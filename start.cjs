@@ -1,13 +1,16 @@
 var exec = require('child_process').exec;
 var os = require('os');
 
-function puts(error, stdout, stderr) {
-    console.log(stdout)
-}
+var linuxStart = exec("cd src/backend && ./backend");
+var winStart = exec("cd src/backend && backend.exe");
 
 if (os.type() === 'Linux')
-    exec("cd src/backend && ./backend", puts);
+    linuxStart.stdout.on('data', function(data) {
+        console.log(data)
+    })
 else if (os.type() === 'Windows_NT')
-    exec("cd src/backend && backend.exe", puts);
+    winStart.stdout.on('data', function(data) {
+        console.log(data)
+    })
 else
    throw new Error("Unsupported OS found: " + os.type());
