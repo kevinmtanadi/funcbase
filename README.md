@@ -1,4 +1,4 @@
-# React Vite with NextUI + Golang Full Stack
+# React Vite with NextUI + Golang
 
 This is a custom fullstack framework built by combining React as the frontend with Golang as the backend. It already comes with [NextUI](https://nextui.org) and [TailwindCSS](https://tailwindcss.com/) for easier UI development.
 
