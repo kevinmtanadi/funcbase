@@ -8,7 +8,7 @@ In the development mode, we will have 2 servers running. The front end code will
 
 ## Production Mode
 
-Currently building for production system is still in development.
+In production, the react app will be compiled into a static file which would be hosted by a single server, by golang.
 
 ## Quick Start
 
@@ -23,10 +23,10 @@ npm install
 npm run dev
 
 # Build for production
-still in development
+npm run build
 
 # Start production server
-still in development
+npm run start
 ```
 
 ## Documentation

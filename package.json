@@ -7,9 +7,12 @@
     "tailwind": "npx tailwindcss build -i ./src/frontend/index.css -o ./src/frontend/tailwind.css --watch",
     "backend": "nodemon --ext go --exec \"node build.cjs || exit 1\"",
     "dev": "concurrently \"npm run tailwind\" \"npm run backend\" \"vite\"",
-    "build": "tsc && vite build",
+    "build-frontend": "tsc && vite build",
+    "build-backend": "node build.cjs",
+    "build": "npm run build-frontend && npm run build-backend",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node start.cjs"
   },
   "dependencies": {
     "@nextui-org/react": "^2.4.1",
