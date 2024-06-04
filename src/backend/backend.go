@@ -6,14 +6,17 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
+	godotenv.Load(".env")
+
 	app := echo.New()
 
-	app.Use(middleware.Recover())
+	module := Module{}
+	module.New(app)
 
 	// Serve the built static files
 	currentDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))

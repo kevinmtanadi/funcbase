@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "tailwind": "npx tailwindcss build -i ./src/frontend/index.css -o ./src/frontend/tailwind.css --watch",
-    "backend": "nodemon --ext go --exec \"node build.cjs || exit 1\"",
+    "backend": "nodemon --ext go --exec \"node dev.cjs || exit 1\"",
     "dev": "concurrently \"npm run tailwind\" \"npm run backend\" \"vite\"",
     "build-frontend": "tsc && vite build",
     "build-backend": "node build.cjs",
