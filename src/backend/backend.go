@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
+	"react-golang/src/backend/config"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -12,6 +12,9 @@ import (
 
 func main() {
 	godotenv.Load(".env")
+
+	config := config.GetInstance()
+	config.Load()
 
 	app := echo.New()
 
@@ -24,17 +27,6 @@ func main() {
 	app.Static("/", distDir)
 	app.File("", distDir+"/index.html")
 
-	API(app)
-
 	port := "8080"
 	app.Logger.Fatal(app.Start(fmt.Sprintf(":%s", port)))
-}
-
-func API(app *echo.Echo) {
-	api := app.Group("/api")
-	api.GET("/hello", HelloWorld)
-}
-
-func HelloWorld(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{"message": "Hello World!"})
 }

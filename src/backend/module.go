@@ -1,8 +1,8 @@
 package main
 
 import (
+	"os"
 	"react-golang/src/backend/api"
-	"react-golang/src/backend/config"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/middleware"
 	pkg_sqlite "react-golang/src/backend/pkg/sqlite"
@@ -15,35 +15,36 @@ type Module struct {
 }
 
 func (m *Module) New(app *echo.Echo) {
-	ioc := m.IOC()
+	ioc := m.IOC(app)
 
 	middleware.UseMiddleware(app)
-
 	api := ioc.Get(constants.CONTAINER_API_NAME).(*api.API)
-	api.Serve(app)
+	api.Serve()
 }
 
-func (m *Module) IOC() di.Container {
+func (m *Module) IOC(app *echo.Echo) di.Container {
 	builder, _ := di.NewBuilder()
 	_ = builder.Add(
 		di.Def{
 			Name: constants.CONTAINER_API_NAME,
 			Build: func(ctn di.Container) (interface{}, error) {
-				return api.NewAPI(builder.Build()), nil
+				return api.NewAPI(app, builder.Build()), nil
 			},
 		},
 		di.Def{
-			Name: constants.CONTAINER_DB_NAME,
+			Name: constants.CONTAINER_APP_DB_NAME,
 			Build: func(ctn di.Container) (interface{}, error) {
-				db, err := pkg_sqlite.NewSQLiteClient()
+				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("APP_DB_PATH"), pkg_sqlite.SQLiteOption{
+					Migrate: true,
+				})
 				return db, err
 			},
 		},
 		di.Def{
-			Name: constants.CONTAINER_CONFIG_NAME,
+			Name: constants.CONTAINER_USER_DB_NAME,
 			Build: func(ctn di.Container) (interface{}, error) {
-				configs := config.NewConfig(builder.Build())
-				return configs, nil
+				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("USER_DB_PATH"))
+				return db, err
 			},
 		},
 	)

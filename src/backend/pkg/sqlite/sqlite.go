@@ -3,6 +3,7 @@ package pkg_sqlite
 import (
 	"log"
 	"os"
+	"react-golang/src/backend/model"
 	"strconv"
 	"time"
 
@@ -12,19 +13,33 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func NewSQLiteClient() (*gorm.DB, error) {
+type SQLiteOption struct {
+	DryRun  bool
+	Migrate bool
+}
+
+func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	var (
 		conn *gorm.DB
 		err  error
 	)
 
-	conn, err = gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{
+	option := SQLiteOption{
+		DryRun:  false,
+		Migrate: false,
+	}
+	if len(options) > 0 {
+		option = options[0]
+	}
+
+	conn, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
 		SkipDefaultTransaction: true,
 		CreateBatchSize:        1000,
+		DryRun:                 option.DryRun,
 	})
 	if err != nil {
 		return conn, err
@@ -57,6 +72,10 @@ func NewSQLiteClient() (*gorm.DB, error) {
 		if maxIdleTime, err := strconv.Atoi(os.Getenv("DB_MAX_IDLE_TIME")); err == nil {
 			db.SetConnMaxIdleTime(time.Duration(maxIdleTime) * time.Minute)
 		}
+	}
+
+	if option.Migrate {
+		model.Migrate(conn)
 	}
 
 	log.Printf("Connected to database: %s\n", os.Getenv("DB_PATH"))
