@@ -43,6 +43,7 @@ func (api *API) DbAPI() {
 	dbRouter.GET("/table/:table_name/rows", api.Database.FetchRows)
 	dbRouter.POST("/table/create", api.Database.CreateTable)
 	dbRouter.POST("/table/insert", api.Database.InsertData)
+	dbRouter.DELETE("/table/:table_name", api.Database.DeleteTable)
 }
 
 func (api *API) AdminAPI() {
@@ -56,10 +57,10 @@ func (api *API) AdminAPI() {
 func (api *API) FunctionAPI() {
 	functionRouter := api.router.Group("/function")
 
-	functionRouter.POST("/input_type", api.Function.CreateInputType)
-	functionRouter.GET("/input_type", api.Function.FetchInputTypeList)
+	// functionRouter.POST("/input_type", api.Function.CreateInputType)
+	// functionRouter.GET("/input_type", api.Function.FetchInputTypeList)
 
 	functionRouter.POST("/run", api.Function.RunFunction)
-	functionRouter.POST("", api.Function.CreateFunction)
-	functionRouter.GET("", api.Function.FetchFunctionList)
+	// functionRouter.POST("/combine", api.Function.CombineFunction)
+	// functionRouter.GET("", api.Function.FetchFunctionList)
 }

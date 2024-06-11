@@ -14,6 +14,8 @@ import {
   TableRow,
   TableCell,
   Skeleton,
+  table,
+  Chip,
 } from "@nextui-org/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -26,6 +28,8 @@ import { RiText } from "react-icons/ri";
 import { RxComponentBoolean } from "react-icons/rx";
 import { formatDate } from "../../utils/utils";
 import InsertDataModal from "./InsertDataModal";
+import TableSettingModal from "./TableSettingModal";
+import classNames from "classnames";
 
 interface TableDataProps {
   tableName: string;
@@ -202,6 +206,23 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
             );
 
           return cellValue;
+        case "BOOLEAN":
+          return (
+            <Chip
+              classNames={{
+                content: "px-1 font-semibold",
+              }}
+              className={classNames(
+                cellValue
+                  ? "border-green-300 bg-green-100"
+                  : "border-red-300 bg-red-100"
+              )}
+              variant="bordered"
+              radius="md"
+            >
+              {cellValue ? "true" : "false"}
+            </Chip>
+          );
         default:
           return cellValue;
       }
@@ -213,6 +234,12 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
     isOpen: isInsertOpen,
     onOpen: onInsertOpen,
     onClose: onInsertClose,
+  } = useDisclosure();
+
+  const {
+    isOpen: isSettingOpen,
+    onOpen: onSettingOpen,
+    onClose: onSettingClose,
   } = useDisclosure();
 
   const TopContent = () => {
@@ -231,7 +258,11 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
             </BreadcrumbItem>
           </Breadcrumbs>
           <Button className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0">
-            <LuSettings fontSize={"1.25rem"} className="cursor-pointer" />
+            <LuSettings
+              onClick={onSettingOpen}
+              fontSize={"1.25rem"}
+              className="cursor-pointer"
+            />
           </Button>
           <Button className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0">
             <LuRefreshCw
@@ -345,6 +376,11 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
         tableName={tableName}
         isOpen={isInsertOpen}
         onClose={onInsertClose}
+      />
+      <TableSettingModal
+        tableName={tableName}
+        isOpen={isSettingOpen}
+        onClose={onSettingClose}
       />
     </>
   );

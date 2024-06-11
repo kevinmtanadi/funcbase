@@ -16,9 +16,11 @@ type DatabaseAPI interface {
 	FetchAllTables(c echo.Context) error
 	FetchTableColumns(c echo.Context) error
 	FetchRows(c echo.Context) error
+
 	CreateTable(c echo.Context) error
 	InsertData(c echo.Context) error
 	RunQuery(c echo.Context) error
+	DeleteTable(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -38,7 +40,9 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 
 	var params *Search = new(Search)
 	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	query := d.db.Table("sqlite_master").
@@ -53,7 +57,9 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 
 	err := query.Find(&result).Error
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -66,7 +72,9 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 	if err := d.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", tableName)).
 		Scan(&result).
 		Error; err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -87,8 +95,10 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 }
 
 type fields struct {
-	FieldType string `json:"field_type"`
-	FieldName string `json:"field_name"`
+	FieldType    string `json:"field_type"`
+	FieldName    string `json:"field_name"`
+	Nullable     bool   `json:"nullable"`
+	RelatedTable string `json:"related_table,omitempty"`
 }
 
 func (f *fields) convertTypeToSQLiteType() string {
@@ -104,7 +114,7 @@ func (f *fields) convertTypeToSQLiteType() string {
 	case "file":
 		return ""
 	case "relation":
-		return ""
+		return "RELATION"
 	default:
 		return ""
 	}
@@ -120,14 +130,14 @@ type createTableReq struct {
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 	var params *createTableReq = new(createTableReq)
 	if err := c.Bind(&params); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	id := "id %s"
 
 	switch params.IDType {
-	case "serial":
-		id = fmt.Sprintf(id, "INTEGER PRIMARY KEY AUTOINCREMENT")
 	case "string":
 		id = fmt.Sprintf(id, "TEXT PRIMARY KEY DEFAULT (hex(randomblob(8)))")
 	case "manual":
@@ -140,6 +150,8 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		id,
 	}
 
+	foreignKeys := []string{}
+
 	for i := 0; i < len(params.Fields); i++ {
 		dtype := params.Fields[i].convertTypeToSQLiteType()
 		// IGNORE UNSUPPORTED DATATYPES FOR NOW
@@ -147,7 +159,14 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 			continue
 		}
 
-		field := fmt.Sprintf("%s %s", params.Fields[i].FieldName, dtype)
+		var field string
+		if dtype == "RELATION" {
+			field = fmt.Sprintf("%s %s", params.Fields[i].FieldName, "TEXT")
+			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].FieldName, params.Fields[i].RelatedTable))
+		} else {
+			field = fmt.Sprintf("%s %s", params.Fields[i].FieldName, dtype)
+		}
+
 		if !params.Nullable {
 			field += " NOT NULL"
 		}
@@ -160,6 +179,8 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		"updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
 	}...)
 
+	fields = append(fields, foreignKeys...)
+
 	query := `
 		CREATE TABLE %s (
 			%s
@@ -170,7 +191,9 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 	err := d.db.Exec(query).Error
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	// check if trigger already exist
@@ -181,7 +204,9 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		Where("name = ?", fmt.Sprintf("updated_timestamp_%s", params.TableName)).
 		Count(&triggerHolder).Error
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	// add trigger to update updated_at value on update
@@ -195,7 +220,9 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		END
 		`, params.TableName, params.TableName, params.TableName)).Error
 		if err != nil {
-			return err
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}
 
@@ -210,7 +237,9 @@ type insertDataReq struct {
 func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	var params *insertDataReq = new(insertDataReq)
 	if err := c.Bind(&params); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	filteredData := make(map[string]interface{})
@@ -254,15 +283,43 @@ type queryReq struct {
 func (d *DatabaseAPIImpl) RunQuery(c echo.Context) error {
 	var params *queryReq = new(queryReq)
 	if err := c.Bind(&params); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
-	fmt.Println(params.Query)
+	rows, err := d.db.Raw(params.Query).Rows()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+	defer rows.Close()
 
 	var result []map[string]interface{} = make([]map[string]interface{}, 0)
-	if err := d.db.Raw(params.Query).Scan(&result).Error; err != nil {
-		return err
+
+	for rows.Next() {
+		var row map[string]interface{}
+		if err := d.db.ScanRows(rows, &row); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+		result = append(result, row)
 	}
 
 	return c.JSON(http.StatusOK, result)
+}
+
+func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
+	tableName := c.Param("table_name")
+
+	err := d.db.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, nil)
 }

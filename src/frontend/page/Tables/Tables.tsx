@@ -6,6 +6,7 @@ import { FaPlus } from "react-icons/fa6";
 import classNames from "classnames";
 import CreateTableModal from "./CreateTableModal";
 import TableData from "./TableData";
+import TableSettingModal from "./TableSettingModal";
 
 const Tables = () => {
   const [search, setSearch] = useState("");
@@ -23,6 +24,11 @@ const Tables = () => {
   });
 
   const [selectedTable, setSelectedTable] = useState("");
+  useEffect(() => {
+    if (!tables) {
+      setSelectedTable("");
+    }
+  }, [tables]);
 
   var isFirst = true;
   useEffect(() => {

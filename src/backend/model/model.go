@@ -6,26 +6,27 @@ import (
 	"gorm.io/gorm"
 )
 
-type Functions struct {
+type Function struct {
 	Name string `json:"name" gorm:"primaryKey"`
 	Data string `json:"data"`
+	Type string `json:"type" gorm:"default:single"`
 }
 
-func (*Functions) TableName() string {
+func (*Function) TableName() string {
 	return "functions"
 }
 
-type InputTypes struct {
+type InputType struct {
 	Name string `json:"name" gorm:"primaryKey"`
 	Data string `json:"data"`
 }
 
-func (*InputTypes) TableName() string {
+func (*InputType) TableName() string {
 	return "input_types"
 }
 
 func Migrate(db *gorm.DB) error {
-	err := db.AutoMigrate(&Functions{}, &InputTypes{})
+	err := db.AutoMigrate(&Function{}, &InputType{})
 
 	log.Println("Model Migrated!")
 	return err

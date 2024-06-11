@@ -11,38 +11,57 @@ import {
   Button,
   ModalFooter,
   Selection,
+  Accordion,
+  AccordionItem,
 } from "@nextui-org/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
-import { FaPlus } from "react-icons/fa";
 import { datatypes } from "../../data/datatypes";
 import { toast } from "react-toastify";
+import BoolInput from "../../components/Inputs/BoolInput";
+import DatetimeInput from "../../components/Inputs/DatetimeInput";
+import NumberInput from "../../components/Inputs/NumberInput";
+import GeneralField from "../../components/Fields/GeneralField";
+import { RiText } from "react-icons/ri";
+import { HiOutlineHashtag } from "react-icons/hi";
+import { RxComponentBoolean } from "react-icons/rx";
+import { FaRegCalendar } from "react-icons/fa6";
+import RelationField from "../../components/Fields/RelationField";
+import { TbCirclesRelation } from "react-icons/tb";
 
 interface CreateTableModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
-  interface Fields {
-    field_type: Selection;
-    field_name: string;
-  }
+export interface Field {
+  field_type: string;
+  field_name: string;
+  nullable: boolean;
+  related_table?: string;
+}
 
-  const [fields, setFields] = useState<Fields[]>([]);
-  const addNewField = () => {
+export interface Relation {
+  related_table: string;
+  type: "single" | "multiple";
+}
+
+const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
+  const [fields, setFields] = useState<Field[]>([]);
+  const addNewField = (type: string) => {
     setFields([
       ...fields,
       {
-        field_type: new Set([]),
+        field_type: type,
         field_name: "",
+        nullable: true,
       },
     ]);
   };
 
   const [tableName, setTableName] = useState("");
-  const [idType, setIdType] = useState<Selection>(new Set([]));
+  const [idType, setIdType] = useState<Selection>(new Set(["string"]));
 
   // override the close to empty the fields
   const handleClose = () => {
@@ -57,11 +76,13 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     mutationFn: () => {
       return axios.post("/api/db/table/create", {
         table_name: tableName,
-        id_type: (idType as any).currentKey,
+        id_type: (idType as any).currentKey || "string",
         fields: fields.map((field) => {
           return {
             field_name: field.field_name,
-            field_type: (field.field_type as any).currentKey,
+            field_type: field.field_type,
+            nullable: field.nullable,
+            related_table: field.related_table,
           };
         }),
       });
@@ -83,8 +104,119 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     });
   };
 
+  const deleteField = (idx: number) => {
+    console.log([...fields.slice(0, idx), ...fields.slice(idx + 1)]);
+    setFields((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const renderField = (field: Field, index: number) => {
+    switch (field.field_type) {
+      case "text":
+        return (
+          <GeneralField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<RiText />}
+          />
+        );
+      case "number":
+        return (
+          <GeneralField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<HiOutlineHashtag />}
+          />
+        );
+      case "datetime":
+        return (
+          <GeneralField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<FaRegCalendar />}
+          />
+        );
+      case "boolean":
+        return (
+          <GeneralField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<RxComponentBoolean />}
+          />
+        );
+      case "relation":
+        return (
+          <RelationField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<TbCirclesRelation />}
+          />
+        );
+      case "file":
+
+      default:
+    }
+  };
+
+  const { data: tables, isLoading } = useQuery<{ name: string }[]>({
+    queryKey: ["tables"],
+    queryFn: async () => {
+      const res = await axios.get(`/api/db/tables`);
+      return res.data;
+    },
+  });
+
   return (
-    <Modal size="2xl" isOpen={isOpen} onClose={handleClose}>
+    <Modal
+      scrollBehavior="inside"
+      size="2xl"
+      isOpen={isOpen}
+      onClose={handleClose}
+    >
       <ModalContent>
         {(onClose) => (
           <>
@@ -123,6 +255,9 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <Select
+                      defaultSelectedKeys={"string"}
+                      selectionMode="single"
+                      variant="bordered"
                       isRequired
                       selectedKeys={idType}
                       onSelectionChange={setIdType}
@@ -132,20 +267,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                         popoverContent: "rounded-t-none rounded-b-md",
                       }}
                     >
-                      <SelectItem
-                        textValue="Automated (Serial)"
-                        className="rounded-sm"
-                        key="serial"
-                      >
-                        <div className="flex">
-                          <p className="font-bold">Automated</p>
-                          <p className="ml-1">(Serial)</p>
-                        </div>
-                        <p className="text-sm text-default-500">
-                          System will automatically generate an ID for every
-                          record sequentially starting from 0
-                        </p>
-                      </SelectItem>
                       <SelectItem
                         variant="bordered"
                         textValue="Automated (String)"
@@ -175,80 +296,45 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                   </div>
                 </div>
                 <Divider />
-                <div className="flex flex-col gap-4">
-                  {fields.map((field, index) => (
-                    <div key={index} className="flex gap-4">
-                      <Select
-                        selectedKeys={field.field_type}
-                        onSelectionChange={(e) => {
-                          setFields([
-                            ...fields.slice(0, index),
-                            {
-                              ...field,
-                              field_type: e,
-                            },
-                            ...fields.slice(index + 1),
-                          ]);
-                        }}
-                        startContent={
-                          (field.field_type as any)?.currentKey &&
-                          datatypes.find(
-                            (f) =>
-                              f.value === (field.field_type as any).currentKey
-                          )?.icon
-                        }
-                        variant="bordered"
-                        classNames={{
-                          trigger: "rounded-md",
-                          label: "font-semibold",
-                        }}
-                        size="sm"
-                        radius="sm"
-                        label="Field type"
-                      >
-                        {datatypes.map((datatype) => (
-                          <SelectItem
-                            startContent={datatype.icon}
-                            key={datatype.value}
-                            value={datatype.value}
+                <Accordion className="rounded-md" variant="bordered">
+                  <AccordionItem
+                    classNames={{
+                      title: "w-full text-center text-md font-semibold",
+                      trigger: "py-3 rounded-none",
+                    }}
+                    className="text-center font-semibold rounded-none"
+                    key="1"
+                    title="Add new field"
+                  >
+                    <Divider className="" />
+                    <div className="grid grid-cols-3 w-full gap-2 mt-3">
+                      {datatypes.map((dtype) =>
+                        dtype.dtype === "RELATION" ? (
+                          <Button
+                            isDisabled={!tables || tables.length === 0}
+                            isLoading={isLoading}
+                            startContent={dtype.icon}
+                            onClick={() => addNewField(dtype.value)}
+                            className="hover:bg-slate-200 bg-transparent rounded-tl-md"
                           >
-                            {datatype.label}
-                          </SelectItem>
-                        ))}
-                      </Select>
-                      <Input
-                        value={field.field_name}
-                        onValueChange={(value) => {
-                          setFields([
-                            ...fields.slice(0, index),
-                            {
-                              ...field,
-                              field_name: value,
-                            },
-                            ...fields.slice(index + 1),
-                          ]);
-                        }}
-                        variant="bordered"
-                        classNames={{
-                          inputWrapper: "rounded-md",
-                          label: "font-semibold",
-                        }}
-                        size="sm"
-                        label="Field name"
-                        labelPlacement="inside"
-                        type="text"
-                      />
+                            {dtype.label}
+                          </Button>
+                        ) : (
+                          <Button
+                            startContent={dtype.icon}
+                            onClick={() => addNewField(dtype.value)}
+                            className="hover:bg-slate-200 bg-transparent rounded-tl-md"
+                          >
+                            {dtype.label}
+                          </Button>
+                        )
+                      )}
                     </div>
-                  ))}
+                  </AccordionItem>
+                </Accordion>
+                <div className="flex flex-col gap-4">
+                  {fields.map((field, index) => renderField(field, index))}
                 </div>
-                <Button
-                  className="font-semibold border-black rounded-md"
-                  startContent={<FaPlus />}
-                  variant="bordered"
-                  onClick={addNewField}
-                >
-                  New field
-                </Button>
               </div>
             </ModalBody>
             <Divider />
