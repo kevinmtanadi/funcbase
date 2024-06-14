@@ -6,6 +6,7 @@ interface BoolInputProps {
   label: string;
   onChange: () => void;
   isSelected?: boolean;
+  isDisabled?: boolean;
 }
 const BoolInput = ({
   id,
@@ -13,9 +14,11 @@ const BoolInput = ({
   isSelected,
   label,
   onChange,
+  isDisabled,
 }: BoolInputProps) => {
   return (
     <Switch
+      isDisabled={isDisabled}
       id={id}
       name={name}
       classNames={{

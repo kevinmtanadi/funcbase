@@ -2,15 +2,9 @@ import {
   Autocomplete,
   AutocompleteItem,
   Button,
-  cn,
-  Divider,
-  Input,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Select,
-  SelectItem,
-  Switch,
 } from "@nextui-org/react";
 import { Field } from "../../page/Tables/CreateTableModal";
 import { useQuery } from "@tanstack/react-query";
@@ -31,7 +25,6 @@ const RelationField = ({
   onChange,
   onDelete,
   idx,
-  icon,
 }: RelationFieldProps) => {
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
@@ -48,30 +41,6 @@ const RelationField = ({
 
   return (
     <div className="flex items-center border-2 rounded-md bg-default-100">
-      <Input
-        value={field.field_name}
-        variant="flat"
-        classNames={{
-          inputWrapper:
-            "bg-transparent rounded-l-md rounded-r-none border-r-none",
-          label: "text-sm",
-        }}
-        onValueChange={(value) => {
-          onChange({ ...field, field_name: value });
-        }}
-        size="sm"
-        fullWidth
-        labelPlacement="inside"
-        label={
-          <div className="flex gap-2 items-center">
-            {icon}
-            <div className="flex items-center">
-              <p>Field name</p>
-            </div>
-          </div>
-        }
-        type="text"
-      />
       {tables && tables?.length > 0 && (
         <Autocomplete
           radius="none"
@@ -84,14 +53,17 @@ const RelationField = ({
             base: "min-w-xs",
           }}
           onSelectionChange={(value) => {
-            onChange({ ...field, related_table: value.toString() });
-            console.log(value.toString());
+            if (!value) return;
+
+            onChange({
+              ...field,
+              field_name: value.toString(),
+              related_table: value.toString(),
+            });
           }}
         >
           {(table) => (
-            <AutocompleteItem key={table.name.toUpperCase()}>
-              {table.name}
-            </AutocompleteItem>
+            <AutocompleteItem key={table.name}>{table.name}</AutocompleteItem>
           )}
         </Autocomplete>
       )}
@@ -107,37 +79,6 @@ const RelationField = ({
         </PopoverTrigger>
         <PopoverContent className="text-xs rounded-md">
           <div className=" flex w-[150px] flex-col items-start gap-2">
-            <div className="w-full px-2 pt-2">
-              <div className="flex w-full py-1 justify-between items-center">
-                <p className="font-semibold text-sm">Nullable</p>
-                <Switch
-                  classNames={{
-                    base: cn(
-                      "left-3",
-                      "inline-flex flex-row-reverse",
-                      "max-w-md bg-content1",
-                      "cursor-pointer rounded-g gap-2 border-2 border-transparent"
-                    ),
-                    wrapper: "p-0 h-3 overflow-visible w-7",
-                    thumb: cn(
-                      "w-3 h-5 border-2 shadow-lg",
-                      //selected
-                      "group-data-[selected=true]:ml-4",
-                      // pressed
-                      "group-data-[pressed=true]:w-4",
-                      "group-data-[selected]:group-data-[pressed]:ml-4"
-                    ),
-                    label: "text-sm font-semibold",
-                  }}
-                  onChange={(e) => {
-                    onChange({ ...field, nullable: e.target.checked });
-                  }}
-                  checked={field.nullable}
-                />
-              </div>
-            </div>
-
-            <Divider />
             <div className="w-full px-2">
               <Button
                 className="bg-transparent min-w-0 w-full p-0"

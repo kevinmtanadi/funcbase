@@ -8,6 +8,7 @@ interface NumberInputProps {
   onChange: () => void;
   value?: string;
   isRequired?: boolean;
+  isDisabled?: boolean;
 }
 const NumberInput = ({
   id,
@@ -16,6 +17,7 @@ const NumberInput = ({
   label,
   onChange,
   isRequired,
+  isDisabled,
 }: NumberInputProps) => {
   const handleKeyDown = (event: React.KeyboardEvent) => {
     // Allow backspace, delete, tab, escape, enter, and navigation keys
@@ -36,6 +38,7 @@ const NumberInput = ({
 
   return (
     <Input
+      isDisabled={isDisabled}
       id={id}
       name={name}
       onKeyDown={handleKeyDown}

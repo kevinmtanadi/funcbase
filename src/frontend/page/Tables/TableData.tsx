@@ -14,12 +14,11 @@ import {
   TableRow,
   TableCell,
   Skeleton,
-  table,
   Chip,
 } from "@nextui-org/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { CgKey } from "react-icons/cg";
 import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";
@@ -30,11 +29,21 @@ import { formatDate } from "../../utils/utils";
 import InsertDataModal from "./InsertDataModal";
 import TableSettingModal from "./TableSettingModal";
 import classNames from "classnames";
+import UpdateDataModal from "./UpdateDataModal";
+import { FiFilter } from "react-icons/fi";
+import FilterModal from "./FilterModal";
 
 interface TableDataProps {
   tableName: string;
   renderUpper?: boolean;
 }
+
+export interface FetchFilter {
+  column: string;
+  operator: string;
+  value: string;
+}
+
 const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   // const [rowsPerPage, setRowsPerPage] = useState(20);
   // const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({});
@@ -43,15 +52,44 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/table/${tableName}/columns`);
+      const res = await axios.get(`/api/db/columns/${tableName}`);
       return res.data;
     },
   });
 
+  const [filter, setFilter] = useState<FetchFilter[]>([]);
+
   const { data: rows, isLoading } = useQuery<any[]>({
-    queryKey: ["rows", tableName],
+    queryKey: ["rows", tableName, filter],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/table/${tableName}/rows`);
+      const res = await axios.post(`/api/db/rows/${tableName}`, {
+        filters: filter
+          .filter((f) => f.column != "" && f.operator != "" && f.value !== "")
+          .map((f) => {
+            if (f.operator === "sw") {
+              return {
+                column: f.column,
+                operator: "LIKE",
+                value: `${f.value}%`,
+              };
+            } else if (f.operator === "ew") {
+              return {
+                column: f.column,
+                operator: "LIKE",
+                value: `%${f.value}`,
+              };
+            } else if (f.operator === "contains") {
+              return {
+                column: f.column,
+                operator: "LIKE",
+                value: `%${f.value}%`,
+              };
+            } else {
+              // Return the filter as is if none of the conditions match
+              return f;
+            }
+          }),
+      });
       return res.data;
     },
   });
@@ -181,7 +219,6 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
         );
 
       const dtype = columns?.find((col) => col.name === columnKey)?.type;
-      console.log(dtype);
       switch (dtype) {
         case "TIMESTAMP":
           const date = new Date(cellValue);
@@ -242,10 +279,23 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
     onClose: onSettingClose,
   } = useDisclosure();
 
+  const {
+    isOpen: isUpdateOpen,
+    onOpen: onUpdateOpen,
+    onClose: onUpdateClose,
+  } = useDisclosure();
+
+  const {
+    isOpen: isFilterOpen,
+    onOpen: onFilterOpen,
+    onClose: onFilterClose,
+  } = useDisclosure();
+  const [selectedRow, setSelectedRow] = useState<string>("");
+
   const TopContent = () => {
     return (
       <div className="mt-3 mx-3 md:flex block items-center justify-between">
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center justify-between md:justify-normal">
           <Breadcrumbs
             size="lg"
             isDisabled
@@ -257,22 +307,40 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
               <p>{tableName}</p>
             </BreadcrumbItem>
           </Breadcrumbs>
-          <Button className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0">
-            <LuSettings
-              onClick={onSettingOpen}
-              fontSize={"1.25rem"}
-              className="cursor-pointer"
-            />
-          </Button>
-          <Button className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0">
-            <LuRefreshCw
-              onClick={refetchData}
-              fontSize={"1.25rem"}
-              className="cursor-pointer"
-            />
-          </Button>
+          <div className="flex gap-2 items-center">
+            <Button
+              radius="sm"
+              className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+            >
+              <LuSettings
+                onClick={onSettingOpen}
+                fontSize={"1.25rem"}
+                className="cursor-pointer"
+              />
+            </Button>
+            <Button
+              radius="sm"
+              className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+            >
+              <LuRefreshCw
+                onClick={refetchData}
+                fontSize={"1.25rem"}
+                className="cursor-pointer"
+              />
+            </Button>
+            <Button
+              radius="sm"
+              className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+            >
+              <FiFilter
+                onClick={onFilterOpen}
+                fontSize={"1.25rem"}
+                className="cursor-pointer"
+              />
+            </Button>
+          </div>
         </div>
-        <div className="flex justify-end gap-2 mt-3">
+        <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
           <Button
             onClick={onInsertOpen}
             startContent={<FaPlus />}
@@ -288,6 +356,10 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   return (
     <>
       <Table
+        onRowAction={(key) => {
+          onUpdateOpen();
+          setSelectedRow(key.toString());
+        }}
         topContent={renderUpper ? <TopContent /> : undefined}
         isHeaderSticky={true}
         classNames={{
@@ -347,7 +419,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
         {columns && rows ? (
           <TableBody emptyContent="No records found" items={rows}>
             {(item) => (
-              <TableRow key={item.id}>
+              <TableRow className="cursor-pointer" key={item.id}>
                 {(columnKey) => (
                   <TableCell>{renderCell(item, columnKey)}</TableCell>
                 )}
@@ -381,6 +453,19 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
         tableName={tableName}
         isOpen={isSettingOpen}
         onClose={onSettingClose}
+      />
+      <UpdateDataModal
+        tableName={tableName}
+        isOpen={isUpdateOpen}
+        onClose={onUpdateClose}
+        id={selectedRow}
+      />
+      <FilterModal
+        isOpen={isFilterOpen}
+        onClose={onFilterClose}
+        filters={filter}
+        setFilter={setFilter}
+        tableName={tableName}
       />
     </>
   );

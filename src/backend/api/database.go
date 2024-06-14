@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
+	"react-golang/src/backend/utils"
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/mattn/go-sqlite3"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
 )
@@ -18,7 +18,10 @@ type DatabaseAPI interface {
 	FetchRows(c echo.Context) error
 
 	CreateTable(c echo.Context) error
+	FetchDataByID(c echo.Context) error
 	InsertData(c echo.Context) error
+	UpdateData(c echo.Context) error
+	DeleteData(c echo.Context) error
 	RunQuery(c echo.Context) error
 	DeleteTable(c echo.Context) error
 }
@@ -80,12 +83,35 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+type filter struct {
+	Column   string `json:"column"`
+	Operator string `json:"operator"`
+	Value    string `json:"value"`
+}
+
+type fetchRowsParam struct {
+	Filter []filter `json:"filters,omitempty"`
+}
+
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
 	var result []map[string]interface{} = make([]map[string]interface{}, 0)
 
-	if err := d.db.Table(tableName).
-		Select("*").
+	var params *fetchRowsParam = new(fetchRowsParam)
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	query := d.db.Table(tableName).
+		Select("*")
+
+	for _, filter := range params.Filter {
+		query = query.Where(fmt.Sprintf("%s %s ?", filter.Column, filter.Operator), filter.Value)
+	}
+
+	if err := query.
 		Find(&result).
 		Error; err != nil {
 		return err
@@ -99,6 +125,8 @@ type fields struct {
 	FieldName    string `json:"field_name"`
 	Nullable     bool   `json:"nullable"`
 	RelatedTable string `json:"related_table,omitempty"`
+	Indexed      bool   `json:"indexed"`
+	Unique       bool   `json:"unique"`
 }
 
 func (f *fields) convertTypeToSQLiteType() string {
@@ -124,7 +152,6 @@ type createTableReq struct {
 	TableName string   `json:"table_name"`
 	IDType    string   `json:"id_type"`
 	Fields    []fields `json:"fields"`
-	Nullable  bool     `json:"nullable"`
 }
 
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
@@ -151,6 +178,8 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 	}
 
 	foreignKeys := []string{}
+	uniques := []string{}
+	indexes := []string{}
 
 	for i := 0; i < len(params.Fields); i++ {
 		dtype := params.Fields[i].convertTypeToSQLiteType()
@@ -167,8 +196,16 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 			field = fmt.Sprintf("%s %s", params.Fields[i].FieldName, dtype)
 		}
 
-		if !params.Nullable {
+		if !params.Fields[i].Nullable {
 			field += " NOT NULL"
+		}
+
+		if params.Fields[i].Indexed {
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].FieldName, params.TableName, params.Fields[i].FieldName))
+		}
+
+		if params.Fields[i].Unique {
+			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].FieldName))
 		}
 
 		fields = append(fields, field)
@@ -179,7 +216,7 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		"updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
 	}...)
 
-	fields = append(fields, foreignKeys...)
+	fields = append(append(fields, uniques...), foreignKeys...)
 
 	query := `
 		CREATE TABLE %s (
@@ -194,6 +231,16 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
+	}
+
+	// add index
+	for _, index := range indexes {
+		err = d.db.Exec(index).Error
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
 	}
 
 	// check if trigger already exist
@@ -229,6 +276,23 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
+	tableName := c.Param("table_name")
+	id := c.Param("id")
+	var result map[string]interface{} = make(map[string]interface{}, 0)
+
+	if err := d.db.Table(tableName).
+		Select("*").
+		Where("id = ?", id).
+		Find(&result).
+		Limit(1).
+		Error; err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
 type insertDataReq struct {
 	TableName string                 `json:"table_name"`
 	Data      map[string]interface{} `json:"data"`
@@ -252,25 +316,56 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		}
 	}
 
-	maxTries := 10
+	filteredData["id"], _ = utils.GenerateRandomString(16)
 
-	tries := 0
-	for {
-		tries++
-		if tries > maxTries {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to insert data")
-		}
+	result := d.db.Table(params.TableName).
+		Create(&filteredData)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": result.Error.Error(),
+		})
+	}
 
-		result := d.db.Table(params.TableName).
-			Create(&filteredData)
-		if result.Error != nil {
-			if sqliteErr, ok := result.Error.(*sqlite3.Error); ok &&
-				sqliteErr.Code == sqlite3.ErrConstraint {
-				continue
-			} else {
-				break
-			}
-		}
+	return c.JSON(http.StatusOK, params.Data)
+}
+
+type updateDataReq struct {
+	TableName string                 `json:"table_name"`
+	ID        string                 `json:"id"`
+	Data      map[string]interface{} `json:"data"`
+}
+
+func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
+	var params *updateDataReq = new(updateDataReq)
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	result := d.db.Table(params.TableName).
+		Where("id = ?", params.ID).
+		Updates(&params.Data)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": result.Error.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, params.Data)
+}
+
+func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
+	tableName := c.Param("table_name")
+	id := c.Param("id")
+
+	result := d.db.Table(tableName).
+		Where("id = ?", id).
+		Delete(nil)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": result.Error.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, nil)

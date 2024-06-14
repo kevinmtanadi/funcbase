@@ -1,7 +1,7 @@
 package api
 
 import (
-	"net/http"
+	api_function "react-golang/src/backend/api/functions"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -12,7 +12,7 @@ type API struct {
 	router   *echo.Group
 	Admin    AdminAPI
 	Database DatabaseAPI
-	Function FunctionAPI
+	Function api_function.FunctionAPI
 }
 
 type Search struct {
@@ -25,7 +25,7 @@ func NewAPI(app *echo.Echo, ioc di.Container) *API {
 		router:   app.Group("/api"),
 		Admin:    NewAdminAPI(ioc),
 		Database: NewDatabaseAPI(ioc),
-		Function: NewFunctionAPI(ioc),
+		Function: api_function.NewFunctionAPI(ioc),
 	}
 }
 
@@ -39,28 +39,24 @@ func (api *API) DbAPI() {
 
 	dbRouter.GET("/tables", api.Database.FetchAllTables)
 	dbRouter.POST("/query", api.Database.RunQuery)
-	dbRouter.GET("/table/:table_name/columns", api.Database.FetchTableColumns)
-	dbRouter.GET("/table/:table_name/rows", api.Database.FetchRows)
+	dbRouter.GET("/columns/:table_name", api.Database.FetchTableColumns)
+	dbRouter.POST("/rows/:table_name", api.Database.FetchRows)
+	dbRouter.GET("/table/:table_name/:id", api.Database.FetchDataByID)
 	dbRouter.POST("/table/create", api.Database.CreateTable)
-	dbRouter.POST("/table/insert", api.Database.InsertData)
+	dbRouter.POST("/row/insert", api.Database.InsertData)
+	dbRouter.PUT("/row/update", api.Database.UpdateData)
+	dbRouter.DELETE("/row/:table_name/:id", api.Database.DeleteData)
 	dbRouter.DELETE("/table/:table_name", api.Database.DeleteTable)
 }
 
 func (api *API) AdminAPI() {
 	adminRouter := api.router.Group("/admin")
 
-	adminRouter.GET("/users", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
+	adminRouter.POST("/register", api.Admin.RegisterNewAdmin)
 }
 
 func (api *API) FunctionAPI() {
 	functionRouter := api.router.Group("/function")
 
-	// functionRouter.POST("/input_type", api.Function.CreateInputType)
-	// functionRouter.GET("/input_type", api.Function.FetchInputTypeList)
-
 	functionRouter.POST("/run", api.Function.RunFunction)
-	// functionRouter.POST("/combine", api.Function.CombineFunction)
-	// functionRouter.GET("", api.Function.FetchFunctionList)
 }

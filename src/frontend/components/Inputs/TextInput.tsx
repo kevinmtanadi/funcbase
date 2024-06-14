@@ -8,6 +8,7 @@ interface TextInputProps {
   onChange: () => void;
   value?: string;
   isRequired?: boolean;
+  isDisabled?: boolean;
 }
 const TextInput = ({
   id,
@@ -16,9 +17,11 @@ const TextInput = ({
   label,
   onChange,
   isRequired,
+  isDisabled,
 }: TextInputProps) => {
   return (
     <Input
+      isDisabled={isDisabled}
       id={id}
       name={name}
       value={value}

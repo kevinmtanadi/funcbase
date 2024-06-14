@@ -10,9 +10,7 @@ import {
 } from "@nextui-org/react";
 import { Field } from "../../page/Tables/CreateTableModal";
 import { LuSettings } from "react-icons/lu";
-import { RiText } from "react-icons/ri";
 import { FaRegTrashAlt } from "react-icons/fa";
-import { FaRegCopy } from "react-icons/fa6";
 
 interface GeneralFieldProps {
   field: Field;
@@ -68,6 +66,66 @@ const GeneralField = ({
           <div className=" flex w-[150px] flex-col items-start gap-2">
             <div className="w-full px-2 pt-2">
               <div className="flex w-full py-1 justify-between items-center">
+                <p className="font-semibold text-sm">Indexed</p>
+                <Switch
+                  classNames={{
+                    base: cn(
+                      "left-3",
+                      "inline-flex flex-row-reverse",
+                      "max-w-md bg-content1",
+                      "cursor-pointer rounded-g gap-2 border-2 border-transparent"
+                    ),
+                    wrapper: "p-0 h-3 overflow-visible w-7",
+                    thumb: cn(
+                      "w-3 h-5 border-2 shadow-lg",
+                      //selected
+                      "group-data-[selected=true]:ml-4",
+                      // pressed
+                      "group-data-[pressed=true]:w-4",
+                      "group-data-[selected]:group-data-[pressed]:ml-4"
+                    ),
+                    label: "text-sm font-semibold",
+                  }}
+                  onChange={(e) => {
+                    onChange({ ...field, indexed: e.target.checked });
+                  }}
+                  isSelected={field.indexed}
+                  checked={field.indexed}
+                />
+              </div>
+            </div>
+            <div className="w-full px-2 pt-2">
+              <div className="flex w-full py-1 justify-between items-center">
+                <p className="font-semibold text-sm">Unique</p>
+                <Switch
+                  classNames={{
+                    base: cn(
+                      "left-3",
+                      "inline-flex flex-row-reverse",
+                      "max-w-md bg-content1",
+                      "cursor-pointer rounded-g gap-2 border-2 border-transparent"
+                    ),
+                    wrapper: "p-0 h-3 overflow-visible w-7",
+                    thumb: cn(
+                      "w-3 h-5 border-2 shadow-lg",
+                      //selected
+                      "group-data-[selected=true]:ml-4",
+                      // pressed
+                      "group-data-[pressed=true]:w-4",
+                      "group-data-[selected]:group-data-[pressed]:ml-4"
+                    ),
+                    label: "text-sm font-semibold",
+                  }}
+                  onChange={(e) => {
+                    onChange({ ...field, unique: e.target.checked });
+                  }}
+                  checked={field.unique}
+                  isSelected={field.unique}
+                />
+              </div>
+            </div>
+            <div className="w-full px-2 pt-2">
+              <div className="flex w-full py-1 justify-between items-center">
                 <p className="font-semibold text-sm">Nullable</p>
                 <Switch
                   classNames={{
@@ -92,6 +150,7 @@ const GeneralField = ({
                     onChange({ ...field, nullable: e.target.checked });
                   }}
                   checked={field.nullable}
+                  isSelected={field.nullable}
                 />
               </div>
             </div>

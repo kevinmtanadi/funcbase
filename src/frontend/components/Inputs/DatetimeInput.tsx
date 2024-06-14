@@ -7,6 +7,7 @@ interface DateInputProps {
   onChange: () => void;
   value?: DateValue;
   isRequired?: boolean;
+  isDisabled?: boolean;
 }
 const DatetimeInput = ({
   id,
@@ -15,6 +16,7 @@ const DatetimeInput = ({
   onChange,
   value,
   isRequired,
+  isDisabled,
 }: DateInputProps) => {
   return (
     <DatePicker
@@ -27,6 +29,7 @@ const DatetimeInput = ({
       label={label}
       granularity="second"
       isRequired={isRequired}
+      isDisabled={isDisabled}
     />
   );
 };

@@ -19,9 +19,6 @@ import axios from "axios";
 import { useState } from "react";
 import { datatypes } from "../../data/datatypes";
 import { toast } from "react-toastify";
-import BoolInput from "../../components/Inputs/BoolInput";
-import DatetimeInput from "../../components/Inputs/DatetimeInput";
-import NumberInput from "../../components/Inputs/NumberInput";
 import GeneralField from "../../components/Fields/GeneralField";
 import { RiText } from "react-icons/ri";
 import { HiOutlineHashtag } from "react-icons/hi";
@@ -39,6 +36,8 @@ export interface Field {
   field_type: string;
   field_name: string;
   nullable: boolean;
+  indexed: boolean;
+  unique: boolean;
   related_table?: string;
 }
 
@@ -55,7 +54,9 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
       {
         field_type: type,
         field_name: "",
+        indexed: false,
         nullable: true,
+        unique: false,
       },
     ]);
   };
@@ -78,11 +79,16 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
         table_name: tableName,
         id_type: (idType as any).currentKey || "string",
         fields: fields.map((field) => {
+          if (field.field_type === "relation" && !field.related_table) return;
+          if (field.field_name === "") return;
+
           return {
             field_name: field.field_name,
             field_type: field.field_type,
             nullable: field.nullable,
             related_table: field.related_table,
+            indexed: field.indexed,
+            unique: field.unique,
           };
         }),
       });
@@ -212,6 +218,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
 
   return (
     <Modal
+      radius="sm"
       scrollBehavior="inside"
       size="2xl"
       isOpen={isOpen}
