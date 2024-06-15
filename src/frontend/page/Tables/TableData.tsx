@@ -32,6 +32,7 @@ import classNames from "classnames";
 import UpdateDataModal from "./UpdateDataModal";
 import { FiFilter } from "react-icons/fi";
 import FilterModal from "./FilterModal";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface TableDataProps {
   tableName: string;
@@ -52,7 +53,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
       return res.data;
     },
   });
@@ -62,7 +63,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   const { data: rows, isLoading } = useQuery<any[]>({
     queryKey: ["rows", tableName, filter],
     queryFn: async () => {
-      const res = await axios.post(`/api/db/rows/${tableName}`, {
+      const res = await axiosInstance.post(`/api/db/rows/${tableName}`, {
         filters: filter
           .filter((f) => f.column != "" && f.operator != "" && f.value !== "")
           .map((f) => {

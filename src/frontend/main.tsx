@@ -9,6 +9,13 @@ import Tables from "./page/Tables/Tables.tsx";
 import SQLEditor from "./page/SQLEditor.tsx";
 import Function from "./page/Function/Function.tsx";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import createStore from "react-auth-kit/createStore";
+import AuthProvider from "react-auth-kit";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
+import SignIn from "./page/SignIn.tsx";
+import refresh from "./utils/refresh.js";
+import Cookies from "cookie-ts";
+import axios from "axios";
 
 const router = createBrowserRouter([
   {
@@ -17,20 +24,35 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Tables />,
+        element: (
+          <ProtectedRoute>
+            <Tables />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/sql",
-        element: <SQLEditor />,
+        element: (
+          <ProtectedRoute>
+            <SQLEditor />,
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/function",
-        element: <Function />,
+        element: (
+          <ProtectedRoute>
+            <Function />
+          </ProtectedRoute>
+        ),
       },
     ],
   },
+  {
+    path: "/signin",
+    element: <SignIn />,
+  },
 ]);
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -39,14 +61,23 @@ const queryClient = new QueryClient({
   },
 });
 
+const store = createStore({
+  authName: "_auth",
+  authType: "cookie",
+  cookieDomain: window.location.hostname,
+  cookieSecure: window.location.protocol === "https:",
+});
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <NextUIProvider>
-        <NextThemesProvider attribute="class" defaultTheme="light">
-          <RouterProvider router={router} />
-        </NextThemesProvider>
-      </NextUIProvider>
-    </QueryClientProvider>
+    <AuthProvider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <NextUIProvider>
+          <NextThemesProvider attribute="class" defaultTheme="light">
+            <RouterProvider router={router} />
+          </NextThemesProvider>
+        </NextUIProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

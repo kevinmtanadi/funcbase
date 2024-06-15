@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { IoCloseSharp } from "react-icons/io5";
 import { LuRefreshCcw, LuRefreshCw } from "react-icons/lu";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface FilterModalProps {
   isOpen: boolean;
@@ -51,7 +52,7 @@ const FilterModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
       return res.data;
     },
   });

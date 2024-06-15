@@ -15,6 +15,7 @@ import NumberInput from "../../components/Inputs/NumberInput";
 import BoolInput from "../../components/Inputs/BoolInput";
 import { useFormik } from "formik";
 import { toast } from "react-toastify";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface InsertDataModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ const InsertDataModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
       return res.data;
     },
   });
@@ -120,7 +121,7 @@ const InsertDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axios.post(`/api/db/row/insert`, {
+      const res = await axiosInstance.post(`/api/db/row/insert`, {
         table_name: tableName,
         data: data,
       });

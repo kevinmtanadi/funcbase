@@ -2,31 +2,23 @@ package model
 
 import (
 	"log"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-type Function struct {
-	Name string `json:"name" gorm:"primaryKey"`
-	Data string `json:"data"`
-	Type string `json:"type" gorm:"default:single"`
-}
-
-func (*Function) TableName() string {
-	return "functions"
-}
-
-type InputType struct {
-	Name string `json:"name" gorm:"primaryKey"`
-	Data string `json:"data"`
-}
-
-func (*InputType) TableName() string {
-	return "input_types"
+type Admin struct {
+	ID        string
+	Email     string
+	Username  string
+	Password  string
+	Salt      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func Migrate(db *gorm.DB) error {
-	err := db.AutoMigrate(&Function{}, &InputType{})
+	err := db.AutoMigrate(&Admin{})
 
 	log.Println("Model Migrated!")
 	return err

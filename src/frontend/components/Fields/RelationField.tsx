@@ -30,6 +30,7 @@ const RelationField = ({
     queryKey: ["tables"],
     queryFn: async () => {
       const res = await axios.get(`/api/db/tables`);
+      console.log(res.data);
       return res.data;
     },
   });

@@ -24,6 +24,7 @@ import { useEffect } from "react";
 import { parseAbsoluteToLocal } from "@internationalized/date";
 import { BsThreeDots } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface UpdateDataModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ const UpdateDataModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
       return res.data;
     },
   });
@@ -49,7 +50,9 @@ const UpdateDataModal = ({
   const { data, isLoading } = useQuery<any>({
     queryKey: ["data", tableName, id],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/table/${tableName}/${id}`);
+      if (!id) return;
+
+      const res = await axiosInstance.get(`/api/db/table/${tableName}/${id}`);
       return res.data;
     },
   });
@@ -133,7 +136,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axios.put(`/api/db/row/update`, {
+      const res = await axiosInstance.put(`/api/db/row/update`, {
         table_name: tableName,
         id: id,
         data: data,
@@ -168,7 +171,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync: deleteMutation } = useMutation({
     mutationFn: async () => {
-      const res = await axios.delete(`/api/db/row/${tableName}/${id}`);
+      const res = await axiosInstance.delete(`/api/db/row/${tableName}/${id}`);
       return res.data;
     },
     onSuccess: () => {

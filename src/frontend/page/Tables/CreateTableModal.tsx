@@ -26,6 +26,7 @@ import { RxComponentBoolean } from "react-icons/rx";
 import { FaRegCalendar } from "react-icons/fa6";
 import RelationField from "../../components/Fields/RelationField";
 import { TbCirclesRelation } from "react-icons/tb";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface CreateTableModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
 
   const { mutateAsync } = useMutation({
     mutationFn: () => {
-      return axios.post("/api/db/table/create", {
+      return axiosInstance.post("/api/db/table/create", {
         table_name: tableName,
         id_type: (idType as any).currentKey || "string",
         fields: fields.map((field) => {
@@ -211,7 +212,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/tables`);
+      const res = await axiosInstance.get(`/api/db/tables`);
       return res.data;
     },
   });

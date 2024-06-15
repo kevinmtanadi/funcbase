@@ -6,6 +6,7 @@ import { FaPlus } from "react-icons/fa6";
 import classNames from "classnames";
 import CreateTableModal from "./CreateTableModal";
 import TableData from "./TableData";
+import axiosInstance from "../../pkg/axiosInstance";
 
 const Tables = () => {
   const [search, setSearch] = useState("");
@@ -13,7 +14,7 @@ const Tables = () => {
   const { data: tables } = useQuery<{ name: string }[]>({
     queryKey: ["tables", search],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/tables`, {
+      const res = await axiosInstance.get(`/api/db/tables`, {
         params: {
           search: search,
         },
@@ -49,7 +50,7 @@ const Tables = () => {
         <h1 className="text-xl font-bold my-auto ml-5">Table List</h1>
       </div>
       <div className="flex h-full">
-        <div className="flex flex-col items-center bg-slate-100 h-screen px-[20px] w-[250px]">
+        <div className="flex flex-col items-center bg-slate-100 h-screen px-[20px] min-w-[250px] w-[250px]">
           <div className="flex justify-center border-bottom-1 w-full py-4">
             <Input
               value={search}
