@@ -28,7 +28,7 @@ const TableSettingModal = ({
   const queryClient = useQueryClient();
   const { mutateAsync } = useMutation({
     mutationFn: () => {
-      return axiosInstance.delete(`/api/db/table/${tableName}`);
+      return axiosInstance.delete(`/api/${tableName}`);
     },
     onSuccess: () => {
       queryClient.refetchQueries({

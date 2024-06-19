@@ -1,8 +1,10 @@
 import axios from "axios";
+import Cookies from "cookie-ts";
 
 const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
+    Authorization: Cookies.get("_auth") ? `${Cookies.get("_auth")}` : "",
     // Add any cusom headers if needed
   },
 });

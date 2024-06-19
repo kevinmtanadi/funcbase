@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
+	"react-golang/src/backend/model"
 	"react-golang/src/backend/utils"
 	"strings"
 
@@ -22,8 +23,10 @@ type DatabaseAPI interface {
 	InsertData(c echo.Context) error
 	UpdateData(c echo.Context) error
 	DeleteData(c echo.Context) error
-	RunQuery(c echo.Context) error
 	DeleteTable(c echo.Context) error
+
+	RunQuery(c echo.Context) error
+	FetchQueryHistory(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -32,7 +35,7 @@ type DatabaseAPIImpl struct {
 
 func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 	return &DatabaseAPIImpl{
-		db: ioc.Get(constants.CONTAINER_USER_DB_NAME).(*gorm.DB),
+		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 	}
 }
 
@@ -48,10 +51,9 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 		})
 	}
 
-	query := d.db.Table("sqlite_master").
-		Select("name").
-		Where("type = ?", "table").
-		Where("name != ?", "sqlite_sequence").
+	query := d.db.Model(&model.Tables{}).
+		Select("name, is_auth").
+		Where("is_system = ?", false).
 		Order("name ASC")
 
 	if params.Search != "" {
@@ -68,16 +70,72 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+type fetchColumn struct {
+	FetchAuthColumn bool `json:"fetch_auth_column" query:"fetch_auth_column"`
+}
+
 func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 	tableName := c.Param("table_name")
-	var result []map[string]interface{} = make([]map[string]interface{}, 0)
 
-	if err := d.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", tableName)).
+	var params *fetchColumn = new(fetchColumn)
+	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	table, err := getTableInfo(d.db, tableName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	var result []model.Column
+	if err := d.db.Raw(fmt.Sprintf(`
+		SELECT 
+			info.cid,
+			info.name,
+			info.'type',
+			info.'notnull',
+			info.dflt_value,
+			fk.'table' AS reference
+		FROM pragma_table_info('%s') AS info
+		LEFT JOIN pragma_foreign_key_list('%s') AS fk ON
+		info.name = fk.'from'
+	`, tableName, tableName)).
 		Scan(&result).
 		Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
+	}
+
+	for i, col := range result {
+		if col.Reference != "" {
+			result[i].Type = "RELATION"
+		}
+	}
+
+	// If table is user type, prevent displaying authentication fields
+	if table.IsAuth {
+		var cleanedResult []model.Column
+		if params.FetchAuthColumn {
+			for _, row := range result {
+				if row.Name != "salt" {
+					cleanedResult = append(cleanedResult, row)
+				}
+			}
+
+			return c.JSON(http.StatusOK, cleanedResult)
+		}
+		for _, row := range result {
+			if row.Name != "password" && row.Name != "salt" {
+				cleanedResult = append(cleanedResult, row)
+			}
+		}
+
+		return c.JSON(http.StatusOK, cleanedResult)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -91,10 +149,19 @@ type filter struct {
 
 type fetchRowsParam struct {
 	Filter []filter `json:"filters,omitempty"`
+	Limit  int      `json:"limit,omitempty"`
 }
 
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
+
+	table, err := getTableInfo(d.db, tableName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
 	var result []map[string]interface{} = make([]map[string]interface{}, 0)
 
 	var params *fetchRowsParam = new(fetchRowsParam)
@@ -104,9 +171,36 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 		})
 	}
 
-	query := d.db.Table(tableName).
-		Select("*")
+	columns := "*"
+	if table.IsAuth {
+		allColumn := []model.Column{}
+		err = d.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", tableName)).
+			Scan(&allColumn).
+			Error
 
+		if err != nil {
+			return err
+		}
+
+		columns = ""
+
+		for _, column := range allColumn {
+			if column.Name != "password" && column.Name != "salt" {
+				if columns != "" {
+					columns = fmt.Sprintf("%s, %s", columns, column.Name)
+				} else {
+					columns = column.Name
+				}
+			}
+		}
+	}
+	query := d.db.Table(tableName)
+
+	if params.Limit > 0 {
+		query = query.Limit(params.Limit)
+	}
+
+	query = query.Select(columns)
 	for _, filter := range params.Filter {
 		query = query.Where(fmt.Sprintf("%s %s ?", filter.Column, filter.Operator), filter.Value)
 	}
@@ -152,6 +246,7 @@ type createTableReq struct {
 	TableName string   `json:"table_name"`
 	IDType    string   `json:"id_type"`
 	Fields    []fields `json:"fields"`
+	Type      string   `json:"table_type"`
 }
 
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
@@ -175,6 +270,19 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 	fields := []string{
 		id,
+	}
+
+	isAuth := false
+
+	if params.Type == "users" {
+		authFields := []string{
+			"email TEXT NOT NULL",
+			"password TEXT NOT NULL",
+			"salt TEXT NOT NULL",
+		}
+		isAuth = true
+
+		fields = append(fields, authFields...)
 	}
 
 	foreignKeys := []string{}
@@ -226,51 +334,62 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 	query = fmt.Sprintf(query, params.TableName, strings.Join(fields, ","))
 
-	err := d.db.Exec(query).Error
+	err := d.db.Transaction(func(tx *gorm.DB) error {
+		err := d.db.Exec(query).Error
+		if err != nil {
+			return err
+		}
+
+		// add index
+		for _, index := range indexes {
+			err = d.db.Exec(index).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		// check if trigger already exist
+		var triggerHolder int64
+		err = d.db.Table("sqlite_master").
+			Select("*").
+			Where("type = ?", "trigger").
+			Where("name = ?", fmt.Sprintf("updated_timestamp_%s", params.TableName)).
+			Count(&triggerHolder).Error
+		if err != nil {
+			return err
+		}
+
+		// add trigger to update updated_at value on update
+		if triggerHolder == 0 {
+			err = d.db.Exec(fmt.Sprintf(`
+			CREATE TRIGGER updated_timestamp_%s
+			AFTER UPDATE ON %s
+			FOR EACH ROW
+			BEGIN
+				UPDATE %s SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+			END
+			`, params.TableName, params.TableName, params.TableName)).Error
+			if err != nil {
+				return err
+			}
+		}
+		err = d.db.Create(
+			&model.Tables{
+				Name:     params.TableName,
+				IsAuth:   isAuth,
+				IsSystem: false,
+			}).
+			Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
-	}
-
-	// add index
-	for _, index := range indexes {
-		err = d.db.Exec(index).Error
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
-	}
-
-	// check if trigger already exist
-	var triggerHolder int64
-	err = d.db.Table("sqlite_master").
-		Select("*").
-		Where("type = ?", "trigger").
-		Where("name = ?", fmt.Sprintf("updated_timestamp_%s", params.TableName)).
-		Count(&triggerHolder).Error
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	// add trigger to update updated_at value on update
-	if triggerHolder == 0 {
-		err = d.db.Exec(fmt.Sprintf(`
-		CREATE TRIGGER updated_timestamp_%s
-		AFTER UPDATE ON %s
-		FOR EACH ROW
-		BEGIN
-			UPDATE %s SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
-		END
-		`, params.TableName, params.TableName, params.TableName)).Error
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
 	}
 
 	return c.JSON(http.StatusOK, nil)
@@ -294,15 +413,28 @@ func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
 }
 
 type insertDataReq struct {
-	TableName string                 `json:"table_name"`
-	Data      map[string]interface{} `json:"data"`
+	Data map[string]interface{} `json:"data"`
 }
 
 func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
+	tableName := c.Param("table_name")
+
 	var params *insertDataReq = new(insertDataReq)
 	if err := c.Bind(&params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
+		})
+	}
+
+	table, err := getTableInfo(d.db, tableName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+	if table.IsAuth {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": "Insertion to user type table can only be done through auth API",
 		})
 	}
 
@@ -318,7 +450,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 	filteredData["id"], _ = utils.GenerateRandomString(16)
 
-	result := d.db.Table(params.TableName).
+	result := d.db.Table(tableName).
 		Create(&filteredData)
 	if result.Error != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -330,12 +462,13 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 }
 
 type updateDataReq struct {
-	TableName string                 `json:"table_name"`
-	ID        string                 `json:"id"`
-	Data      map[string]interface{} `json:"data"`
+	ID   string                 `json:"id"`
+	Data map[string]interface{} `json:"data"`
 }
 
 func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
+	tableName := c.Param("table_name")
+
 	var params *updateDataReq = new(updateDataReq)
 	if err := c.Bind(&params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
@@ -343,7 +476,7 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 		})
 	}
 
-	result := d.db.Table(params.TableName).
+	result := d.db.Table(tableName).
 		Where("id = ?", params.ID).
 		Updates(&params.Data)
 	if result.Error != nil {
@@ -355,12 +488,22 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	return c.JSON(http.StatusOK, params.Data)
 }
 
+type deleteDataReq struct {
+	ID []string `json:"id"`
+}
+
 func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
 	tableName := c.Param("table_name")
-	id := c.Param("id")
+
+	var params *deleteDataReq = new(deleteDataReq)
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
 
 	result := d.db.Table(tableName).
-		Where("id = ?", id).
+		Where("id IN ?", params.ID).
 		Delete(nil)
 	if result.Error != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -383,6 +526,8 @@ func (d *DatabaseAPIImpl) RunQuery(c echo.Context) error {
 		})
 	}
 
+	var result []map[string]interface{} = make([]map[string]interface{}, 0)
+
 	rows, err := d.db.Raw(params.Query).Rows()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -390,8 +535,6 @@ func (d *DatabaseAPIImpl) RunQuery(c echo.Context) error {
 		})
 	}
 	defer rows.Close()
-
-	var result []map[string]interface{} = make([]map[string]interface{}, 0)
 
 	for rows.Next() {
 		var row map[string]interface{}
@@ -403,18 +546,64 @@ func (d *DatabaseAPIImpl) RunQuery(c echo.Context) error {
 		result = append(result, row)
 	}
 
+	go func(query string) {
+		d.db.Create(&model.QueryHistory{
+			Query: query,
+		})
+
+		d.db.Exec(`
+		DELETE FROM query_history
+		WHERE id NOT IN (
+			SELECT id
+			FROM (
+				SELECT id
+				FROM query_history
+				ORDER BY id DESC
+				LIMIT 10
+			)
+		);
+		`)
+	}(params.Query)
+
 	return c.JSON(http.StatusOK, result)
+}
+
+func (d *DatabaseAPIImpl) FetchQueryHistory(c echo.Context) error {
+	var queryHistories []model.QueryHistory
+
+	result := d.db.Limit(10).Order("id DESC").Find(&queryHistories)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": result.Error.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, queryHistories)
 }
 
 func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 	tableName := c.Param("table_name")
 
-	err := d.db.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
+	err := d.db.Transaction(func(tx *gorm.DB) error {
+		err := d.db.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
+		if err != nil {
+			return err
+		}
+
+		err = d.db.
+			Where("lower(name) = ?", strings.ToLower(tableName)).
+			Delete(&model.Tables{}).
+			Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
-
 	return c.JSON(http.StatusOK, nil)
 }

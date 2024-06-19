@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
@@ -19,29 +20,30 @@ type AdminAPI interface {
 }
 
 type AdminAPIImpl struct {
-	appDb *gorm.DB
+	db *gorm.DB
 }
 
 func NewAdminAPI(ioc di.Container) AdminAPI {
 	return &AdminAPIImpl{
-		appDb: ioc.Get(constants.CONTAINER_APP_DB_NAME).(*gorm.DB),
+		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 	}
 }
 
-type registerReq struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+type adminRegisterReq struct {
+	Email        string `json:"email"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	ReturnsToken bool   `json:"returns_token"`
 }
 
 func (h *AdminAPIImpl) Register(c echo.Context) error {
-	var body *registerReq = new(registerReq)
+	var body *adminRegisterReq = new(adminRegisterReq)
 	if err := c.Bind(body); err != nil {
 		return c.String(http.StatusBadRequest, "Bad Request")
 	}
 
 	var exist int64
-	err := h.appDb.Model(&model.Admin{}).
+	err := h.db.Model(&model.Admin{}).
 		Where("email = ?", body.Email).
 		Count(&exist).Error
 	if err != nil {
@@ -68,36 +70,44 @@ func (h *AdminAPIImpl) Register(c echo.Context) error {
 		Salt:     salt,
 	}
 
-	err = h.appDb.Create(&newAdmin).Error
+	err = h.db.Create(&newAdmin).Error
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
-	token, err := auth_libraries.GenerateJWT(newAdmin.ID)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
+	if body.ReturnsToken {
+		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
+			"sub":   id,
+			"email": newAdmin.Email,
+			"roles": []string{"user", "admin"},
+		})
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "success",
+			"token":   token,
 		})
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"token": token,
+		"message": "success",
 	})
 }
 
-type loginReq struct {
+type adminLoginReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 func (h *AdminAPIImpl) Login(c echo.Context) error {
-	var body *loginReq = new(loginReq)
+	var body *adminLoginReq = new(adminLoginReq)
 	if err := c.Bind(body); err != nil {
 		return c.String(http.StatusBadRequest, "Bad Request")
 	}
 
 	var admin model.Admin
-	err := h.appDb.Model(&model.Admin{}).
+	err := h.db.Model(&model.Admin{}).
 		Where("email = ?", body.Email).
 		First(&admin).Error
 	if err != nil {
@@ -112,7 +122,11 @@ func (h *AdminAPIImpl) Login(c echo.Context) error {
 		})
 	}
 
-	token, err := auth_libraries.GenerateJWT(admin.ID)
+	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
+		"sub":   admin.ID,
+		"email": admin.Email,
+		"roles": []string{"user", "admin"},
+	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
@@ -125,13 +139,30 @@ func (h *AdminAPIImpl) Login(c echo.Context) error {
 }
 
 func (h *AdminAPIImpl) FetchAdminList(c echo.Context) error {
-
 	var admins []model.Admin
 
-	err := h.appDb.Find(&admins).Error
+	err := h.db.Find(&admins).Error
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, admins)
+	columns := []model.Column{}
+	err = h.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", "admin")).
+		Scan(&columns).
+		Error
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+	}
+
+	cleanedColumns := []model.Column{}
+	for _, column := range columns {
+		if column.Name != "password" && column.Name != "salt" {
+			cleanedColumns = append(cleanedColumns, column)
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"rows":    admins,
+		"columns": cleanedColumns,
+	})
 }

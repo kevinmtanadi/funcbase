@@ -6,16 +6,14 @@ import { NextUIProvider } from "@nextui-org/react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Tables from "./page/Tables/Tables.tsx";
-import SQLEditor from "./page/SQLEditor.tsx";
-import Function from "./page/Function/Function.tsx";
+import SQLEditor from "./page/SQLEditor/SQLEditor.tsx";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import createStore from "react-auth-kit/createStore";
 import AuthProvider from "react-auth-kit";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import SignIn from "./page/SignIn.tsx";
-import refresh from "./utils/refresh.js";
-import Cookies from "cookie-ts";
-import axios from "axios";
+import Admin from "./page/Admin/Admin.tsx";
+import InitialRegister from "./page/InitialRegister.tsx";
 
 const router = createBrowserRouter([
   {
@@ -39,10 +37,10 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "/function",
+        path: "/admin",
         element: (
           <ProtectedRoute>
-            <Function />
+            <Admin />,
           </ProtectedRoute>
         ),
       },
@@ -51,6 +49,10 @@ const router = createBrowserRouter([
   {
     path: "/signin",
     element: <SignIn />,
+  },
+  {
+    path: "/signup",
+    element: <InitialRegister />,
   },
 ]);
 const queryClient = new QueryClient({

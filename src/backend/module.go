@@ -32,18 +32,11 @@ func (m *Module) IOC(app *echo.Echo) di.Container {
 			},
 		},
 		di.Def{
-			Name: constants.CONTAINER_APP_DB_NAME,
+			Name: constants.CONTAINER_DB_NAME,
 			Build: func(ctn di.Container) (interface{}, error) {
-				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("APP_DB_PATH"), pkg_sqlite.SQLiteOption{
+				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("DB_PATH"), pkg_sqlite.SQLiteOption{
 					Migrate: true,
 				})
-				return db, err
-			},
-		},
-		di.Def{
-			Name: constants.CONTAINER_USER_DB_NAME,
-			Build: func(ctn di.Container) (interface{}, error) {
-				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("USER_DB_PATH"))
 				return db, err
 			},
 		},

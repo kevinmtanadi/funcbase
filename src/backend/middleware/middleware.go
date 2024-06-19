@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
@@ -25,31 +25,27 @@ func RequireAuth() echo.MiddlewareFunc {
 				"error":  "unauthorized",
 			}
 
-			cookiesStr := c.Request().Header.Get("Cookie")
-			if cookiesStr == "" {
+			authToken := c.Request().Header.Get("Authorization")
+			if authToken == "" {
 				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 			}
 
-			cookies := strings.Split(cookiesStr, ";")
-			for _, ck := range cookies {
-				cookie := strings.TrimSpace(ck)
-				key, value := strings.Split(cookie, "=")[0], strings.Split(cookie, "=")[1]
-				if key == "_auth" {
-					fmt.Println(value)
-					claims, err := parseJWT(value)
-					if err != nil {
-						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-					}
-
-					userID, ok := claims["user_id"].(string)
-					if !ok {
-						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-					}
-
-					c.Set("user_id", userID)
-					return next(c)
-				}
+			claims, err := parseJWT(authToken)
+			if err != nil {
+				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 			}
+
+			// token is expired
+			if float64(time.Now().Unix()) > claims["exp"].(float64) {
+				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+			}
+
+			userID, ok := claims["sub"].(string)
+			if ok {
+				c.Set("user_id", userID)
+				return next(c)
+			}
+
 			return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 		}
 	}

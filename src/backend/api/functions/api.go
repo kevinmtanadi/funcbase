@@ -17,14 +17,12 @@ type FunctionAPI interface {
 }
 
 type FunctionAPIImpl struct {
-	appDb  *gorm.DB
-	userDb *gorm.DB
+	db *gorm.DB
 }
 
 func NewFunctionAPI(ioc di.Container) FunctionAPI {
 	return FunctionAPIImpl{
-		appDb:  ioc.Get(constants.CONTAINER_APP_DB_NAME).(*gorm.DB),
-		userDb: ioc.Get(constants.CONTAINER_USER_DB_NAME).(*gorm.DB),
+		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 	}
 }
 
@@ -34,7 +32,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
 	}
 
-	err := f.userDb.Transaction(func(tx *gorm.DB) error {
+	err := f.db.Transaction(func(tx *gorm.DB) error {
 		for _, command := range body.Commands {
 			for actionType, cmd := range command {
 				switch actionType {

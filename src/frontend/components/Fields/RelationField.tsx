@@ -29,7 +29,7 @@ const RelationField = ({
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axios.get(`/api/db/tables`);
+      const res = await axios.get(`/api/tables`);
       console.log(res.data);
       return res.data;
     },

@@ -8,7 +8,6 @@ import {
   Button,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import TextInput from "../../components/Inputs/TextInput";
 import DatetimeInput from "../../components/Inputs/DatetimeInput";
 import NumberInput from "../../components/Inputs/NumberInput";
@@ -16,22 +15,25 @@ import BoolInput from "../../components/Inputs/BoolInput";
 import { useFormik } from "formik";
 import { toast } from "react-toastify";
 import axiosInstance from "../../pkg/axiosInstance";
+import { Table } from "./Tables";
+import RelationInput from "../../components/Inputs/RelationInput";
+import { useEffect } from "react";
 
 interface InsertDataModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tableName: string;
+  table: Table;
 }
 
-const InsertDataModal = ({
-  isOpen,
-  onClose,
-  tableName,
-}: InsertDataModalProps) => {
+const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
   const { data: columns } = useQuery<any[]>({
-    queryKey: ["columns", tableName],
+    queryKey: ["columns", table.name, "insertion"],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/${table.name}/columns`, {
+        params: {
+          fetch_auth_column: table.is_auth,
+        },
+      });
       return res.data;
     },
   });
@@ -64,7 +66,7 @@ const InsertDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             onChange={formik.handleChange}
           />
@@ -76,7 +78,7 @@ const InsertDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             onChange={formik.handleChange}
           />
@@ -86,7 +88,7 @@ const InsertDataModal = ({
           <BoolInput
             id={column.name}
             name={column.name}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             onChange={formik.handleChange}
           />
@@ -98,9 +100,26 @@ const InsertDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             onChange={formik.handleChange}
+          />
+        );
+      case "RELATION":
+        return (
+          <RelationInput
+            id={column.name}
+            name={column.name}
+            isRequired={column.notnull === 0}
+            key={column.name}
+            label={column.name}
+            onChange={(value: string) =>
+              formik.setValues({
+                ...formik.values,
+                [column.name]: value,
+              })
+            }
+            relatedTable={column.reference}
           />
         );
       default:
@@ -109,7 +128,7 @@ const InsertDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             onChange={formik.handleChange}
           />
@@ -121,15 +140,23 @@ const InsertDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axiosInstance.post(`/api/db/row/insert`, {
-        table_name: tableName,
+      if (table.is_auth) {
+        const res = await axiosInstance.post(
+          `/api/auth/register/${table.name}`,
+          { data: data }
+        );
+
+        return res.data;
+      }
+
+      const res = await axiosInstance.post(`/api/${table.name}/insert`, {
         data: data,
       });
       return res.data;
     },
     onSuccess: () => {
       queryClient.refetchQueries({
-        queryKey: ["rows", tableName],
+        queryKey: ["rows", table.name],
       });
       onClose();
     },
@@ -146,6 +173,10 @@ const InsertDataModal = ({
       });
     },
   });
+
+  useEffect(() => {
+    console.log(formik.values);
+  }, [formik]);
 
   return (
     <>

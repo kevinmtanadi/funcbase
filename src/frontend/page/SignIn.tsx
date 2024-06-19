@@ -66,7 +66,7 @@ const SignIn = () => {
               >
                 <Input
                   classNames={{
-                    inputWrapper: "rounded-md",
+                    inputWrapper: "rounded-md ",
                     label: "text-md font-semibold",
                   }}
                   variant="flat"

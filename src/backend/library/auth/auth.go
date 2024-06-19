@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,12 +37,18 @@ func VerifyPassword(password, salt, storedPassword string) bool {
 	return err == nil
 }
 
-func GenerateJWT(userID string) (string, error) {
+func GenerateJWT(payload map[string]interface{}) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS512)
 
 	claims := token.Claims.(jwt.MapClaims)
-	claims["user_id"] = userID
+
+	claims["iss"] = "fullbase"
 	claims["exp"] = time.Now().Add(time.Hour * 24 * 7).Unix()
+	claims["iat"] = time.Now().Unix()
+	claims["jti"], _ = uuid.NewV7()
+	for k, v := range payload {
+		claims[k] = v
+	}
 
 	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
@@ -50,3 +57,5 @@ func GenerateJWT(userID string) (string, error) {
 
 	return tokenStr, nil
 }
+
+// need to add jwt revoke

@@ -15,10 +15,12 @@ import {
   TableCell,
   Skeleton,
   Chip,
+  Selection,
+  Card,
+  CardBody,
 } from "@nextui-org/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 import { CgKey } from "react-icons/cg";
 import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";
@@ -33,10 +35,15 @@ import UpdateDataModal from "./UpdateDataModal";
 import { FiFilter } from "react-icons/fi";
 import FilterModal from "./FilterModal";
 import axiosInstance from "../../pkg/axiosInstance";
+import FloatingBox from "../../components/FloatingBox";
+import { TbCirclesRelation } from "react-icons/tb";
+import { toast } from "react-toastify";
 
 interface TableDataProps {
-  tableName: string;
-  renderUpper?: boolean;
+  table: {
+    name: string;
+    is_auth: boolean;
+  };
 }
 
 export interface FetchFilter {
@@ -45,15 +52,14 @@ export interface FetchFilter {
   value: string;
 }
 
-const TableData = ({ tableName, renderUpper }: TableDataProps) => {
-  // const [rowsPerPage, setRowsPerPage] = useState(20);
-  // const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({});
-  // const [page, setPage] = useState(1);
-
+const TableData = ({ table }: TableDataProps) => {
   const { data: columns } = useQuery<any[]>({
-    queryKey: ["columns", tableName],
+    queryKey: ["columns", table.name],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
+      if (table.name === "") {
+        return null;
+      }
+      const res = await axiosInstance.get(`/api/${table.name}/columns`);
       return res.data;
     },
   });
@@ -61,9 +67,13 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
   const [filter, setFilter] = useState<FetchFilter[]>([]);
 
   const { data: rows, isLoading } = useQuery<any[]>({
-    queryKey: ["rows", tableName, filter],
+    queryKey: ["rows", table.name, filter],
     queryFn: async () => {
-      const res = await axiosInstance.post(`/api/db/rows/${tableName}`, {
+      if (table.name === "") {
+        return null;
+      }
+
+      const res = await axiosInstance.post(`/api/${table.name}/rows`, {
         filters: filter
           .filter((f) => f.column != "" && f.operator != "" && f.value !== "")
           .map((f) => {
@@ -99,7 +109,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
 
   const refetchData = async () => {
     await queryClient.refetchQueries({
-      queryKey: ["rows", tableName],
+      queryKey: ["rows", table.name],
       type: "active",
     });
   };
@@ -137,6 +147,15 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
           <TooltipContainer column={column}>
             <div className="flex items-center gap-2">
               <RiText size={16} />
+              <p>{column.name}</p>
+            </div>
+          </TooltipContainer>
+        );
+      case "RELATION":
+        return (
+          <TooltipContainer column={column}>
+            <div className="flex items-center gap-2">
+              <TbCirclesRelation size={16} />
               <p>{column.name}</p>
             </div>
           </TooltipContainer>
@@ -295,7 +314,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
 
   const TopContent = () => {
     return (
-      <div className="mt-3 mx-3 md:flex block items-center justify-between">
+      <div className="my-3 mx-3 md:flex block items-center justify-between">
         <div className="flex gap-2 items-center justify-between md:justify-normal">
           <Breadcrumbs
             size="lg"
@@ -305,7 +324,7 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
           >
             <BreadcrumbItem>Table</BreadcrumbItem>
             <BreadcrumbItem>
-              <p>{tableName}</p>
+              <p>{table.name}</p>
             </BreadcrumbItem>
           </Breadcrumbs>
           <div className="flex gap-2 items-center">
@@ -354,109 +373,140 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
     );
   };
 
+  const [selectedRows, setSelectedRows] = useState<Selection>(new Set([]));
+  const { mutateAsync } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.delete(`/api/${table.name}/rows`, {
+        data: {
+          id: Array.from(selectedRows),
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({
+        queryKey: ["rows", table.name],
+        type: "active",
+      });
+      setSelectedRows(new Set([]));
+    },
+  });
+
+  const deleteMultipleRow = (n: number) => {
+    toast.promise(mutateAsync(), {
+      pending: `Deleting ${n} data`,
+      success: `Successfully deleted ${n} data`,
+      error: "Failed to delete",
+    });
+  };
+
   return (
     <>
-      <Table
-        onRowAction={(key) => {
-          onUpdateOpen();
-          setSelectedRow(key.toString());
-        }}
-        topContent={renderUpper ? <TopContent /> : undefined}
-        isHeaderSticky={true}
-        classNames={{
-          base: "max-h-[calc(100dvh_-_45px_-_5px)] max-w-[calc(100vw_-_275px)] overflow-y-scroll overflow-x-scroll",
-          thead: "[&>tr]:first:rounded-none",
-          th: [
-            "text-default-500",
-            "border-b",
-            "rounded-none",
-            "border-divider",
-            "hover:bg-slate-200",
-            "first:hover:bg-gray-100",
-            "first:w-[50px]",
-          ],
-          tr: "[&>th]:first:rounded-none [&>th]:last:rounded-none border-b-1 rounded-none",
-          td: [
-            "first:w-[50px]",
-            "group-data-[first=true]:first:before:rounded-none",
-            "group-data-[first=true]:last:before:rounded-none",
-            "group-data-[middle=true]:before:rounded-none",
-            "group-data-[last=true]:first:before:rounded-none",
-            "group-data-[last=true]:last:before:rounded-none",
-            "py-2",
-          ],
-        }}
-        checkboxesProps={{
-          classNames: {
-            wrapper:
-              "after:bg-primary max-w-[50px] after:text-background text-background",
-          },
-        }}
-        selectionMode="multiple"
-        removeWrapper
-      >
-        {columns && rows ? (
-          <TableHeader columns={columns}>
-            {(column) => (
-              <TableColumn key={column.name}>
-                {renderHeader(column)}
+      <div className="flex flex-col">
+        <TopContent />
+        <Table
+          selectedKeys={selectedRows}
+          onSelectionChange={(keys) => setSelectedRows(keys)}
+          onRowAction={(key) => {
+            onUpdateOpen();
+            setSelectedRow(key.toString());
+          }}
+          isHeaderSticky={true}
+          classNames={{
+            base: "max-h-[calc(100dvh_-_45px_-_5px)] max-w-[calc(100vw_-_315px)] overflow-y-scroll overflow-x-scroll",
+            thead: "[&>tr]:first:rounded-none",
+            th: [
+              "text-default-500",
+              "border-b",
+              "rounded-none",
+              "border-divider",
+              "hover:bg-slate-200",
+              "first:hover:bg-gray-100",
+              "first:w-[50px]",
+            ],
+            tr: "[&>th]:first:rounded-none [&>th]:last:rounded-none border-b-1 rounded-none",
+            td: [
+              "first:w-[50px]",
+              "group-data-[first=true]:first:before:rounded-none",
+              "group-data-[first=true]:last:before:rounded-none",
+              "group-data-[middle=true]:before:rounded-none",
+              "group-data-[last=true]:first:before:rounded-none",
+              "group-data-[last=true]:last:before:rounded-none",
+              "py-2",
+            ],
+          }}
+          checkboxesProps={{
+            classNames: {
+              wrapper:
+                "after:bg-primary max-w-[50px] after:text-background text-background",
+            },
+          }}
+          selectionMode="multiple"
+          removeWrapper
+        >
+          {columns && rows ? (
+            <TableHeader columns={columns}>
+              {(column) => (
+                <TableColumn key={column.name}>
+                  {renderHeader(column)}
+                </TableColumn>
+              )}
+            </TableHeader>
+          ) : (
+            <TableHeader>
+              <TableColumn>
+                <Skeleton className="h-[22px] rounded-md" />
               </TableColumn>
-            )}
-          </TableHeader>
-        ) : (
-          <TableHeader>
-            <TableColumn>
-              <Skeleton className="h-[22px] rounded-md" />
-            </TableColumn>
-            <TableColumn>
-              <Skeleton className="h-[22px] rounded-md" />
-            </TableColumn>
-            <TableColumn>
-              <Skeleton className="h-[22px] rounded-md" />
-            </TableColumn>
-          </TableHeader>
-        )}
+              <TableColumn>
+                <Skeleton className="h-[22px] rounded-md" />
+              </TableColumn>
+              <TableColumn>
+                <Skeleton className="h-[22px] rounded-md" />
+              </TableColumn>
+            </TableHeader>
+          )}
 
-        {columns && rows ? (
-          <TableBody emptyContent="No records found" items={rows}>
-            {(item) => (
-              <TableRow className="cursor-pointer" key={item.id}>
-                {(columnKey) => (
-                  <TableCell>{renderCell(item, columnKey)}</TableCell>
-                )}
-              </TableRow>
-            )}
-          </TableBody>
-        ) : (
-          <TableBody isLoading={isLoading}>
-            {[1, 2, 3].map((item) => (
-              <TableRow key={item}>
-                <TableCell>
-                  <Skeleton className="h-[22px] rounded-md" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-[22px] rounded-md" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-[22px] rounded-md" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        )}
-      </Table>
+          {columns && rows ? (
+            <TableBody emptyContent="No records found" items={rows}>
+              {(item) => (
+                <TableRow className="cursor-pointer" key={item.id}>
+                  {(columnKey) => (
+                    <TableCell>{renderCell(item, columnKey)}</TableCell>
+                  )}
+                </TableRow>
+              )}
+            </TableBody>
+          ) : (
+            <TableBody isLoading={isLoading}>
+              {[1, 2, 3].map((item) => (
+                <TableRow key={item}>
+                  <TableCell>
+                    <Skeleton className="h-[22px] rounded-md" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-[22px] rounded-md" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-[22px] rounded-md" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          )}
+        </Table>
+      </div>
+
       <InsertDataModal
-        tableName={tableName}
+        table={table}
         isOpen={isInsertOpen}
         onClose={onInsertClose}
       />
       <TableSettingModal
-        tableName={tableName}
+        tableName={table.name}
         isOpen={isSettingOpen}
         onClose={onSettingClose}
       />
       <UpdateDataModal
-        tableName={tableName}
+        tableName={table.name}
         isOpen={isUpdateOpen}
         onClose={onUpdateClose}
         id={selectedRow}
@@ -466,8 +516,35 @@ const TableData = ({ tableName, renderUpper }: TableDataProps) => {
         onClose={onFilterClose}
         filters={filter}
         setFilter={setFilter}
-        tableName={tableName}
+        tableName={table.name}
       />
+      <FloatingBox isOpen={(selectedRows as any).size > 0}>
+        <Card>
+          <CardBody className="pl-6 pr-2 py-2">
+            <div className="flex gap-10 items-center">
+              <p>
+                <b>{(selectedRows as any).size}</b> selected
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setSelectedRows(new Set([]))}
+                  className="p-0 min-w-0 w-[80px] h-8 bg-transparent hover:bg-slate-200"
+                  radius="sm"
+                >
+                  Clear
+                </Button>
+                <Button
+                  className="p-0 min-w-0 w-[80px] h-8 bg-red-200"
+                  radius="sm"
+                  onClick={() => deleteMultipleRow((selectedRows as any).size)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </FloatingBox>
     </>
   );
 };

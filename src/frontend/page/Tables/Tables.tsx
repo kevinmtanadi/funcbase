@@ -1,20 +1,26 @@
 import { Button, Input, useDisclosure } from "@nextui-org/react";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FaPlus } from "react-icons/fa6";
+import { FaPlus, FaRegUser, FaTable } from "react-icons/fa6";
 import classNames from "classnames";
 import CreateTableModal from "./CreateTableModal";
 import TableData from "./TableData";
 import axiosInstance from "../../pkg/axiosInstance";
+import { LuTable, LuTable2 } from "react-icons/lu";
+import { PiTable } from "react-icons/pi";
+
+export interface Table {
+  name: string;
+  is_auth: boolean;
+}
 
 const Tables = () => {
   const [search, setSearch] = useState("");
 
-  const { data: tables } = useQuery<{ name: string }[]>({
+  const { data: tables } = useQuery<Table[]>({
     queryKey: ["tables", search],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/db/tables`, {
+      const res = await axiosInstance.get(`/api/tables`, {
         params: {
           search: search,
         },
@@ -23,17 +29,20 @@ const Tables = () => {
     },
   });
 
-  const [selectedTable, setSelectedTable] = useState("");
+  const [selectedTable, setSelectedTable] = useState<Table>({
+    name: "",
+    is_auth: false,
+  });
   useEffect(() => {
     if (!tables) {
-      setSelectedTable("");
+      setSelectedTable({ name: "", is_auth: false });
     }
   }, [tables]);
 
   var isFirst = true;
   useEffect(() => {
     if (isFirst && tables && tables.length > 0) {
-      setSelectedTable(tables[0].name);
+      setSelectedTable(tables[0]);
       isFirst = false;
     }
   }, [tables]);
@@ -62,15 +71,16 @@ const Tables = () => {
           <div className="flex flex-col gap-2 w-full">
             {tables?.map((table) => (
               <div
-                onClick={() => setSelectedTable(table.name)}
+                onClick={() => setSelectedTable(table)}
                 className={classNames({
-                  "rounded-md px-3 border-bottom-1 w-full py-2 hover:bg-slate-300 cursor-pointer":
+                  "rounded-md flex items-center gap-3 px-3 border-bottom-1 w-full py-2 hover:bg-slate-300 cursor-pointer":
                     true,
-                  "bg-slate-300": table.name === selectedTable,
+                  "bg-slate-300": table.name === selectedTable.name,
                 })}
                 key={table.name}
               >
-                {table.name}
+                <div>{table.is_auth ? <FaRegUser /> : <FaTable />}</div>
+                <p>{table.name}</p>
               </div>
             ))}
             <Button
@@ -85,7 +95,7 @@ const Tables = () => {
         </div>
         <div className="w-full">
           {selectedTable ? (
-            <TableData renderUpper tableName={selectedTable} />
+            <TableData table={selectedTable} />
           ) : (
             <div className="w-full mt-10 flex items-center justify-center">
               <p className="text-lg text-slate-400">No tables found</p>

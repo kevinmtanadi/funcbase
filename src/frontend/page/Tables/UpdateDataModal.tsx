@@ -11,9 +11,9 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Spinner,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import TextInput from "../../components/Inputs/TextInput";
 import DatetimeInput from "../../components/Inputs/DatetimeInput";
 import NumberInput from "../../components/Inputs/NumberInput";
@@ -42,7 +42,7 @@ const UpdateDataModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/db/columns/${tableName}`);
+      const res = await axiosInstance.get(`/api/${tableName}/columns`);
       return res.data;
     },
   });
@@ -52,7 +52,7 @@ const UpdateDataModal = ({
     queryFn: async () => {
       if (!id) return;
 
-      const res = await axiosInstance.get(`/api/db/table/${tableName}/${id}`);
+      const res = await axiosInstance.get(`/api/${tableName}/${id}`);
       return res.data;
     },
   });
@@ -62,7 +62,7 @@ const UpdateDataModal = ({
       case "TEXT":
         return (
           <TextInput
-            isDisabled={isLoading}
+            isDisabled={isLoading || column.name === "id"}
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
@@ -102,7 +102,7 @@ const UpdateDataModal = ({
       case "TIMESTAMP":
         return (
           <DatetimeInput
-            isDisabled={isLoading}
+            isDisabled={true}
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
@@ -136,8 +136,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axiosInstance.put(`/api/db/row/update`, {
-        table_name: tableName,
+      const res = await axiosInstance.put(`/api/${tableName}/update`, {
         id: id,
         data: data,
       });
@@ -171,7 +170,9 @@ const UpdateDataModal = ({
 
   const { mutateAsync: deleteMutation } = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.delete(`/api/db/row/${tableName}/${id}`);
+      const res = await axiosInstance.delete(`/api/${tableName}/rows`, {
+        data: { id: [id] },
+      });
       return res.data;
     },
     onSuccess: () => {
@@ -206,24 +207,28 @@ const UpdateDataModal = ({
                   <BreadcrumbItem>{tableName}</BreadcrumbItem>
                   <BreadcrumbItem>{id}</BreadcrumbItem>
                 </Breadcrumbs>
-                <Popover placement="bottom" radius="sm">
-                  <PopoverTrigger>
-                    <Button className="bg-transparent hover:bg-default-100 h-7 p-0 w-7 min-w-0">
-                      <BsThreeDots />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <Button
-                      onClick={handleDelete}
-                      className="bg-transparent min-w-0 w-full p-0"
-                    >
-                      <div className="flex gap-2 justify-between w-full items-center">
-                        <p className="font-semibold text-red-500">Delete</p>
-                        <FaRegTrashAlt className="text-red-500" />
-                      </div>
-                    </Button>
-                  </PopoverContent>
-                </Popover>
+                {isLoading ? (
+                  <Spinner color="default" size="sm" />
+                ) : (
+                  <Popover placement="bottom" radius="sm">
+                    <PopoverTrigger>
+                      <Button className="bg-transparent hover:bg-default-100 h-7 p-0 w-7 min-w-0">
+                        <BsThreeDots />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <Button
+                        onClick={handleDelete}
+                        className="bg-transparent min-w-0 w-full p-0"
+                      >
+                        <div className="flex gap-2 justify-between w-full items-center">
+                          <p className="font-semibold text-red-500">Delete</p>
+                          <FaRegTrashAlt className="text-red-500" />
+                        </div>
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
             </ModalHeader>
             <ModalBody className="mb-3">

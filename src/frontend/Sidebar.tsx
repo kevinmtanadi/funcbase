@@ -27,7 +27,7 @@ const Sidebar = ({ tabs }: SidebarProps) => {
   const { pathname } = location;
 
   return (
-    <div className="pt-4 sticky top-0 flex flex-col justify-between h-full w-[65px] bg-slate-200">
+    <div className="pt-4 top-0 sticky flex flex-col justify-between h-screen w-[65px] bg-slate-200">
       <div className="flex flex-col gap-4 items-center">
         {tabs.map((tab) => (
           <SidebarItem key={tab.name} tab={tab} active={pathname == tab.path} />
