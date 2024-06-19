@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 *.exe
+*.exe~
+backend.exe~
 
 config.json
 dummy
