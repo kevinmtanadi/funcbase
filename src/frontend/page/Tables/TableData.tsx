@@ -20,7 +20,7 @@ import {
   CardBody,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { CgKey } from "react-icons/cg";
 import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";

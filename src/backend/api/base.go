@@ -2,6 +2,7 @@ package api
 
 import (
 	api_function "react-golang/src/backend/api/functions"
+	api_function_2 "react-golang/src/backend/api/functions2"
 	"react-golang/src/backend/middleware"
 	"react-golang/src/backend/model"
 
@@ -11,12 +12,13 @@ import (
 )
 
 type API struct {
-	app      *echo.Echo
-	router   *echo.Group
-	Admin    AdminAPI
-	Auth     AuthAPI
-	Database DatabaseAPI
-	Function api_function.FunctionAPI
+	app          *echo.Echo
+	router       *echo.Group
+	Admin        AdminAPI
+	Auth         AuthAPI
+	Database     DatabaseAPI
+	Function     api_function.FunctionAPI
+	Function2API api_function_2.Function2API
 }
 
 type Search struct {
@@ -25,12 +27,13 @@ type Search struct {
 
 func NewAPI(app *echo.Echo, ioc di.Container) *API {
 	return &API{
-		app:      app,
-		router:   app.Group("/api"),
-		Admin:    NewAdminAPI(ioc),
-		Auth:     NewAuthAPI(ioc),
-		Database: NewDatabaseAPI(ioc),
-		Function: api_function.NewFunctionAPI(ioc),
+		app:          app,
+		router:       app.Group("/api"),
+		Admin:        NewAdminAPI(ioc),
+		Auth:         NewAuthAPI(ioc),
+		Database:     NewDatabaseAPI(ioc),
+		Function:     api_function.NewFunctionAPI(ioc),
+		Function2API: api_function_2.NewFunctionAPI(ioc),
 	}
 }
 
@@ -44,17 +47,17 @@ func (api *API) Serve() {
 func (api *API) MainAPI() {
 	mainRouter := api.router.Group("")
 
-	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.RequireAuth())
-	mainRouter.POST("/query", api.Database.RunQuery, middleware.RequireAuth())
-	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.RequireAuth())
-	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.RequireAuth())
-	mainRouter.POST("/:table_name/rows", api.Database.FetchRows, middleware.RequireAuth())
-	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.RequireAuth())
-	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.RequireAuth())
-	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.RequireAuth())
-	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.RequireAuth())
-	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.RequireAuth())
-	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.RequireAuth())
+	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.RequireAuth(true))
+	mainRouter.POST("/query", api.Database.RunQuery, middleware.RequireAuth(true))
+	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.RequireAuth(true))
+	mainRouter.POST("/:table_name/rows", api.Database.FetchRows, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.RequireAuth(true))
+	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.RequireAuth(true))
+	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.RequireAuth(true))
+	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.RequireAuth(true))
+	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.RequireAuth(true))
+	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.RequireAuth(true))
 }
 
 func (api *API) AdminAPI() {
@@ -75,7 +78,8 @@ func (api *API) AuthAPI() {
 func (api *API) FunctionAPI() {
 	functionRouter := api.router.Group("/function")
 
-	functionRouter.POST("/run", api.Function.RunFunction)
+	functionRouter.POST("/run", api.Function.RunFunction, middleware.RequireAuth(false))
+	functionRouter.POST("/run2", api.Function2API.RunFunction)
 }
 
 func getTableInfo(db *gorm.DB, tableName string) (model.Tables, error) {

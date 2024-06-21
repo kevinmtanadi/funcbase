@@ -16,7 +16,7 @@ func UseMiddleware(app *echo.Echo) {
 	app.Use(middleware.Recover())
 }
 
-func RequireAuth() echo.MiddlewareFunc {
+func RequireAuth(required bool) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			unauthorizedErr := map[string]interface{}{
@@ -27,17 +27,23 @@ func RequireAuth() echo.MiddlewareFunc {
 
 			authToken := c.Request().Header.Get("Authorization")
 			if authToken == "" {
-				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				if required {
+					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				}
 			}
 
 			claims, err := parseJWT(authToken)
 			if err != nil {
-				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				if required {
+					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				}
 			}
 
 			// token is expired
 			if float64(time.Now().Unix()) > claims["exp"].(float64) {
-				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				if required {
+					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+				}
 			}
 
 			userID, ok := claims["sub"].(string)
@@ -46,7 +52,11 @@ func RequireAuth() echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+			if required {
+				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+			}
+
+			return next(c)
 		}
 	}
 }

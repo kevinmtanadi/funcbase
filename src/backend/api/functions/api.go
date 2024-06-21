@@ -2,7 +2,6 @@ package api_function
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/utils"
@@ -44,6 +43,13 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 						return err
 					}
 
+					for k, v := range insert.Data {
+						if v.(string) == "$user" {
+							userID := c.Get("user_id").(string)
+							insert.Data[k] = userID
+						}
+					}
+
 					insert.Data["id"] = id
 					table := tx.Table(insert.Table)
 					result := table.Create(insert.Data)
@@ -71,7 +77,13 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 						return err
 					}
 
-					fmt.Println(update.Filter)
+					for k, v := range update.Data {
+						if v.(string) == "$user" {
+							userID := c.Get("user_id").(string)
+							update.Data[k] = userID
+						}
+					}
+
 					table := tx.Table(update.Table)
 					result := applyFilter(table, update.Filter).Updates(update.Data)
 					if result.Error != nil {
