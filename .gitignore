@@ -31,3 +31,8 @@ dummy
 dummy/*
 
 .env
+
+database.db
+*.db
+db/*
+db
