@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import React, { useCallback } from "react";
 import axiosInstance from "../../pkg/axiosInstance";
 import {
@@ -41,8 +41,6 @@ const Admin = () => {
       return res.data;
     },
   });
-
-  const queryClient = useQueryClient();
 
   const TooltipContainer = ({ column, children, className }: any) => {
     const content = (

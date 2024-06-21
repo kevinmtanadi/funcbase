@@ -8,10 +8,10 @@ import {
 } from "@nextui-org/react";
 import { Field } from "../../page/Tables/CreateTableModal";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { LuSettings } from "react-icons/lu";
+import axiosInstance from "../../pkg/axiosInstance";
 
 interface RelationFieldProps {
   field: Field;
@@ -29,7 +29,7 @@ const RelationField = ({
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axios.get(`/api/tables`);
+      const res = await axiosInstance.get(`/api/tables`);
       console.log(res.data);
       return res.data;
     },

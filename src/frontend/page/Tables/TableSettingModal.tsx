@@ -9,7 +9,6 @@ import {
   Button,
 } from "@nextui-org/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axiosInstance from "../../pkg/axiosInstance";

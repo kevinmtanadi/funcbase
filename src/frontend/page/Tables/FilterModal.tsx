@@ -1,8 +1,6 @@
 import React, { SetStateAction, useEffect, useState } from "react";
 import { FetchFilter } from "./TableData";
 import {
-  Autocomplete,
-  AutocompleteItem,
   BreadcrumbItem,
   Breadcrumbs,
   Button,
@@ -17,9 +15,8 @@ import {
 } from "@nextui-org/react";
 import { FaPlus } from "react-icons/fa6";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { IoCloseSharp } from "react-icons/io5";
-import { LuRefreshCcw, LuRefreshCw } from "react-icons/lu";
+import { LuRefreshCw } from "react-icons/lu";
 import axiosInstance from "../../pkg/axiosInstance";
 
 interface FilterModalProps {

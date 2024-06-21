@@ -29,3 +29,5 @@ backend.exe~
 config.json
 dummy
 dummy/*
+
+.env

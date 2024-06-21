@@ -5,7 +5,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
     Authorization: Cookies.get("_auth") ? `${Cookies.get("_auth")}` : "",
-    // Add any cusom headers if needed
+    "X-API-KEY": "019039ff-f5be-7520-8ab8-bbcf248a6585",
   },
 });
 

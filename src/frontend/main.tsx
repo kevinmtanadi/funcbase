@@ -14,6 +14,7 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import SignIn from "./page/SignIn.tsx";
 import Admin from "./page/Admin/Admin.tsx";
 import InitialRegister from "./page/InitialRegister.tsx";
+import Setting from "./page/Setting/Setting.tsx";
 
 const router = createBrowserRouter([
   {
@@ -32,7 +33,7 @@ const router = createBrowserRouter([
         path: "/sql",
         element: (
           <ProtectedRoute>
-            <SQLEditor />,
+            <SQLEditor />
           </ProtectedRoute>
         ),
       },
@@ -40,7 +41,15 @@ const router = createBrowserRouter([
         path: "/admin",
         element: (
           <ProtectedRoute>
-            <Admin />,
+            <Admin />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/setting",
+        element: (
+          <ProtectedRoute>
+            <Setting />
           </ProtectedRoute>
         ),
       },

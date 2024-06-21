@@ -69,6 +69,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
   const handleClose = () => {
     setFields([]);
     setTableName("");
+    setTableType("");
     onClose();
   };
 

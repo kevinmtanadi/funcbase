@@ -1,5 +1,5 @@
 import Sidebar from "./Sidebar";
-import { Navigate, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { TbCode } from "react-icons/tb";
@@ -8,6 +8,7 @@ import { CgDatabase } from "react-icons/cg";
 import { LuUsers2 } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "./pkg/axiosInstance";
+import { BiWrench } from "react-icons/bi";
 
 const tabs = [
   {
@@ -24,6 +25,11 @@ const tabs = [
     name: "Admins",
     path: "/admin",
     icon: LuUsers2,
+  },
+  {
+    name: "Settings",
+    path: "/setting",
+    icon: BiWrench,
   },
 ];
 
@@ -49,7 +55,21 @@ const checkAuth = () => {
   const isAuth = useIsAuthenticated();
   if (admin?.rows.length > 0) {
     if (!isAuth) {
-      window.location.href = "/signin";
+      const maxAttempts = 5;
+      let attempts = 0;
+
+      const checkAuthentication = () => {
+        attempts++;
+        if (!isAuth && attempts < maxAttempts) {
+          setTimeout(checkAuthentication, 100);
+        } else {
+          if (!isAuth) {
+            window.location.href = "/signin";
+          }
+        }
+      };
+
+      checkAuthentication();
     }
   }
 };

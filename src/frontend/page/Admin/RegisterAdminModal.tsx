@@ -1,5 +1,4 @@
 import {
-  table,
   Modal,
   ModalContent,
   ModalHeader,

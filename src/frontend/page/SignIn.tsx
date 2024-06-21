@@ -1,12 +1,12 @@
 import { Button, Card, CardBody, CardHeader, Input } from "@nextui-org/react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import { Formik } from "formik";
 import { useState } from "react";
 import useSignIn from "react-auth-kit/hooks/useSignIn";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa6";
-import { redirect, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import * as Yup from "yup";
+import axiosInstance from "../pkg/axiosInstance";
 
 interface LoginData {
   email: string;
@@ -24,7 +24,7 @@ const SignIn = () => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: LoginData) => {
-      await axios.post("/api/admin/login", data).then((res) => {
+      await axiosInstance.post("/api/admin/login", data).then((res) => {
         const res_data = res.data;
         if (res_data.token) {
           signIn({

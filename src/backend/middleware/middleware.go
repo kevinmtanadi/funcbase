@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"react-golang/src/backend/config"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -12,6 +13,11 @@ import (
 )
 
 func UseMiddleware(app *echo.Echo) {
+	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: config.GetInstance().AllowedOrigins,
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization, "X-API-KEY"},
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
+	}))
 	app.Use(middleware.Logger())
 	app.Use(middleware.Recover())
 }
@@ -79,4 +85,27 @@ func parseJWT(tokenStr string) (jwt.MapClaims, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 	return claims, nil
+}
+
+func ValidateAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		key := c.Request().Header.Get("X-API-KEY")
+		if key == "" {
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"code":   "401",
+				"status": "error",
+				"error":  "missing API key",
+			})
+		}
+
+		if key != config.GetInstance().APIKey && key != os.Getenv("MAIN_APP_API_KEY") {
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"code":   "401",
+				"status": "error",
+				"error":  "api key invalid",
+			})
+		}
+
+		return next(c)
+	}
 }

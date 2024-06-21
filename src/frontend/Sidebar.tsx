@@ -1,15 +1,7 @@
-import { useEffect } from "react";
 import classname from "classnames";
 import { IconType } from "react-icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  SwitchProps,
-  Tooltip,
-  useSwitch,
-  VisuallyHidden,
-} from "@nextui-org/react";
-import { FaMoon, FaSun } from "react-icons/fa6";
-import { useTheme } from "next-themes";
+import { Tooltip } from "@nextui-org/react";
 import useSignOut from "react-auth-kit/hooks/useSignOut";
 import { IoMdExit } from "react-icons/io";
 
@@ -86,72 +78,72 @@ const SidebarItem = ({ tab, active }: SidebarItemProps) => {
 
 export default Sidebar;
 
-function ThemeSwitcher(props: SwitchProps) {
-  const { setTheme } = useTheme();
+// function ThemeSwitcher(props: SwitchProps) {
+//   const { setTheme } = useTheme();
 
-  const {
-    Component,
-    slots,
-    isSelected,
-    getBaseProps,
-    getInputProps,
-    getWrapperProps,
-  } = useSwitch(props);
+//   const {
+//     Component,
+//     slots,
+//     isSelected,
+//     getBaseProps,
+//     getInputProps,
+//     getWrapperProps,
+//   } = useSwitch(props);
 
-  useEffect(() => {
-    if (!isSelected) {
-      setTheme("light");
-    } else {
-      setTheme("dark");
-    }
-  }, [isSelected]);
+//   useEffect(() => {
+//     if (!isSelected) {
+//       setTheme("light");
+//     } else {
+//       setTheme("dark");
+//     }
+//   }, [isSelected]);
 
-  return (
-    <Tooltip radius="sm" placement="right" content="Toggle Dark Mode">
-      <Component {...getBaseProps()}>
-        <VisuallyHidden>
-          <input {...getInputProps()} />
-        </VisuallyHidden>
-        <div
-          {...getWrapperProps()}
-          className={slots.wrapper({
-            class: [
-              "mr-0",
-              "w-[45px] h-[45px]",
-              "flex items-center justify-center",
-              "rounded-lg bg-transparent hover:bg-slate-300",
-              'group[data-selected="true"]:bg-transparent group-data-[selected=true]:bg-transparent',
-              " group-data-[selected=true]:hover:bg-slate-300",
-            ],
-          })}
-        >
-          {isSelected ? <FaSun /> : <FaMoon />}
-        </div>
-      </Component>
-    </Tooltip>
-  );
+//   return (
+//     <Tooltip radius="sm" placement="right" content="Toggle Dark Mode">
+//       <Component {...getBaseProps()}>
+//         <VisuallyHidden>
+//           <input {...getInputProps()} />
+//         </VisuallyHidden>
+//         <div
+//           {...getWrapperProps()}
+//           className={slots.wrapper({
+//             class: [
+//               "mr-0",
+//               "w-[45px] h-[45px]",
+//               "flex items-center justify-center",
+//               "rounded-lg bg-transparent hover:bg-slate-300",
+//               'group[data-selected="true"]:bg-transparent group-data-[selected=true]:bg-transparent',
+//               " group-data-[selected=true]:hover:bg-slate-300",
+//             ],
+//           })}
+//         >
+//           {isSelected ? <FaSun /> : <FaMoon />}
+//         </div>
+//       </Component>
+//     </Tooltip>
+//   );
 
-  // return (
-  //   <div className="flex gap-2">
-  //     <Switch
-  //       classNames={{
-  //         wrapper:
-  //           'group[data-selected="true"]:bg-slate-950 group-data-[selected=true]:bg-slate-950',
-  //         label: "hidden w-0",
-  //       }}
-  //       size="sm"
-  //       endContent={undefined}
-  //       color="primary"
-  //       isSelected={theme === "dark"}
-  //       thumbIcon={({ isSelected, className }) =>
-  //         isSelected ? (
-  //           <FaMoon className={className} />
-  //         ) : (
-  //           <FaSun className={className} />
-  //         )
-  //       }
-  //       onValueChange={toggleDarkMode}
-  //     />
-  //   </div>
-  // );
-}
+//   // return (
+//   //   <div className="flex gap-2">
+//   //     <Switch
+//   //       classNames={{
+//   //         wrapper:
+//   //           'group[data-selected="true"]:bg-slate-950 group-data-[selected=true]:bg-slate-950',
+//   //         label: "hidden w-0",
+//   //       }}
+//   //       size="sm"
+//   //       endContent={undefined}
+//   //       color="primary"
+//   //       isSelected={theme === "dark"}
+//   //       thumbIcon={({ isSelected, className }) =>
+//   //         isSelected ? (
+//   //           <FaMoon className={className} />
+//   //         ) : (
+//   //           <FaSun className={className} />
+//   //         )
+//   //       }
+//   //       onValueChange={toggleDarkMode}
+//   //     />
+//   //   </div>
+//   // );
+// }

@@ -56,9 +56,10 @@ const TableData = ({ table }: TableDataProps) => {
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", table.name],
     queryFn: async () => {
-      if (table.name === "") {
-        return null;
+      if (table === undefined || table.name === "") {
+        return [];
       }
+
       const res = await axiosInstance.get(`/api/${table.name}/columns`);
       return res.data;
     },
@@ -66,11 +67,17 @@ const TableData = ({ table }: TableDataProps) => {
 
   const [filter, setFilter] = useState<FetchFilter[]>([]);
 
-  const { data: rows, isLoading } = useQuery<any[]>({
+  const {
+    data: rows,
+    isLoading,
+    isRefetching,
+    isPending,
+    isFetching,
+  } = useQuery<any[]>({
     queryKey: ["rows", table.name, filter],
     queryFn: async () => {
-      if (table.name === "") {
-        return null;
+      if (table === undefined || table.name === "") {
+        return [];
       }
 
       const res = await axiosInstance.post(`/api/${table.name}/rows`, {
@@ -399,6 +406,14 @@ const TableData = ({ table }: TableDataProps) => {
     });
   };
 
+  if (columns?.length === 0) {
+    return (
+      <div className="flex h-full w-full mt-[50px] justify-center">
+        <p className="text-slate-500 font-semibold text-lg">No table found</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col">
@@ -476,7 +491,9 @@ const TableData = ({ table }: TableDataProps) => {
               )}
             </TableBody>
           ) : (
-            <TableBody isLoading={isLoading}>
+            <TableBody
+              isLoading={isLoading || isRefetching || isFetching || isPending}
+            >
               {[1, 2, 3].map((item) => (
                 <TableRow key={item}>
                   <TableCell>

@@ -97,6 +97,7 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 			info.cid,
 			info.name,
 			info.'type',
+			info.pk,
 			info.'notnull',
 			info.dflt_value,
 			fk.'table' AS reference

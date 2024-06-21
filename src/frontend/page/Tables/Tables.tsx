@@ -6,8 +6,6 @@ import classNames from "classnames";
 import CreateTableModal from "./CreateTableModal";
 import TableData from "./TableData";
 import axiosInstance from "../../pkg/axiosInstance";
-import { LuTable, LuTable2 } from "react-icons/lu";
-import { PiTable } from "react-icons/pi";
 
 export interface Table {
   name: string;

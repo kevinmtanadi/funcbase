@@ -2,21 +2,17 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"reflect"
 	"sync"
 )
 
-type corsOption struct {
-	AllowOrigins []string `json:"allow_origins"`
-	AllowMethods []string `json:"allow_methods"`
-	AllowHeaders []string `json:"allow_headers"`
-}
-
 type Config struct {
-	AppName string `json:"app_name"`
-	AppURL  string `json:"app_url"`
-
-	CorsOption corsOption `json:"cors_options"`
+	AppName        string   `json:"app_name"`
+	AppURL         string   `json:"app_url"`
+	APIKey         string   `json:"api_key"`
+	AllowedOrigins []string `json:"allowed_origins"`
 }
 
 var (
@@ -42,10 +38,10 @@ func (c *Config) Load() error {
 			config := Config{
 				AppName: "Fullbase",
 				AppURL:  "https://fullbase.com",
-				CorsOption: corsOption{
-					AllowOrigins: []string{"*"},
-					AllowMethods: []string{"*"},
-					AllowHeaders: []string{"*"},
+				APIKey:  "default-api-key",
+				AllowedOrigins: []string{
+					"http://localhost:8080",
+					"http://localhost:3000",
 				},
 			}
 			config.Save()
@@ -79,4 +75,45 @@ func (c *Config) Save() error {
 		return err
 	}
 	return nil
+}
+
+func (c *Config) Get(key string) interface{} {
+	val := reflect.ValueOf(c).Elem()
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+
+		if tag == key {
+			return val.Field(i).Interface()
+		}
+	}
+	return nil
+}
+
+func (c *Config) Set(key string, value interface{}) error {
+	val := reflect.ValueOf(c).Elem()
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+
+		if tag == key {
+			fieldValue := val.Field(i)
+			if fieldValue.CanSet() {
+				newValue := reflect.ValueOf(value)
+				if newValue.Type().AssignableTo(fieldValue.Type()) {
+					fieldValue.Set(newValue)
+					return nil
+				} else {
+					return fmt.Errorf("cannot assign value of type %s to field of type %s", newValue.Type(), fieldValue.Type())
+				}
+			} else {
+				return fmt.Errorf("cannot set value to field %s", field.Name)
+			}
+		}
+	}
+	return fmt.Errorf("no field found with json tag %s", key)
 }
