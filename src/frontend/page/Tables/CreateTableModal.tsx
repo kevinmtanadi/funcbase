@@ -77,7 +77,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
 
   const { mutateAsync } = useMutation({
     mutationFn: () => {
-      return axiosInstance.post("/api/table/create", {
+      return axiosInstance.post("/api/main/table/create", {
         table_name: tableName,
         id_type: (idType as any).currentKey || "string",
         fields: fields.map((field) => {
@@ -214,7 +214,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/tables`);
+      const res = await axiosInstance.get(`/api/main/tables`);
       return res.data;
     },
   });

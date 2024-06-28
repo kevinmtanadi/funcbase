@@ -15,6 +15,8 @@ import SignIn from "./page/SignIn.tsx";
 import Admin from "./page/Admin/Admin.tsx";
 import InitialRegister from "./page/InitialRegister.tsx";
 import Setting from "./page/Setting/Setting.tsx";
+import Function from "./page/Function/Function.tsx";
+import CreateFunction from "./page/Function/CreateFunction.tsx";
 
 const router = createBrowserRouter([
   {
@@ -38,6 +40,22 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/function",
+        element: (
+          <ProtectedRoute>
+            <Function />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/function/create",
+        element: (
+          <ProtectedRoute>
+            <CreateFunction />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "/admin",
         element: (
           <ProtectedRoute>
@@ -55,6 +73,7 @@ const router = createBrowserRouter([
       },
     ],
   },
+
   {
     path: "/signin",
     element: <SignIn />,

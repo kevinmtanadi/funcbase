@@ -15,6 +15,7 @@ import FloatingBox from "../../components/FloatingBox";
 import { deepEqual } from "../../utils/utils";
 import { toast } from "react-toastify";
 import { LuCopy } from "react-icons/lu";
+import classNames from "classnames";
 
 const GeneralSetting = () => {
   const settingList = ["app_url", "app_name"];
@@ -62,6 +63,7 @@ const GeneralSetting = () => {
 
   return (
     <>
+      <h1 className="text-xl font-bold mb-5">General</h1>
       <div className="flex flex-col gap-5">
         <Input
           isDisabled={isLoading || isPending || isFetching}
@@ -162,6 +164,7 @@ const SecuritySetting = () => {
 
   return (
     <>
+      <h1 className="text-xl font-bold mb-5">Security</h1>
       <div className="flex flex-col gap-5">
         <div className="flex gap-3">
           <Input
@@ -257,16 +260,21 @@ const renderSetting = (name: string) => {
 const Setting = () => {
   const [tab, setTab] = useState("General");
   return (
-    <div className="flex gap-5 flex-col w-full h-screen">
+    <div className="flex flex-col w-full h-screen">
       <div className="w-full h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Setings</h1>
+        <h1 className="text-xl font-bold my-auto ml-5">Settings</h1>
       </div>
-      <div className="flex mx-5 gap-5">
-        <div className="max-w-[200px] min-w-[150px] w-[30%]">
-          <div className="flex flex-col">
+      <div className="flex grow">
+        <div className="flex flex-col items-center bg-slate-100 px-[20px] min-w-[250px] w-[250px]">
+          <div className="flex flex-col mt-3 gap-2 w-full">
             {settingTabList.map((item) => (
               <div
-                className="p-2 cursor-pointer hover:bg-slate-300"
+                className={classNames({
+                  "rounded-md flex items-center gap-3 px-3 border-bottom-1 w-full py-2 hover:bg-slate-300 cursor-pointer":
+                    true,
+                  "bg-slate-300": tab === item.name,
+                })}
+                key={item.name}
                 onClick={() => setTab(item.name)}
               >
                 {item.name}
@@ -274,7 +282,8 @@ const Setting = () => {
             ))}
           </div>
         </div>
-        <div className="grow ">{renderSetting(tab)}</div>
+
+        <div className="grow mt-3 mx-5">{renderSetting(tab)}</div>
       </div>
     </div>
   );

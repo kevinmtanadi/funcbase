@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { TbCode } from "react-icons/tb";
 import useIsAuthenticated from "react-auth-kit/hooks/useIsAuthenticated";
 import { CgDatabase } from "react-icons/cg";
-import { LuUsers2 } from "react-icons/lu";
+import { LuFunctionSquare, LuUsers2 } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "./pkg/axiosInstance";
 import { BiWrench } from "react-icons/bi";
@@ -20,6 +20,11 @@ const tabs = [
     name: "SQL Editor",
     path: "/sql",
     icon: TbCode,
+  },
+  {
+    name: "Functions",
+    path: "/function",
+    icon: LuFunctionSquare,
   },
   {
     name: "Admins",

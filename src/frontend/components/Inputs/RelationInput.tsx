@@ -26,15 +26,18 @@ const RelationInput = ({
   const { data, isLoading } = useQuery<any[]>({
     queryKey: ["rows", relatedTable, searchQuery],
     queryFn: async () => {
-      const { data } = await axiosInstance.post(`/api/${relatedTable}/rows`, {
-        filters: [
-          {
-            column: "id",
-            operator: "LIKE",
-            value: `${searchQuery}%`,
-          },
-        ],
-      });
+      const { data } = await axiosInstance.post(
+        `/api/main/${relatedTable}/rows`,
+        {
+          filters: [
+            {
+              column: "id",
+              operator: "LIKE",
+              value: `${searchQuery}%`,
+            },
+          ],
+        }
+      );
       return data;
     },
   });

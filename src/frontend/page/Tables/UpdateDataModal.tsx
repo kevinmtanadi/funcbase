@@ -42,7 +42,9 @@ const UpdateDataModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/${tableName}/columns`);
+      if (!tableName) return [];
+
+      const res = await axiosInstance.get(`/api/main/${tableName}/columns`);
       return res.data;
     },
   });
@@ -50,9 +52,9 @@ const UpdateDataModal = ({
   const { data, isLoading } = useQuery<any>({
     queryKey: ["data", tableName, id],
     queryFn: async () => {
-      if (!id) return;
+      if (!id || !tableName || id === "" || tableName === "") return [];
 
-      const res = await axiosInstance.get(`/api/${tableName}/${id}`);
+      const res = await axiosInstance.get(`/api/main/${tableName}/${id}`);
       return res.data;
     },
   });
@@ -136,7 +138,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axiosInstance.put(`/api/${tableName}/update`, {
+      const res = await axiosInstance.put(`/api/main/${tableName}/update`, {
         id: id,
         data: data,
       });
@@ -170,7 +172,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync: deleteMutation } = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.delete(`/api/${tableName}/rows`, {
+      const res = await axiosInstance.delete(`/api/main/${tableName}/rows`, {
         data: { id: [id] },
       });
       return res.data;
@@ -190,6 +192,8 @@ const UpdateDataModal = ({
       error: "Error when deleting data",
     });
   };
+
+  if (!columns) return <></>;
 
   return (
     <>

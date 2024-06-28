@@ -13,6 +13,9 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
+      Cookies.clear("_auth");
+      Cookies.clear("_auth_state");
+      Cookies.clear("_auth_type");
       window.location.href = "/signin";
     }
     return Promise.reject(error);

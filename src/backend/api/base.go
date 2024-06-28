@@ -1,7 +1,6 @@
 package api
 
 import (
-	api_function "react-golang/src/backend/api/functions"
 	"react-golang/src/backend/middleware"
 	"react-golang/src/backend/model"
 
@@ -16,7 +15,7 @@ type API struct {
 	Admin    AdminAPI
 	Auth     AuthAPI
 	Database DatabaseAPI
-	Function api_function.FunctionAPI
+	Function FunctionAPI
 	Setting  SettingAPI
 }
 
@@ -27,11 +26,11 @@ type Search struct {
 func NewAPI(app *echo.Echo, ioc di.Container) *API {
 	return &API{
 		app:      app,
-		router:   app.Group("/api"),
+		router:   app.Group("/api", middleware.ValidateAPIKey),
 		Admin:    NewAdminAPI(ioc),
 		Auth:     NewAuthAPI(ioc),
 		Database: NewDatabaseAPI(ioc),
-		Function: api_function.NewFunctionAPI(ioc),
+		Function: NewFunctionAPI(ioc),
 		Setting:  NewSettingAPI(ioc),
 	}
 }
@@ -40,12 +39,17 @@ func (api *API) Serve() {
 	api.MainAPI()
 	api.AdminAPI()
 	api.AuthAPI()
-	api.FunctionAPI()
 	api.SettingAPI()
+
+	api.router.POST("/:func_name", api.Function.RunFunction, middleware.RequireAuth(false))
+	api.router.GET("/function", api.Function.FetchFunctionList)
+	api.router.GET("/function/:func_name", api.Function.FetchFunctionDetail)
+	api.router.DELETE("/function/:func_name", api.Function.DeleteFunction)
+	api.router.POST("/function/create", api.Function.CreateFunction)
 }
 
 func (api *API) MainAPI() {
-	mainRouter := api.router.Group("", middleware.RequireAuth(true), middleware.ValidateAPIKey)
+	mainRouter := api.router.Group("/main", middleware.RequireAuth(true))
 
 	mainRouter.GET("/tables", api.Database.FetchAllTables)
 	mainRouter.POST("/query", api.Database.RunQuery)
@@ -61,7 +65,7 @@ func (api *API) MainAPI() {
 }
 
 func (api *API) AdminAPI() {
-	adminRouter := api.router.Group("/admin", middleware.ValidateAPIKey)
+	adminRouter := api.router.Group("/admin")
 
 	adminRouter.POST("/register", api.Admin.Register)
 	adminRouter.POST("/login", api.Admin.Login)
@@ -69,20 +73,14 @@ func (api *API) AdminAPI() {
 }
 
 func (api *API) AuthAPI() {
-	authRouter := api.router.Group("/auth", middleware.ValidateAPIKey)
+	authRouter := api.router.Group("/auth")
 
 	authRouter.POST("/register/:table_name", api.Auth.Register)
 	authRouter.POST("/login/:table_name", api.Auth.Login)
 }
 
-func (api *API) FunctionAPI() {
-	functionRouter := api.router.Group("/function", middleware.ValidateAPIKey)
-
-	functionRouter.POST("/run", api.Function.RunFunction, middleware.RequireAuth(false))
-}
-
 func (api *API) SettingAPI() {
-	settingRouter := api.router.Group("/settings", middleware.ValidateAPIKey)
+	settingRouter := api.router.Group("/settings")
 
 	settingRouter.GET("", api.Setting.Get)
 	settingRouter.PUT("", api.Setting.Update)

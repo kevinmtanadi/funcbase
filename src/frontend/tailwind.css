@@ -942,6 +942,11 @@ video {
   margin-bottom: 0.75rem;
 }
 
+.my-5 {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
 .my-\[calc\(\(theme\(spacing\.5\)-theme\(spacing\.1\)\)\/2\)\] {
   margin-top: calc((1.25rem - 0.25rem) / 2);
   margin-bottom: calc((1.25rem - 0.25rem) / 2);
@@ -960,11 +965,6 @@ video {
 .my-auto {
   margin-top: auto;
   margin-bottom: auto;
-}
-
-.mx-10 {
-  margin-left: 2.5rem;
-  margin-right: 2.5rem;
 }
 
 .-mr-2 {
@@ -1067,6 +1067,18 @@ video {
   margin-top: 0.75rem;
 }
 
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mt-5 {
+  margin-top: 1.25rem;
+}
+
+.mt-\[50px\] {
+  margin-top: 50px;
+}
+
 .mt-\[calc\(theme\(fontSize\.small\)_\+_10px\)\] {
   margin-top: calc(var(--nextui-font-size-small) + 10px);
 }
@@ -1077,18 +1089,6 @@ video {
 
 .mt-\[calc\(theme\(fontSize\.small\)_\+_8px\)\] {
   margin-top: calc(var(--nextui-font-size-small) + 8px);
-}
-
-.mb-10 {
-  margin-bottom: 2.5rem;
-}
-
-.mt-\[\] {
-  margin-top: ;
-}
-
-.mt-\[50px\] {
-  margin-top: 50px;
 }
 
 .box-border {
@@ -3234,6 +3234,10 @@ video {
   padding: 1rem;
 }
 
+.p-5 {
+  padding: 1.25rem;
+}
+
 .\!px-1 {
   padding-left: 0.25rem !important;
   padding-right: 0.25rem !important;
@@ -3356,6 +3360,10 @@ video {
 
 .pb-2 {
   padding-bottom: 0.5rem;
+}
+
+.pb-3 {
+  padding-bottom: 0.75rem;
 }
 
 .pb-4 {
@@ -3516,6 +3524,10 @@ video {
 
 .font-bold {
   font-weight: 700;
+}
+
+.font-light {
+  font-weight: 300;
 }
 
 .font-medium {

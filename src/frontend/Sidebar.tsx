@@ -22,7 +22,11 @@ const Sidebar = ({ tabs }: SidebarProps) => {
     <div className="pt-4 top-0 sticky flex flex-col justify-between h-screen w-[65px] bg-slate-200">
       <div className="flex flex-col gap-4 items-center">
         {tabs.map((tab) => (
-          <SidebarItem key={tab.name} tab={tab} active={pathname == tab.path} />
+          <SidebarItem
+            key={tab.name}
+            tab={tab}
+            active={"/" + pathname.split("/")[1] == tab.path}
+          />
         ))}
       </div>
       <div className="mb-5 flex flex-col items-center">

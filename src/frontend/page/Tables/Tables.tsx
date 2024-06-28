@@ -18,7 +18,7 @@ const Tables = () => {
   const { data: tables } = useQuery<Table[]>({
     queryKey: ["tables", search],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/tables`, {
+      const res = await axiosInstance.get(`/api/main/tables`, {
         params: {
           search: search,
         },
@@ -37,11 +37,11 @@ const Tables = () => {
     }
   }, [tables]);
 
-  var isFirst = true;
+  const [first, setFirst] = useState(true);
   useEffect(() => {
-    if (isFirst && tables && tables.length > 0) {
+    if (first && tables && tables.length > 0) {
       setSelectedTable(tables[0]);
-      isFirst = false;
+      setFirst(false);
     }
   }, [tables]);
 
@@ -52,18 +52,21 @@ const Tables = () => {
   } = useDisclosure();
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full h-screen">
       <div className="w-full h-[45px] flex border-b-1">
         <h1 className="text-xl font-bold my-auto ml-5">Table List</h1>
       </div>
-      <div className="flex h-full">
-        <div className="flex flex-col items-center bg-slate-100 h-screen px-[20px] min-w-[250px] w-[250px]">
+      <div className="flex grow">
+        <div className="flex flex-col items-center bg-slate-100 px-[20px] min-w-[250px] w-[250px]">
           <div className="flex justify-center border-bottom-1 w-full py-4">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              variant="underlined"
-              placeholder="Search for table"
+              variant="bordered"
+              classNames={{
+                inputWrapper: "bg-white rounded-md",
+              }}
+              placeholder="Search table"
             />
           </div>
           <div className="flex flex-col gap-2 w-full">

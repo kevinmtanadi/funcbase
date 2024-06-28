@@ -29,7 +29,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", table.name, "insertion"],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/${table.name}/columns`, {
+      const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
         params: {
           fetch_auth_column: table.is_auth,
         },
@@ -149,7 +149,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
         return res.data;
       }
 
-      const res = await axiosInstance.post(`/api/${table.name}/insert`, {
+      const res = await axiosInstance.post(`/api/main/${table.name}/insert`, {
         data: data,
       });
       return res.data;

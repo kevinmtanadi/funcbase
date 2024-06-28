@@ -13,36 +13,36 @@ import { FaRegTrashAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axiosInstance from "../../pkg/axiosInstance";
 
-interface TableSettingModalProps {
+interface FunctionSettingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tableName: string;
+  functionName: string;
 }
 
-const TableSettingModal = ({
+const FunctionSettingModal = ({
   isOpen,
   onClose,
-  tableName,
-}: TableSettingModalProps) => {
+  functionName,
+}: FunctionSettingModalProps) => {
   const queryClient = useQueryClient();
   const { mutateAsync } = useMutation({
     mutationFn: () => {
-      return axiosInstance.delete(`/api/main/${tableName}`);
+      return axiosInstance.delete(`/api/function/${functionName}`);
     },
     onSuccess: () => {
       queryClient.refetchQueries({
-        queryKey: ["tables"],
+        queryKey: ["functions"],
         type: "active",
       });
       onClose();
     },
   });
 
-  const deleteTable = () => {
+  const deleteFunction = () => {
     toast.promise(mutateAsync(), {
-      pending: "Deleting table...",
-      success: "Table deleted successfully",
-      error: "Error when deleting table",
+      pending: "Deleting function...",
+      success: "Function deleted successfully",
+      error: "Error when deleting function",
     });
   };
 
@@ -56,16 +56,16 @@ const TableSettingModal = ({
             separator="/"
             className="text-xl font-semibold"
           >
-            <BreadcrumbItem>Table</BreadcrumbItem>
+            <BreadcrumbItem>Function</BreadcrumbItem>
             <BreadcrumbItem>
-              <p>{tableName}</p>
+              <p>{functionName}</p>
             </BreadcrumbItem>
           </Breadcrumbs>
         </ModalHeader>
         <ModalBody>
           <Button
             className="bg-transparent min-w-0 w-full p-0"
-            onClick={() => deleteTable()}
+            onClick={() => deleteFunction()}
           >
             <div className="flex gap-2 justify-between w-full items-center">
               <p className="font-semibold text-red-500">Delete</p>
@@ -79,4 +79,4 @@ const TableSettingModal = ({
   );
 };
 
-export default TableSettingModal;
+export default FunctionSettingModal;

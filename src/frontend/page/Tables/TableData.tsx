@@ -60,7 +60,7 @@ const TableData = ({ table }: TableDataProps) => {
         return [];
       }
 
-      const res = await axiosInstance.get(`/api/${table.name}/columns`);
+      const res = await axiosInstance.get(`/api/main/${table.name}/columns`);
       return res.data;
     },
   });
@@ -80,7 +80,7 @@ const TableData = ({ table }: TableDataProps) => {
         return [];
       }
 
-      const res = await axiosInstance.post(`/api/${table.name}/rows`, {
+      const res = await axiosInstance.post(`/api/main/${table.name}/rows`, {
         filters: filter
           .filter((f) => f.column != "" && f.operator != "" && f.value !== "")
           .map((f) => {
@@ -383,7 +383,7 @@ const TableData = ({ table }: TableDataProps) => {
   const [selectedRows, setSelectedRows] = useState<Selection>(new Set([]));
   const { mutateAsync } = useMutation({
     mutationFn: async () => {
-      await axiosInstance.delete(`/api/${table.name}/rows`, {
+      await axiosInstance.delete(`/api/main/${table.name}/rows`, {
         data: {
           id: Array.from(selectedRows),
         },

@@ -27,6 +27,9 @@ func main() {
 	app.Static("/", distDir)
 	app.Static("/signup", distDir)
 	app.Static("/signin", distDir)
+	app.Static("/sql", distDir)
+	app.Static("/setting", distDir)
+	app.Static("/admin", distDir)
 	app.File("", distDir+"/index.html")
 
 	port := "8080"

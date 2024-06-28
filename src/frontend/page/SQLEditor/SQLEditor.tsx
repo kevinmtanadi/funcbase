@@ -25,7 +25,7 @@ const SQLEditor = () => {
   const { data: histories } = useQuery<any[]>({
     queryKey: ["query"],
     queryFn: async () => {
-      const res = await axiosInstance.get("/api/query");
+      const res = await axiosInstance.get("/api/main/query");
       return res.data;
     },
   });
@@ -35,7 +35,7 @@ const SQLEditor = () => {
   const { mutate } = useMutation({
     mutationFn: async (query: string) => {
       axiosInstance
-        .post("/api/query", {
+        .post("/api/main/query", {
           query: query.replace(/\n/g, " "),
         })
         .then((res) => {

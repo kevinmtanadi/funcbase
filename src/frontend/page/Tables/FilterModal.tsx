@@ -49,7 +49,7 @@ const FilterModal = ({
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", tableName],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/${tableName}/columns`);
+      const res = await axiosInstance.get(`/api/main/${tableName}/columns`);
       return res.data;
     },
   });
@@ -58,7 +58,6 @@ const FilterModal = ({
 
   useEffect(() => {
     if (filters.length > 0) {
-      console.log(filters);
       setFilterTemp(filters);
     }
   }, [filters]);

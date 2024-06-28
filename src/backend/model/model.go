@@ -17,7 +17,7 @@ type Admin struct {
 }
 
 type Tables struct {
-	Name     string `json:"name" gorm:"primaryKey,column:name"`
+	Name     string `json:"name" gorm:"primaryKey"`
 	IsAuth   bool   `json:"is_auth" gorm:"column:is_auth"`
 	IsSystem bool   `json:"is_system" gorm:"column:is_system"`
 }
@@ -28,8 +28,13 @@ type QueryHistory struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type FunctionStored struct {
+	Name     string `json:"name" gorm:"primaryKey"`
+	Function string `json:"function" gorm:"column:function"`
+}
+
 func Migrate(db *gorm.DB) error {
-	err := db.AutoMigrate(&Admin{}, &Tables{}, &QueryHistory{})
+	err := db.AutoMigrate(&Admin{}, &Tables{}, &QueryHistory{}, &FunctionStored{})
 	if err != nil {
 		return err
 	}

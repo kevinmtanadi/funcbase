@@ -142,14 +142,14 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-type filter struct {
+type Filter struct {
 	Column   string `json:"column"`
 	Operator string `json:"operator"`
 	Value    string `json:"value"`
 }
 
 type fetchRowsParam struct {
-	Filter []filter `json:"filters,omitempty"`
+	Filter []Filter `json:"filters,omitempty"`
 	Limit  int      `json:"limit,omitempty"`
 }
 
