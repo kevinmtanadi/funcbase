@@ -5,10 +5,6 @@ interface Props {
   children?: React.ReactNode;
 }
 const FloatingBox = ({ isOpen, children }: Props) => {
-  console.log(isOpen);
-  if (!isOpen) {
-    return null;
-  }
   return (
     <div
       className={classNames({

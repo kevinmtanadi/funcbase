@@ -60,7 +60,7 @@ const checkAuth = () => {
   const isAuth = useIsAuthenticated();
   if (admin?.rows.length > 0) {
     if (!isAuth) {
-      const maxAttempts = 5;
+      const maxAttempts = 10;
       let attempts = 0;
 
       const checkAuthentication = () => {

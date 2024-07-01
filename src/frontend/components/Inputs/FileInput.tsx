@@ -1,8 +1,26 @@
 import { Input } from "@nextui-org/react";
 
-interface FileInputProps {}
-const FileInput = ({}: FileInputProps) => {
-  return <Input type="file" />;
+interface FileInputProps {
+  id?: string;
+  name?: string;
+  label: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  value?: string;
+  isRequired?: boolean;
+  isDisabled?: boolean;
+}
+const FileInput = ({
+  id,
+  name,
+  value,
+  label,
+  onChange,
+  isRequired,
+  isDisabled,
+}: FileInputProps) => {
+  return (
+    <input type="file" id={id} name={name} value={value} onChange={onChange} />
+  );
 };
 
 export default FileInput;

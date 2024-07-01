@@ -709,27 +709,37 @@ const FunctionDelete = ({
               }}
               onChange={(e) => {
                 setFunctionParts((prev) => {
-                  // Make a copy of prev to avoid direct mutation
-                  const newState = [...prev];
+                  // Use map to create a new state array
+                  return prev.map((item, i) => {
+                    if (i !== idx) {
+                      // Return the item unchanged if it's not the one we're updating
+                      return item;
+                    }
 
-                  // Make sure newState[idx].filter exists
-                  if (!newState[idx].filter) {
-                    newState[idx].filter = [];
-                  }
+                    // Ensure item.filter is defined
+                    const filter = item.filter ? [...item.filter] : [];
 
-                  // Make sure newState[idx].filter[idx] exists
-                  if (!newState[idx].filter[idx]) {
-                    newState[idx].filter[idx] = {
-                      column: "",
-                      operator: "",
-                      value: "",
+                    // Ensure filter[idx] is defined
+                    if (!filter[idx]) {
+                      filter[idx] = {
+                        column: "",
+                        operator: "",
+                        value: "",
+                      };
+                    }
+
+                    // Update the value
+                    filter[idx] = {
+                      ...filter[idx],
+                      column: e.target.value,
                     };
-                  }
 
-                  // Update the value
-                  newState[idx].filter[idx].column = e.target.value;
-
-                  return newState;
+                    // Return the updated item
+                    return {
+                      ...item,
+                      filter,
+                    };
+                  });
                 });
               }}
             >
@@ -750,27 +760,37 @@ const FunctionDelete = ({
               }}
               onChange={(e) => {
                 setFunctionParts((prev) => {
-                  // Make a copy of prev to avoid direct mutation
-                  const newState = [...prev];
+                  // Use map to create a new state array
+                  return prev.map((item, i) => {
+                    if (i !== idx) {
+                      // Return the item unchanged if it's not the one we're updating
+                      return item;
+                    }
 
-                  // Make sure newState[idx].filter exists
-                  if (!newState[idx].filter) {
-                    newState[idx].filter = [];
-                  }
+                    // Ensure item.filter is defined
+                    const filter = item.filter ? [...item.filter] : [];
 
-                  // Make sure newState[idx].filter[idx] exists
-                  if (!newState[idx].filter[idx]) {
-                    newState[idx].filter[idx] = {
-                      column: "",
-                      operator: "",
-                      value: "",
+                    // Ensure filter[idx] is defined
+                    if (!filter[idx]) {
+                      filter[idx] = {
+                        column: "",
+                        operator: "",
+                        value: "",
+                      };
+                    }
+
+                    // Update the value
+                    filter[idx] = {
+                      ...filter[idx],
+                      column: e.target.value,
                     };
-                  }
 
-                  // Update the value
-                  newState[idx].filter[idx].operator = e.target.value;
-
-                  return newState;
+                    // Return the updated item
+                    return {
+                      ...item,
+                      filter,
+                    };
+                  });
                 });
               }}
             >
@@ -820,27 +840,35 @@ const FunctionDelete = ({
               }}
               onChange={(e) => {
                 setFunctionParts((prev) => {
-                  // Make a copy of prev to avoid direct mutation
-                  const newState = [...prev];
+                  return prev.map((item, i) => {
+                    if (i !== idx) {
+                      return item;
+                    }
 
-                  // Make sure newState[idx].filter exists
-                  if (!newState[idx].filter) {
-                    newState[idx].filter = [];
-                  }
+                    // Ensure item.filter is defined
+                    const filter = item.filter ? [...item.filter] : [];
 
-                  // Make sure newState[idx].filter[idx] exists
-                  if (!newState[idx].filter[idx]) {
-                    newState[idx].filter[idx] = {
-                      column: "",
-                      operator: "",
-                      value: "",
+                    // Ensure filter[idx] is defined
+                    if (!filter[idx]) {
+                      filter[idx] = {
+                        column: "",
+                        operator: "",
+                        value: "",
+                      };
+                    }
+
+                    // Update the value
+                    filter[idx] = {
+                      ...filter[idx],
+                      value: e.target.value,
                     };
-                  }
 
-                  // Update the value
-                  newState[idx].filter[idx].value = e.target.value;
-
-                  return newState;
+                    // Return the updated item
+                    return {
+                      ...item,
+                      filter,
+                    };
+                  });
                 });
               }}
               type="text"

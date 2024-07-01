@@ -2,7 +2,10 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/utils"
@@ -235,7 +238,7 @@ func (f *fields) convertTypeToSQLiteType() string {
 	case "datetime":
 		return "DATETIME"
 	case "file":
-		return ""
+		return "BLOB"
 	case "relation":
 		return "RELATION"
 	default:
@@ -413,17 +416,13 @@ func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-type insertDataReq struct {
-	Data map[string]interface{} `json:"data"`
-}
-
 func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
-	var params *insertDataReq = new(insertDataReq)
-	if err := c.Bind(&params); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"error": err.Error(),
+	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": "Failed to parse multipart form",
 		})
 	}
 
@@ -440,16 +439,55 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	}
 
 	filteredData := make(map[string]interface{})
-	for k, v := range params.Data {
-		if k == "id" && (v == 0 || v == "") {
+
+	id, _ := utils.GenerateRandomString(16)
+	form := c.Request().MultipartForm
+
+	for k, v := range form.Value {
+		if len(v) == 0 || k == "id" || k == "created_at" || k == "updated_at" {
 			continue
 		}
-		if v != nil && v != "" {
-			filteredData[k] = v
+		if v[0] == "" {
+			continue
 		}
+		filteredData[k] = v[0]
 	}
 
-	filteredData["id"], _ = utils.GenerateRandomString(16)
+	for k, files := range form.File {
+		file, err := files[0].Open()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to open file",
+			})
+		}
+
+		defer file.Close()
+
+		newFileName := utils.GenerateUUIDV7()
+		fileExtension := filepath.Ext(files[0].Filename)
+
+		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
+
+		dst, err := os.Create(storageDir)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to create destination file",
+			})
+		}
+		defer dst.Close()
+
+		// Copy file to destination
+		if _, err := io.Copy(dst, file); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to save file",
+			})
+		}
+
+		filteredData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
+		continue
+	}
+
+	filteredData["id"] = id
 
 	result := d.db.Table(tableName).
 		Create(&filteredData)
@@ -459,34 +497,83 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, params.Data)
-}
-
-type updateDataReq struct {
-	ID   string                 `json:"id"`
-	Data map[string]interface{} `json:"data"`
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success",
+	})
 }
 
 func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
-	var params *updateDataReq = new(updateDataReq)
-	if err := c.Bind(&params); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"error": err.Error(),
+	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": "Failed to parse multipart form",
 		})
 	}
 
+	updatedData := make(map[string]interface{})
+	form := c.Request().MultipartForm
+
+	for k, v := range form.Value {
+		if len(v) == 0 || k == "created_at" || k == "updated_at" {
+			continue
+		}
+		if v[0] == "" {
+			continue
+		}
+		updatedData[k] = v[0]
+	}
+
+	for k, files := range form.File {
+		file, err := files[0].Open()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to open file",
+			})
+		}
+
+		defer file.Close()
+
+		newFileName := utils.GenerateUUIDV7()
+		fileExtension := filepath.Ext(files[0].Filename)
+		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
+		_, err = os.Stat(storageDir)
+		if os.IsExist(err) {
+			os.Remove(storageDir)
+		}
+
+		dst, err := os.Create(storageDir)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to create destination file",
+			})
+		}
+		defer dst.Close()
+
+		// Copy file to destination
+		if _, err := io.Copy(dst, file); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Failed to save file",
+			})
+		}
+
+		updatedData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
+		continue
+	}
+
 	result := d.db.Table(tableName).
-		Where("id = ?", params.ID).
-		Updates(&params.Data)
+		Where("id = ?", updatedData["id"]).
+		Updates(&updatedData)
 	if result.Error != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": result.Error.Error(),
 		})
 	}
 
-	return c.JSON(http.StatusOK, params.Data)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success",
+	})
 }
 
 type deleteDataReq struct {

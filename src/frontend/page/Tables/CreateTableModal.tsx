@@ -22,7 +22,7 @@ import GeneralField from "../../components/Fields/GeneralField";
 import { RiText } from "react-icons/ri";
 import { HiOutlineHashtag } from "react-icons/hi";
 import { RxComponentBoolean } from "react-icons/rx";
-import { FaRegCalendar, FaRegUser, FaTable } from "react-icons/fa6";
+import { FaRegCalendar, FaRegFile, FaRegUser, FaTable } from "react-icons/fa6";
 import RelationField from "../../components/Fields/RelationField";
 import { TbCirclesRelation } from "react-icons/tb";
 import axiosInstance from "../../pkg/axiosInstance";
@@ -206,7 +206,22 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
           />
         );
       case "file":
-
+        return (
+          <GeneralField
+            key={index}
+            onDelete={() => deleteField(index)}
+            onChange={(field) =>
+              setFields([
+                ...fields.slice(0, index),
+                field,
+                ...fields.slice(index + 1),
+              ])
+            }
+            field={field}
+            idx={index}
+            icon={<FaRegFile />}
+          />
+        );
       default:
     }
   };

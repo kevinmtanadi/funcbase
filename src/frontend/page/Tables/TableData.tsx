@@ -38,6 +38,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import FloatingBox from "../../components/FloatingBox";
 import { TbCirclesRelation } from "react-icons/tb";
 import { toast } from "react-toastify";
+import { FaRegFile } from "react-icons/fa6";
 
 interface TableDataProps {
   table: {
@@ -208,6 +209,15 @@ const TableData = ({ table }: TableDataProps) => {
           <TooltipContainer column={column}>
             <div className="flex items-center gap-2">
               <RxComponentBoolean size={12} />
+              <p>{column.name}</p>
+            </div>
+          </TooltipContainer>
+        );
+      case "BLOB":
+        return (
+          <TooltipContainer column={column}>
+            <div className="flex items-center gap-2">
+              <FaRegFile size={12} />
               <p>{column.name}</p>
             </div>
           </TooltipContainer>

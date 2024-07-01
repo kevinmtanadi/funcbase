@@ -25,6 +25,7 @@ import { parseAbsoluteToLocal } from "@internationalized/date";
 import { BsThreeDots } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
 import axiosInstance from "../../pkg/axiosInstance";
+import FileInput from "../../components/Inputs/FileInput";
 
 interface UpdateDataModalProps {
   isOpen: boolean;
@@ -118,6 +119,22 @@ const UpdateDataModal = ({
             onChange={formik.handleChange}
           />
         );
+      case "BLOB":
+        return (
+          <FileInput
+            id={column.name}
+            name={column.name}
+            isRequired={column.notnull === 0}
+            key={column.name}
+            label={column.name}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              if (!event.target.files) {
+                return;
+              }
+              formik.setFieldValue(column.name, event.target.files[0]);
+            }}
+          />
+        );
       default:
         return (
           <TextInput
@@ -138,10 +155,21 @@ const UpdateDataModal = ({
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axiosInstance.put(`/api/main/${tableName}/update`, {
-        id: id,
-        data: data,
+      const formData = new FormData();
+
+      Object.keys(data).forEach((key) => {
+        formData.append(key, data[key]);
       });
+
+      const res = await axiosInstance.put(
+        `/api/main/${tableName}/update`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       return res.data;
     },
     onSuccess: () => {

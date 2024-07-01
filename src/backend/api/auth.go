@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
@@ -36,11 +37,11 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 
 	var body *registerReq = new(registerReq)
 	if err := c.Bind(body); err != nil {
-		return c.String(http.StatusBadRequest, "Bad Request")
+		return c.JSON(http.StatusBadRequest, "Error binding request")
 	}
 
 	if body.Data["email"] == nil || body.Data["password"] == nil {
-		return c.String(http.StatusBadRequest, "Bad Request")
+		return c.JSON(http.StatusBadRequest, "Email or password is empty")
 	}
 
 	table, err := getTableInfo(h.db, tableName)
@@ -73,11 +74,18 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 
 	id, _ := utils.GenerateRandomString(16)
 	newUser := map[string]interface{}{
-		"id":       id,
 		"email":    body.Data["email"],
 		"password": hashedPassword,
 		"salt":     salt,
 	}
+
+	for k, v := range body.Data {
+		newUser[k] = v
+	}
+
+	newUser["id"] = id
+
+	fmt.Println(newUser)
 
 	err = h.db.Table(tableName).Create(&newUser).Error
 	if err != nil {

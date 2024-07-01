@@ -17,6 +17,7 @@ type API struct {
 	Database DatabaseAPI
 	Function FunctionAPI
 	Setting  SettingAPI
+	Storage  StorageAPI
 }
 
 type Search struct {
@@ -26,12 +27,13 @@ type Search struct {
 func NewAPI(app *echo.Echo, ioc di.Container) *API {
 	return &API{
 		app:      app,
-		router:   app.Group("/api", middleware.ValidateAPIKey),
+		router:   app.Group("/api"),
 		Admin:    NewAdminAPI(ioc),
 		Auth:     NewAuthAPI(ioc),
 		Database: NewDatabaseAPI(ioc),
 		Function: NewFunctionAPI(ioc),
 		Setting:  NewSettingAPI(ioc),
+		Storage:  NewStorageAPI(ioc),
 	}
 }
 
@@ -40,16 +42,17 @@ func (api *API) Serve() {
 	api.AdminAPI()
 	api.AuthAPI()
 	api.SettingAPI()
+	api.StorageAPI()
 
-	api.router.POST("/:func_name", api.Function.RunFunction, middleware.RequireAuth(false))
-	api.router.GET("/function", api.Function.FetchFunctionList)
-	api.router.GET("/function/:func_name", api.Function.FetchFunctionDetail)
-	api.router.DELETE("/function/:func_name", api.Function.DeleteFunction)
-	api.router.POST("/function/create", api.Function.CreateFunction)
+	api.router.POST("/:func_name", api.Function.RunFunction, middleware.RequireAuth(false), middleware.ValidateAPIKey)
+	api.router.GET("/function", api.Function.FetchFunctionList, middleware.ValidateMainAPIKey)
+	api.router.GET("/function/:func_name", api.Function.FetchFunctionDetail, middleware.ValidateMainAPIKey)
+	api.router.DELETE("/function/:func_name", api.Function.DeleteFunction, middleware.ValidateMainAPIKey)
+	api.router.POST("/function/create", api.Function.CreateFunction, middleware.ValidateMainAPIKey)
 }
 
 func (api *API) MainAPI() {
-	mainRouter := api.router.Group("/main", middleware.RequireAuth(true))
+	mainRouter := api.router.Group("/main", middleware.RequireAuth(true), middleware.ValidateMainAPIKey)
 
 	mainRouter.GET("/tables", api.Database.FetchAllTables)
 	mainRouter.POST("/query", api.Database.RunQuery)
@@ -65,7 +68,7 @@ func (api *API) MainAPI() {
 }
 
 func (api *API) AdminAPI() {
-	adminRouter := api.router.Group("/admin")
+	adminRouter := api.router.Group("/admin", middleware.ValidateMainAPIKey)
 
 	adminRouter.POST("/register", api.Admin.Register)
 	adminRouter.POST("/login", api.Admin.Login)
@@ -73,17 +76,23 @@ func (api *API) AdminAPI() {
 }
 
 func (api *API) AuthAPI() {
-	authRouter := api.router.Group("/auth")
+	authRouter := api.router.Group("/auth", middleware.ValidateAPIKey)
 
 	authRouter.POST("/register/:table_name", api.Auth.Register)
 	authRouter.POST("/login/:table_name", api.Auth.Login)
 }
 
 func (api *API) SettingAPI() {
-	settingRouter := api.router.Group("/settings")
+	settingRouter := api.router.Group("/settings", middleware.ValidateMainAPIKey)
 
 	settingRouter.GET("", api.Setting.Get)
 	settingRouter.PUT("", api.Setting.Update)
+}
+
+func (api *API) StorageAPI() {
+	storageRouter := api.router.Group("/storage", middleware.ValidateAPIKey)
+
+	storageRouter.GET("/:filename", api.Storage.Retrieve)
 }
 
 func getTableInfo(db *gorm.DB, tableName string) (model.Tables, error) {

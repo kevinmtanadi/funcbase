@@ -18,6 +18,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
 import { useEffect } from "react";
+import FileInput from "../../components/Inputs/FileInput";
 
 interface InsertDataModalProps {
   isOpen: boolean;
@@ -51,6 +52,9 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
         break;
       case "BOOLEAN":
         acc[field.name] = false;
+        break;
+      case "BLOB":
+        acc[field.name] = null;
         break;
       default:
         acc[field.name] = "";
@@ -122,6 +126,8 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             relatedTable={column.reference}
           />
         );
+      case "BLOB":
+        break;
       default:
         return (
           <TextInput
@@ -141,17 +147,47 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
       if (table.is_auth) {
+        const cleanedData: any = {};
+        Object.keys(data).forEach((key) => {
+          if (
+            data[key] !== "" &&
+            data[key] !== null &&
+            data[key] !== undefined &&
+            !(
+              typeof data[key] === "object" &&
+              Object.keys(data[key]).length === 0
+            )
+          ) {
+            cleanedData[key] = data[key];
+          }
+        });
+
         const res = await axiosInstance.post(
           `/api/auth/register/${table.name}`,
-          { data: data }
+          {
+            data: cleanedData,
+            returns_token: false,
+          }
         );
 
         return res.data;
       }
 
-      const res = await axiosInstance.post(`/api/main/${table.name}/insert`, {
-        data: data,
+      const formData = new FormData();
+
+      Object.keys(data).forEach((key) => {
+        formData.append(key, data[key]);
       });
+
+      const res = await axiosInstance.post(
+        `/api/main/${table.name}/insert`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       return res.data;
     },
     onSuccess: () => {

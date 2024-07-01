@@ -36,3 +36,6 @@ database.db
 *.db
 db/*
 db
+
+public/*
+public

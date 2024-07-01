@@ -7,9 +7,6 @@ import {
   Checkbox,
   CheckboxGroup,
   Chip,
-  Input,
-  Select,
-  SelectItem,
   table,
   useDisclosure,
 } from "@nextui-org/react";
@@ -137,7 +134,7 @@ const FunctionInsert = ({ func }: FunctionInsertProps) => {
       <div className="flex gap-1 items-center">
         {Object.entries(func.values)
           .filter((key) => key[1] !== "$user.id")
-          .map((key, val) => (
+          .map((key) => (
             <Chip color="primary" className="px-2" key={key[0]}>
               {key[0]}
             </Chip>
