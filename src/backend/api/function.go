@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/model"
+	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
 	"strings"
 
@@ -24,12 +25,14 @@ type FunctionAPI interface {
 }
 
 type FunctionAPIImpl struct {
-	db *gorm.DB
+	db      *gorm.DB
+	service *service.Service
 }
 
 func NewFunctionAPI(ioc di.Container) FunctionAPI {
 	return FunctionAPIImpl{
-		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }
 
@@ -161,37 +164,48 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 
 	savedData := map[string]interface{}{}
 	err = f.db.Transaction(func(db *gorm.DB) error {
-		for _, f := range functions {
-			switch f.Action {
+		for _, fun := range functions {
+			columns, err := f.service.Table.Columns(fun.Table, false)
+			if err != nil {
+				return err
+			}
+
+			for _, column := range columns {
+				if column.Type == "BLOB" {
+					
+				}
+			}
+
+			switch fun.Action {
 			case "insert":
-				if f.Multiple {
-					bindedInput := BindMultipleInput(f.Values, caller.Data[f.Name].([]interface{}), savedData, userID)
+				if fun.Multiple {
+					bindedInput := BindMultipleInput(fun.Values, caller.Data[fun.Name].([]interface{}), savedData, userID)
 					for i := range bindedInput {
 						bindedInput[i]["id"], _ = utils.GenerateRandomString(16)
 					}
-					err := db.Table(f.Table).Create(bindedInput).Error
+					err := db.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
 				} else {
-					bindedInput := BindSingularInput(f.Values, caller.Data[f.Name].(map[string]interface{}), savedData, userID)
+					bindedInput := BindSingularInput(fun.Values, caller.Data[fun.Name].(map[string]interface{}), savedData, userID)
 					bindedInput["id"], _ = utils.GenerateRandomString(16)
-					err := db.Table(f.Table).Create(bindedInput).Error
+					err := db.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
 
-					savedData[f.Name] = bindedInput["id"]
+					savedData[fun.Name] = bindedInput["id"]
 				}
 			case "update":
-				if f.Multiple {
-					for _, input := range caller.Data[f.Name].([]map[string]interface{}) {
+				if fun.Multiple {
+					for _, input := range caller.Data[fun.Name].([]map[string]interface{}) {
 						filter := map[string]interface{}{
 							"id = ?": input["id"],
 						}
 
-						bindedInput := BindSingularInput(f.Values, input, savedData, userID)
-						table := db.Table(f.Table)
+						bindedInput := BindSingularInput(fun.Values, input, savedData, userID)
+						table := db.Table(fun.Table)
 						for k, v := range filter {
 							table = table.Where(k, v)
 						}
@@ -201,13 +215,13 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 						}
 					}
 				} else {
-					data := caller.Data[f.Name].(map[string]interface{})
+					data := caller.Data[fun.Name].(map[string]interface{})
 					filter := map[string]interface{}{
 						"id = ?": data["id"],
 					}
 
-					bindedInput := BindSingularInput(f.Values, caller.Data[f.Name].(map[string]interface{}), savedData, userID)
-					table := db.Table(f.Table)
+					bindedInput := BindSingularInput(fun.Values, caller.Data[fun.Name].(map[string]interface{}), savedData, userID)
+					table := db.Table(fun.Table)
 					for k, v := range filter {
 						table = table.Where(k, v)
 					}
@@ -217,10 +231,10 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 					}
 				}
 			case "delete":
-				data := caller.Data[f.Name].(map[string]interface{})
+				data := caller.Data[fun.Name].(map[string]interface{})
 				filter := map[string]interface{}{}
 
-				for _, f := range f.Filter {
+				for _, f := range fun.Filter {
 					if f.Value == "" {
 						filter[f.Column+f.Operator] = data[f.Column]
 					} else {
@@ -228,7 +242,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 					}
 				}
 
-				table := db.Table(f.Table)
+				table := db.Table(fun.Table)
 				for k, v := range filter {
 					table = table.Where(k, v)
 				}
@@ -238,12 +252,12 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 				}
 			case "fetch":
 				result := []map[string]interface{}{}
-				err := db.Table(f.Table).Select(f.Columns).Find(&result).Error
+				err := db.Table(fun.Table).Select(fun.Columns).Find(&result).Error
 				if err != nil {
 					return err
 				}
 
-				savedData[f.Name] = result
+				savedData[fun.Name] = result
 			}
 		}
 

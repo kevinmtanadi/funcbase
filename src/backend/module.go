@@ -6,6 +6,7 @@ import (
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/middleware"
 	pkg_sqlite "react-golang/src/backend/pkg/sqlite"
+	"react-golang/src/backend/service"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -38,6 +39,12 @@ func (m *Module) IOC(app *echo.Echo) di.Container {
 					Migrate: true,
 				})
 				return db, err
+			},
+		},
+		di.Def{
+			Name: constants.CONTAINER_SERVICE,
+			Build: func(ctn di.Container) (interface{}, error) {
+				return service.NewService(ctn), nil
 			},
 		},
 	)

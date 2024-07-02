@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
+	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
 
 	"github.com/labstack/echo/v4"
@@ -18,12 +19,14 @@ type AuthAPI interface {
 }
 
 type AuthAPIImpl struct {
-	db *gorm.DB
+	db      *gorm.DB
+	service *service.Service
 }
 
 func NewAuthAPI(ioc di.Container) AuthAPI {
 	return &AuthAPIImpl{
-		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }
 
@@ -44,7 +47,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, "Email or password is empty")
 	}
 
-	table, err := getTableInfo(h.db, tableName)
+	table, err := h.service.Table.Info(tableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
@@ -128,7 +131,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Bad Request")
 	}
 
-	table, err := getTableInfo(h.db, tableName)
+	table, err := h.service.Table.Info(tableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}

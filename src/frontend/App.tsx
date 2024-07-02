@@ -9,12 +9,13 @@ import { LuFunctionSquare, LuUsers2 } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "./pkg/axiosInstance";
 import { BiWrench } from "react-icons/bi";
+import { AiOutlineTable } from "react-icons/ai";
 
 const tabs = [
   {
     name: "Database",
     path: "/",
-    icon: CgDatabase,
+    icon: AiOutlineTable,
   },
   {
     name: "SQL Editor",
@@ -25,6 +26,11 @@ const tabs = [
     name: "Functions",
     path: "/function",
     icon: LuFunctionSquare,
+  },
+  {
+    name: "Storage",
+    path: "/storage",
+    icon: CgDatabase,
   },
   {
     name: "Admins",

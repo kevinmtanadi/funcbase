@@ -17,6 +17,7 @@ import InitialRegister from "./page/InitialRegister.tsx";
 import Setting from "./page/Setting/Setting.tsx";
 import Function from "./page/Function/Function.tsx";
 import CreateFunction from "./page/Function/CreateFunction.tsx";
+import Storage from "./page/Storage/Storage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -52,6 +53,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <CreateFunction />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/storage",
+        element: (
+          <ProtectedRoute>
+            <Storage />
           </ProtectedRoute>
         ),
       },

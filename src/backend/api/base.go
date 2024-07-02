@@ -2,11 +2,9 @@ package api
 
 import (
 	"react-golang/src/backend/middleware"
-	"react-golang/src/backend/model"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
-	"gorm.io/gorm"
 )
 
 type API struct {
@@ -90,20 +88,10 @@ func (api *API) SettingAPI() {
 }
 
 func (api *API) StorageAPI() {
-	storageRouter := api.router.Group("/storage", middleware.ValidateAPIKey)
+	storageRouter := api.router.Group("/storage")
 
+	storageRouter.GET("", api.Storage.FetchStorageData, middleware.ValidateMainAPIKey)
 	storageRouter.GET("/:filename", api.Storage.Retrieve)
-}
-
-func getTableInfo(db *gorm.DB, tableName string) (model.Tables, error) {
-	var table model.Tables
-	err := db.Model(&model.Tables{}).
-		Where("is_system = ?", false).
-		Where("name = ?", tableName).
-		First(&table).Error
-	if err != nil {
-		return table, err
-	}
-
-	return table, nil
+	storageRouter.POST("/upload", api.Storage.Upload, middleware.ValidateAPIKey)
+	storageRouter.DELETE("/:filename", api.Storage.Delete, middleware.ValidateMainAPIKey)
 }

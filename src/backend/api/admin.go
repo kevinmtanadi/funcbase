@@ -6,6 +6,7 @@ import (
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
 	"react-golang/src/backend/model"
+	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
 
 	"github.com/labstack/echo/v4"
@@ -20,12 +21,14 @@ type AdminAPI interface {
 }
 
 type AdminAPIImpl struct {
-	db *gorm.DB
+	db      *gorm.DB
+	service *service.Service
 }
 
 func NewAdminAPI(ioc di.Container) AdminAPI {
 	return &AdminAPIImpl{
-		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }
 

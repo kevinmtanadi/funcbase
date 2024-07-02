@@ -9,7 +9,7 @@ import {
   SelectItem,
 } from "@nextui-org/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaPlus } from "react-icons/fa6";
 import axiosInstance from "../../pkg/axiosInstance";
 import { IoCloseSharp } from "react-icons/io5";
@@ -379,40 +379,52 @@ const FunctionInsert = ({
         Multiple
       </Checkbox>
       <p className="text-default-500 text-xs">Allow multiple data insertion</p>
-      {columns?.map((column) => (
-        <Select
-          items={selections}
-          size="sm"
-          defaultSelectedKeys={[""]}
-          label={column.name}
-          variant="bordered"
-          onChange={(e) => {
-            if (e.target.value !== "") {
-              setFunctionParts((prevParts) => [
-                ...prevParts.slice(0, idx),
-                {
-                  ...prevParts[idx],
-                  values: {
-                    ...prevParts[idx].values,
-                    [column.name]: e.target.value,
+      {columns?.map((column, idx) =>
+        column.type !== "BLOB" ? (
+          <Select
+            key={column.name}
+            items={selections}
+            size="sm"
+            defaultSelectedKeys={[""]}
+            label={column.name}
+            variant="bordered"
+            onChange={(e) => {
+              if (e.target.value !== "") {
+                setFunctionParts((prevParts) => [
+                  ...prevParts.slice(0, idx),
+                  {
+                    ...prevParts[idx],
+                    values: {
+                      ...prevParts[idx].values,
+                      [column.name]: e.target.value,
+                    },
                   },
-                },
-                ...prevParts.slice(idx + 1),
-              ]);
-            }
-          }}
-        >
-          {(item) => (
-            <SelectItem
-              description={item.description}
-              value={item.value}
-              key={item.key}
-            >
-              {item.label}
-            </SelectItem>
-          )}
-        </Select>
-      ))}
+                  ...prevParts.slice(idx + 1),
+                ]);
+              }
+            }}
+          >
+            {(item) => (
+              <SelectItem
+                description={item.description}
+                value={item.value}
+                key={item.key}
+              >
+                {item.label}
+              </SelectItem>
+            )}
+          </Select>
+        ) : (
+          <Input
+            isDisabled
+            fullWidth
+            variant="bordered"
+            label={column.name}
+            placeholder="BLOB of the file"
+            value={""}
+          />
+        )
+      )}
     </div>
   );
 };

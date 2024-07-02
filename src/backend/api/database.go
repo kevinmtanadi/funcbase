@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/model"
+	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
 	"strings"
 
@@ -33,12 +34,14 @@ type DatabaseAPI interface {
 }
 
 type DatabaseAPIImpl struct {
-	db *gorm.DB
+	db      *gorm.DB
+	service *service.Service
 }
 
 func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 	return &DatabaseAPIImpl{
-		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }
 
@@ -87,59 +90,11 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 		})
 	}
 
-	table, err := getTableInfo(d.db, tableName)
+	result, err := d.service.Table.Columns(tableName, params.FetchAuthColumn)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
-	}
-
-	var result []model.Column
-	if err := d.db.Raw(fmt.Sprintf(`
-		SELECT 
-			info.cid,
-			info.name,
-			info.'type',
-			info.pk,
-			info.'notnull',
-			info.dflt_value,
-			fk.'table' AS reference
-		FROM pragma_table_info('%s') AS info
-		LEFT JOIN pragma_foreign_key_list('%s') AS fk ON
-		info.name = fk.'from'
-	`, tableName, tableName)).
-		Scan(&result).
-		Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	for i, col := range result {
-		if col.Reference != "" {
-			result[i].Type = "RELATION"
-		}
-	}
-
-	// If table is user type, prevent displaying authentication fields
-	if table.IsAuth {
-		var cleanedResult []model.Column
-		if params.FetchAuthColumn {
-			for _, row := range result {
-				if row.Name != "salt" {
-					cleanedResult = append(cleanedResult, row)
-				}
-			}
-
-			return c.JSON(http.StatusOK, cleanedResult)
-		}
-		for _, row := range result {
-			if row.Name != "password" && row.Name != "salt" {
-				cleanedResult = append(cleanedResult, row)
-			}
-		}
-
-		return c.JSON(http.StatusOK, cleanedResult)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -159,7 +114,7 @@ type fetchRowsParam struct {
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
 
-	table, err := getTableInfo(d.db, tableName)
+	table, err := d.service.Table.Info(tableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
@@ -426,7 +381,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		})
 	}
 
-	table, err := getTableInfo(d.db, tableName)
+	table, err := d.service.Table.Info(tableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
@@ -467,19 +422,10 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		fileExtension := filepath.Ext(files[0].Filename)
 
 		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
-
-		dst, err := os.Create(storageDir)
+		err = d.service.Storage.Save(file, storageDir)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to create destination file",
-			})
-		}
-		defer dst.Close()
-
-		// Copy file to destination
-		if _, err := io.Copy(dst, file); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to save file",
+				"error": err.Error(),
 			})
 		}
 
@@ -489,13 +435,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 	filteredData["id"] = id
 
-	result := d.db.Table(tableName).
-		Create(&filteredData)
-	if result.Error != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": result.Error.Error(),
-		})
-	}
+	d.service.Table.Insert(tableName, filteredData)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success",
@@ -562,12 +502,10 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 		continue
 	}
 
-	result := d.db.Table(tableName).
-		Where("id = ?", updatedData["id"]).
-		Updates(&updatedData)
-	if result.Error != nil {
+	err = d.service.Table.Update(tableName, updatedData)
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": result.Error.Error(),
+			"error": err.Error(),
 		})
 	}
 
@@ -590,12 +528,12 @@ func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
 		})
 	}
 
-	result := d.db.Table(tableName).
-		Where("id IN ?", params.ID).
-		Delete(nil)
-	if result.Error != nil {
+	err := d.service.Table.Delete(tableName, map[string]interface{}{
+		"id": params.ID,
+	})
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": result.Error.Error(),
+			"error": err.Error(),
 		})
 	}
 

@@ -127,6 +127,21 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
           />
         );
       case "BLOB":
+        return (
+          <FileInput
+            id={column.name}
+            name={column.name}
+            isRequired={column.notnull === 0}
+            key={column.name}
+            label={column.name}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              if (!event.target.files) {
+                return;
+              }
+              formik.setFieldValue(column.name, event.target.files[0]);
+            }}
+          />
+        );
         break;
       default:
         return (
