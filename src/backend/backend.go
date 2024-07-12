@@ -30,6 +30,9 @@ func main() {
 	app.Static("/sql", distDir)
 	app.Static("/setting", distDir)
 	app.Static("/admin", distDir)
+	app.Static("/function", distDir)
+	app.Static("/function/create", distDir)
+	app.Static("/storage", distDir)
 	app.File("", distDir+"/index.html")
 
 	port := "8080"

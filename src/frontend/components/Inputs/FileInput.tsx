@@ -1,5 +1,3 @@
-import { Input } from "@nextui-org/react";
-
 interface FileInputProps {
   id?: string;
   name?: string;
@@ -9,15 +7,7 @@ interface FileInputProps {
   isRequired?: boolean;
   isDisabled?: boolean;
 }
-const FileInput = ({
-  id,
-  name,
-  value,
-  label,
-  onChange,
-  isRequired,
-  isDisabled,
-}: FileInputProps) => {
+const FileInput = ({ id, name, value, onChange }: FileInputProps) => {
   return (
     <input type="file" id={id} name={name} value={value} onChange={onChange} />
   );

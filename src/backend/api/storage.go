@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -60,7 +61,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 		params.Page = 1
 	}
 	if params.PageSize <= 0 {
-		params.PageSize = 20
+		params.PageSize = 100
 	}
 
 	// Calculate the offset and limit
@@ -148,6 +149,7 @@ func (s *StorageAPIImpl) Upload(c echo.Context) error {
 		defer file.Close()
 
 		storageDir := filepath.Join("..", "public", files[0].Filename)
+		fmt.Println(storageDir)
 		err = s.service.Storage.Save(file, storageDir)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{

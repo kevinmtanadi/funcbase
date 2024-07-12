@@ -1,4 +1,4 @@
-import { Autocomplete, AutocompleteItem } from "@nextui-org/react";
+import { Autocomplete, AutocompleteItem, Input } from "@nextui-org/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { TbCirclesRelation } from "react-icons/tb";
@@ -23,24 +23,24 @@ const RelationInput = ({
   relatedTable,
 }: RelationInputProps) => {
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const { data, isLoading } = useQuery<any[]>({
+  const { data, isLoading } = useQuery<any>({
     queryKey: ["rows", relatedTable, searchQuery],
     queryFn: async () => {
-      const { data } = await axiosInstance.post(
+      const { data } = await axiosInstance.get(
         `/api/main/${relatedTable}/rows`,
         {
-          filters: [
-            {
-              column: "id",
-              operator: "LIKE",
-              value: `${searchQuery}%`,
-            },
-          ],
+          params: {
+            filter: `id LIKE '${searchQuery}%'`,
+          },
         }
       );
       return data;
     },
   });
+
+  if (!data || !data.data) {
+    return <Input label={label} isDisabled />;
+  }
 
   return (
     <Autocomplete
@@ -51,8 +51,8 @@ const RelationInput = ({
       fullWidth
       defaultItems={[]}
       inputValue={searchQuery}
-      isLoading={isLoading}
-      items={data}
+      isLoading={isLoading || !data || !data.data}
+      items={data.data}
       startContent={<TbCirclesRelation />}
       label={label}
       variant="bordered"
@@ -61,7 +61,9 @@ const RelationInput = ({
         onChange(value);
       }}
     >
-      {(item) => <AutocompleteItem key={item.id}>{item.id}</AutocompleteItem>}
+      {(item: any) => (
+        <AutocompleteItem key={item.id}>{item.id}</AutocompleteItem>
+      )}
     </Autocomplete>
   );
 };

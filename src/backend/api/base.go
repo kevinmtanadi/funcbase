@@ -50,19 +50,19 @@ func (api *API) Serve() {
 }
 
 func (api *API) MainAPI() {
-	mainRouter := api.router.Group("/main", middleware.RequireAuth(true), middleware.ValidateMainAPIKey)
+	mainRouter := api.router.Group("/main")
 
-	mainRouter.GET("/tables", api.Database.FetchAllTables)
-	mainRouter.POST("/query", api.Database.RunQuery)
-	mainRouter.GET("/query", api.Database.FetchQueryHistory)
-	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns)
-	mainRouter.POST("/:table_name/rows", api.Database.FetchRows)
-	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID)
-	mainRouter.POST("/table/create", api.Database.CreateTable)
-	mainRouter.POST("/:table_name/insert", api.Database.InsertData)
-	mainRouter.PUT("/:table_name/update", api.Database.UpdateData)
-	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData)
-	mainRouter.DELETE("/:table_name", api.Database.DeleteTable)
+	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/query", api.Database.RunQuery, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/rows", api.Database.FetchRows, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.ValidateAPIKey)
+	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 }
 
 func (api *API) AdminAPI() {
@@ -78,6 +78,7 @@ func (api *API) AuthAPI() {
 
 	authRouter.POST("/register/:table_name", api.Auth.Register)
 	authRouter.POST("/login/:table_name", api.Auth.Login)
+	authRouter.GET("/me", api.Auth.GetMyUserID, middleware.RequireAuth(true))
 }
 
 func (api *API) SettingAPI() {

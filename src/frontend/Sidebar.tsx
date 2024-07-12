@@ -15,6 +15,7 @@ export interface Tab {
 interface SidebarProps {
   tabs: Tab[];
 }
+
 const Sidebar = ({ tabs }: SidebarProps) => {
   const location = useLocation();
   const { pathname } = location;

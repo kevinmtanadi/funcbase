@@ -82,7 +82,7 @@ const QueryResult = ({ rows, columns }: QueryResultProps) => {
             <TableRow key={item.id || item.cid}>
               {(columnKey) => (
                 <TableCell key={columnKey}>
-                  {getKeyValue(item, columnKey)}
+                  {getKeyValue(item, columnKey) || ""}
                 </TableCell>
               )}
             </TableRow>

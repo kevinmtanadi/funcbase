@@ -1,5 +1,5 @@
 import { Button, Card, CardBody, CardHeader, Input } from "@nextui-org/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Formik } from "formik";
 import { useState } from "react";
 import useSignIn from "react-auth-kit/hooks/useSignIn";
@@ -19,6 +19,14 @@ const loginDataSchema = Yup.object({
 });
 
 const InitialRegister = () => {
+  const { data: admin, isLoading } = useQuery<any>({
+    queryKey: ["admin"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/api/admin");
+      return data;
+    },
+  });
+
   const signIn = useSignIn();
   const navigate = useNavigate();
 
@@ -47,6 +55,16 @@ const InitialRegister = () => {
 
   const [isVisible, setIsVisible] = useState(false);
   const toggleVisibility = () => setIsVisible(!isVisible);
+
+  if (isLoading || !admin) {
+    return <>Loading...</>;
+  }
+
+  if (admin.rows.length !== 0) {
+    console.log(admin.rows.length);
+    window.location.href = "/";
+    return <></>;
+  }
 
   return (
     <div className="bg-default-100 flex h-screen w-screen overflow-hidden items-center justify-center">

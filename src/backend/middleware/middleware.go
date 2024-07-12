@@ -31,38 +31,40 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 				"error":  "unauthorized",
 			}
 
-			authToken := c.Request().Header.Get("Authorization")
-			if authToken == "" {
-				if required {
-					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+			cookies := c.Request().Cookies()
+			for _, cookie := range cookies {
+				if cookie.Name == "_auth" {
+					accessToken := cookie.Value
+
+					claims, err := parseJWT(accessToken)
+					if err != nil {
+						if required {
+							return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+						}
+					}
+
+					// token is expired
+					if float64(time.Now().Unix()) > claims["exp"].(float64) {
+						if required {
+							return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+						}
+					}
+
+					userID, ok := claims["sub"].(string)
+					if ok {
+						c.Set("user_id", userID)
+						return next(c)
+					}
+
+					if required {
+						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+					}
+
+					return next(c)
 				}
 			}
 
-			claims, err := parseJWT(authToken)
-			if err != nil {
-				if required {
-					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-				}
-			}
-
-			// token is expired
-			if float64(time.Now().Unix()) > claims["exp"].(float64) {
-				if required {
-					return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-				}
-			}
-
-			userID, ok := claims["sub"].(string)
-			if ok {
-				c.Set("user_id", userID)
-				return next(c)
-			}
-
-			if required {
-				return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-			}
-
-			return next(c)
+			return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 		}
 	}
 }

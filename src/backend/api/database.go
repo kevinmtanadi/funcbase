@@ -100,19 +100,23 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-type Filter struct {
-	Column   string `json:"column"`
-	Operator string `json:"operator"`
-	Value    string `json:"value"`
+type fetchRowsParam struct {
+	Filter   string `query:"filter"`
+	Sort     string `query:"sort"`
+	Page     int    `query:"page"`
+	PageSize int    `query:"page_size"`
 }
 
-type fetchRowsParam struct {
-	Filter []Filter `json:"filters,omitempty"`
-	Limit  int      `json:"limit,omitempty"`
+type fetchRowsRes struct {
+	Data      []map[string]interface{} `json:"data"`
+	Page      int                      `json:"page"`
+	PageSize  int                      `json:"page_size"`
+	TotalData int64                    `json:"total_data"`
 }
 
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
+	var res fetchRowsRes
 
 	table, err := d.service.Table.Info(tableName)
 	if err != nil {
@@ -121,10 +125,8 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 		})
 	}
 
-	var result []map[string]interface{} = make([]map[string]interface{}, 0)
-
 	var params *fetchRowsParam = new(fetchRowsParam)
-	if err := c.Bind(&params); err != nil {
+	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -153,24 +155,54 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 			}
 		}
 	}
-	query := d.db.Table(tableName)
 
-	if params.Limit > 0 {
-		query = query.Limit(params.Limit)
+	paramUser := c.Get("user_id")
+	var userID string
+	if paramUser != nil {
+		userID = paramUser.(string)
 	}
 
-	query = query.Select(columns)
-	for _, filter := range params.Filter {
-		query = query.Where(fmt.Sprintf("%s %s ?", filter.Column, filter.Operator), filter.Value)
+	rawQuery := `
+	SELECT %s FROM %s
+	`
+	query := fmt.Sprintf(rawQuery, columns, tableName)
+
+	if params.Filter != "" {
+		if strings.Contains(params.Filter, "$user.id") {
+			params.Filter = strings.ReplaceAll(params.Filter, "$user.id", userID)
+		}
+		query = query + `WHERE ` + params.Filter
+	}
+	if params.Sort != "" {
+		query = query + ` ORDER BY ` + params.Sort
 	}
 
-	if err := query.
-		Find(&result).
+	res.Data = make([]map[string]interface{}, 0)
+	if err := d.db.Raw(query).
+		Find(&res.Data).
 		Error; err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
-	return c.JSON(http.StatusOK, result)
+	rawCountQuery := `
+	SELECT COUNT(*) FROM %s
+	`
+	query = fmt.Sprintf(rawCountQuery, tableName)
+	if params.Filter != "" {
+		query = query + `WHERE ` + params.Filter
+	}
+	if err := d.db.Raw(query).First(&res.TotalData).Error; err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	res.Page = params.Page
+	res.PageSize = params.PageSize
+
+	return c.JSON(http.StatusOK, res)
 }
 
 type fields struct {
@@ -405,6 +437,14 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		if v[0] == "" {
 			continue
 		}
+		if v[0] == "$user.id" {
+			if c.Get("user_id") == nil {
+				return c.JSON(http.StatusBadRequest, map[string]interface{}{
+					"error": "User not authorized",
+				})
+			}
+			filteredData[k] = c.Get("user_id")
+		}
 		filteredData[k] = v[0]
 	}
 
@@ -528,9 +568,7 @@ func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
 		})
 	}
 
-	err := d.service.Table.Delete(tableName, map[string]interface{}{
-		"id": params.ID,
-	})
+	err := d.service.Table.BatchDelete(tableName, params.ID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),

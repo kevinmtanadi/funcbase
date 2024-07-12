@@ -53,7 +53,7 @@ const Tables = () => {
 
   return (
     <div className="flex flex-col w-full h-screen">
-      <div className="w-full h-[45px] flex border-b-1">
+      <div className="w-full h-[45px] min-h-[45px] flex border-b-1">
         <h1 className="text-xl font-bold my-auto ml-5">Table List</h1>
       </div>
       <div className="flex grow">

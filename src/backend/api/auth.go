@@ -16,6 +16,7 @@ import (
 type AuthAPI interface {
 	Register(c echo.Context) error
 	Login(c echo.Context) error
+	GetMyUserID(c echo.Context) error
 }
 
 type AuthAPIImpl struct {
@@ -77,16 +78,18 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 
 	id, _ := utils.GenerateRandomString(16)
 	newUser := map[string]interface{}{
+		"id":       id,
 		"email":    body.Data["email"],
 		"password": hashedPassword,
 		"salt":     salt,
 	}
 
 	for k, v := range body.Data {
+		if k == "id" || k == "email" || k == "password" || k == "salt" {
+			continue
+		}
 		newUser[k] = v
 	}
-
-	newUser["id"] = id
 
 	fmt.Println(newUser)
 
@@ -143,9 +146,15 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 	var user map[string]interface{}
 	err = h.db.Table(tableName).
 		Where("email = ?", body.Data["email"]).
-		First(&user).Error
+		Limit(1).
+		Find(&user).Error
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"error": "Invalid email or password",
+		})
+	}
+	if user["id"] == nil {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
 			"error": "Invalid email or password",
 		})
 	}
@@ -159,7 +168,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 		"sub":   user["id"].(string),
 		"email": user["email"].(string),
-		"roles": []string{"user", tableName},
+		"role":  tableName,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -169,5 +178,18 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"token": token,
+	})
+}
+
+func (h *AuthAPIImpl) GetMyUserID(c echo.Context) error {
+	userID, ok := c.Get("user_id").(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"error": "JWT Not found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"userID": userID,
 	})
 }

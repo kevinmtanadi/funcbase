@@ -17,7 +17,6 @@ import { toast } from "react-toastify";
 import axiosInstance from "../../pkg/axiosInstance";
 import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
-import { useEffect } from "react";
 import FileInput from "../../components/Inputs/FileInput";
 
 interface InsertDataModalProps {
@@ -30,12 +29,18 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", table.name, "insertion"],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
-        params: {
-          fetch_auth_column: table.is_auth,
-        },
-      });
-      return res.data;
+      if (
+        table !== undefined &&
+        table.name !== "" &&
+        table.name !== undefined
+      ) {
+        const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
+          params: {
+            fetch_auth_column: table.is_auth,
+          },
+        });
+        return res.data;
+      }
     },
   });
 
@@ -142,7 +147,6 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             }}
           />
         );
-        break;
       default:
         return (
           <TextInput
@@ -225,10 +229,6 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
     },
   });
 
-  useEffect(() => {
-    console.log(formik.values);
-  }, [formik]);
-
   return (
     <>
       <Modal radius="sm" size="2xl" isOpen={isOpen} onClose={onClose}>
@@ -242,7 +242,8 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
                     (f) =>
                       f.name !== "id" &&
                       f.name !== "created_at" &&
-                      f.name !== "updated_at"
+                      f.name !== "updated_at" &&
+                      f.name !== "salt"
                   )
                   .map((column) => renderInputField(column, formik))}
               </div>

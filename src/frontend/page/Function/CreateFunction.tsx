@@ -12,7 +12,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useEffect, useState } from "react";
 import { FaPlus } from "react-icons/fa6";
 import axiosInstance from "../../pkg/axiosInstance";
-import { IoCloseSharp } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -276,7 +275,7 @@ const FunctionInsert = ({
   setFunctionParts,
 }: FunctionInsertProps) => {
   const { data: columns } = useQuery<any[]>({
-    queryKey: ["columns", tableName],
+    queryKey: ["columns", tableName, "crud"],
     queryFn: async () => {
       if (!tableName || tableName === "") return [];
       const res = await axiosInstance.get(`/api/main/${tableName}/columns`);
@@ -379,7 +378,7 @@ const FunctionInsert = ({
         Multiple
       </Checkbox>
       <p className="text-default-500 text-xs">Allow multiple data insertion</p>
-      {columns?.map((column, idx) =>
+      {columns?.map((column) =>
         column.type !== "BLOB" ? (
           <Select
             key={column.name}
@@ -390,16 +389,17 @@ const FunctionInsert = ({
             variant="bordered"
             onChange={(e) => {
               if (e.target.value !== "") {
-                setFunctionParts((prevParts) => [
-                  ...prevParts.slice(0, idx),
+                console.log(functionParts);
+                setFunctionParts([
+                  ...functionParts.slice(0, idx),
                   {
-                    ...prevParts[idx],
+                    ...functionParts[idx],
                     values: {
-                      ...prevParts[idx].values,
+                      ...functionParts[idx].values,
                       [column.name]: e.target.value,
                     },
                   },
-                  ...prevParts.slice(idx + 1),
+                  ...functionParts.slice(idx + 1),
                 ]);
               }
             }}
@@ -416,11 +416,12 @@ const FunctionInsert = ({
           </Select>
         ) : (
           <Input
+            key={column.name}
             isDisabled
             fullWidth
             variant="bordered"
             label={column.name}
-            placeholder="BLOB of the file"
+            placeholder="File uploading isn't supported with function"
             value={""}
           />
         )
@@ -442,7 +443,7 @@ const FunctionUpdate = ({
   setFunctionParts,
 }: FunctionUpdateProps) => {
   const { data: columns } = useQuery<any[]>({
-    queryKey: ["columns", tableName],
+    queryKey: ["columns", tableName, "crud"],
     queryFn: async () => {
       if (!tableName || tableName === "") return [];
       const res = await axiosInstance.get(`/api/main/${tableName}/columns`);
@@ -544,6 +545,7 @@ const FunctionUpdate = ({
       <p className="text-default-500 text-xs">Allow multiple data insertion</p>
       {columns?.map((column) => (
         <Select
+          key={column.name}
           items={selections}
           size="sm"
           defaultSelectedKeys={[""]}
@@ -551,17 +553,28 @@ const FunctionUpdate = ({
           variant="bordered"
           onChange={(e) => {
             if (e.target.value !== "") {
-              setFunctionParts((prevParts) => [
-                ...prevParts.slice(0, idx),
+              setFunctionParts([
+                ...functionParts.slice(0, idx),
                 {
-                  ...prevParts[idx],
+                  ...functionParts[idx],
                   values: {
-                    ...prevParts[idx].values,
+                    ...functionParts[idx].values,
                     [column.name]: e.target.value,
                   },
                 },
-                ...prevParts.slice(idx + 1),
+                ...functionParts.slice(idx + 1),
               ]);
+              // setFunctionParts((prevParts) => [
+              //   ...prevParts.slice(0, idx),
+              //   {
+              //     ...prevParts[idx],
+              //     values: {
+              //       ...prevParts[idx].values,
+              //       [column.name]: e.target.value,
+              //     },
+              //   },
+              //   ...prevParts.slice(idx + 1),
+              // ]);
             }
           }}
         >
@@ -631,271 +644,12 @@ interface FunctionDeleteProps {
   setFunctionParts: React.Dispatch<React.SetStateAction<FunctionPart[]>>;
   idx: number;
 }
-const FunctionDelete = ({
-  tableName,
-  functionParts,
-  idx,
-  setFunctionParts,
-}: FunctionDeleteProps) => {
-  const { data: columns } = useQuery<any[]>({
-    queryKey: ["columns", tableName],
-    queryFn: async () => {
-      if (!tableName || tableName === "") return [];
-      const res = await axiosInstance.get(`/api/main/${tableName}/columns`);
-      return res.data;
-    },
-  });
-
-  const addFilter = () => {
-    setFunctionParts((prev) => {
-      // Ensure prev[idx] exists
-      const currentPart = prev[idx] || {};
-
-      // Ensure currentPart.filter exists
-      const currentFilter = currentPart.filter || [];
-
-      // Add the new filter
-      const updatedFilter = [
-        ...currentFilter,
-        {
-          column: "",
-          operator: "",
-          value: "",
-        },
-      ];
-
-      // Create the updated part with the new filter
-      const updatedPart = {
-        ...currentPart,
-        filter: updatedFilter,
-      };
-
-      // Return the new state
-      return [...prev.slice(0, idx), updatedPart, ...prev.slice(idx + 1)];
-    });
-  };
-
-  const removeFilter = (idx: number) => {
-    setFunctionParts((prev) => {
-      const currentPart = prev[idx] || {};
-      const currentFilter = currentPart.filter || [];
-      const updatedFilter = currentFilter.filter((_, i) => i !== idx);
-      const updatedPart = {
-        ...currentPart,
-        filter: updatedFilter,
-      };
-      return [...prev.slice(0, idx), updatedPart, ...prev.slice(idx + 1)];
-    });
-  };
-
+const FunctionDelete = ({ functionParts, idx }: FunctionDeleteProps) => {
   if (!functionParts[idx].action || !functionParts[idx].table) return <></>;
 
   return (
     <div className="flex flex-col">
-      <p className="font-semibold mb-3">Filter deleted data</p>
-      <Button
-        startContent={<FaPlus />}
-        className="rounded-md w-full bg-slate-950 text-white font-semibold"
-        fullWidth
-        onClick={addFilter}
-      >
-        Add Filter
-      </Button>
-      <div className="flex flex-col gap-2 mt-3">
-        {functionParts[idx].filter?.map((filter, idx) => (
-          <div
-            key={idx}
-            className="flex items-center border-2 rounded-md bg-transparent"
-          >
-            <Select
-              selectedKeys={[filter.column]}
-              radius="none"
-              className="bg-transparent h-full"
-              size="sm"
-              label="Column"
-              variant="flat"
-              items={columns}
-              classNames={{
-                base: "min-w-xs",
-                trigger: "bg-transparent",
-              }}
-              onChange={(e) => {
-                setFunctionParts((prev) => {
-                  // Use map to create a new state array
-                  return prev.map((item, i) => {
-                    if (i !== idx) {
-                      // Return the item unchanged if it's not the one we're updating
-                      return item;
-                    }
-
-                    // Ensure item.filter is defined
-                    const filter = item.filter ? [...item.filter] : [];
-
-                    // Ensure filter[idx] is defined
-                    if (!filter[idx]) {
-                      filter[idx] = {
-                        column: "",
-                        operator: "",
-                        value: "",
-                      };
-                    }
-
-                    // Update the value
-                    filter[idx] = {
-                      ...filter[idx],
-                      column: e.target.value,
-                    };
-
-                    // Return the updated item
-                    return {
-                      ...item,
-                      filter,
-                    };
-                  });
-                });
-              }}
-            >
-              {(column) => (
-                <SelectItem key={column.name} value={column.name}>
-                  {column.name}
-                </SelectItem>
-              )}
-            </Select>
-            <Select
-              selectedKeys={[filter.operator]}
-              size="sm"
-              label="Operator"
-              radius="none"
-              classNames={{
-                base: "min-w-xs",
-                trigger: "bg-transparent",
-              }}
-              onChange={(e) => {
-                setFunctionParts((prev) => {
-                  // Use map to create a new state array
-                  return prev.map((item, i) => {
-                    if (i !== idx) {
-                      // Return the item unchanged if it's not the one we're updating
-                      return item;
-                    }
-
-                    // Ensure item.filter is defined
-                    const filter = item.filter ? [...item.filter] : [];
-
-                    // Ensure filter[idx] is defined
-                    if (!filter[idx]) {
-                      filter[idx] = {
-                        column: "",
-                        operator: "",
-                        value: "",
-                      };
-                    }
-
-                    // Update the value
-                    filter[idx] = {
-                      ...filter[idx],
-                      column: e.target.value,
-                    };
-
-                    // Return the updated item
-                    return {
-                      ...item,
-                      filter,
-                    };
-                  });
-                });
-              }}
-            >
-              <SelectItem key={"="} value="=">
-                Equals
-              </SelectItem>
-              <SelectItem key={"!="} value="!=">
-                Not Equals
-              </SelectItem>
-              <SelectItem key={"<"} value="<">
-                Less Than
-              </SelectItem>
-              <SelectItem key={">"} value=">">
-                Greater Than
-              </SelectItem>
-              <SelectItem key={"<="} value="<=">
-                Less Than or Equals
-              </SelectItem>
-              <SelectItem key={">="} value=">=">
-                Greater Than or Equals
-              </SelectItem>
-              <SelectItem key={"sw"} value="sw">
-                Starts With
-              </SelectItem>
-              <SelectItem key={"ew"} value="ew">
-                Ends With
-              </SelectItem>
-              <SelectItem key={"contains"} value="contains">
-                Contains
-              </SelectItem>
-            </Select>
-            <Input
-              size="sm"
-              label={
-                <p className="font-semibold flex items-center gap-1">
-                  Value{" "}
-                  <p className="text-xs font-light">
-                    (Leave empty to set the value on API call)
-                  </p>
-                </p>
-              }
-              variant="flat"
-              value={filter.value}
-              classNames={{
-                inputWrapper: "bg-transparent rounded-none",
-                label: "text-sm",
-              }}
-              onChange={(e) => {
-                setFunctionParts((prev) => {
-                  return prev.map((item, i) => {
-                    if (i !== idx) {
-                      return item;
-                    }
-
-                    // Ensure item.filter is defined
-                    const filter = item.filter ? [...item.filter] : [];
-
-                    // Ensure filter[idx] is defined
-                    if (!filter[idx]) {
-                      filter[idx] = {
-                        column: "",
-                        operator: "",
-                        value: "",
-                      };
-                    }
-
-                    // Update the value
-                    filter[idx] = {
-                      ...filter[idx],
-                      value: e.target.value,
-                    };
-
-                    // Return the updated item
-                    return {
-                      ...item,
-                      filter,
-                    };
-                  });
-                });
-              }}
-              type="text"
-            />
-            <Button
-              onClick={() => removeFilter(idx)}
-              size="lg"
-              variant="flat"
-              className="w-[30px] p-0 min-w-[30px] bg-transparent rounded-l-none rounded-r-md hover:bg-default-200"
-            >
-              <IoCloseSharp />
-            </Button>
-          </div>
-        ))}
-      </div>
+      <div className="flex flex-col gap-2 mt-3"></div>
     </div>
   );
 };

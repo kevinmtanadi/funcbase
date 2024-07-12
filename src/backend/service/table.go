@@ -15,6 +15,7 @@ type TableService interface {
 	Insert(tableName string, data map[string]interface{}) error
 	Update(tableName string, data map[string]interface{}) error
 	Delete(tableName string, data map[string]interface{}) error
+	BatchDelete(tableName string, data []string) error
 }
 
 type TableServiceImpl struct {
@@ -70,7 +71,7 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]mo
 
 	table, err := s.Info(tableName)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	// If table is user type, prevent displaying authentication fields
@@ -83,13 +84,16 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]mo
 				}
 			}
 
-			return result, err
+			return cleanedResult, nil
 		}
+
 		for _, row := range result {
 			if row.Name != "password" && row.Name != "salt" {
 				cleanedResult = append(cleanedResult, row)
 			}
 		}
+
+		return cleanedResult, nil
 	}
 
 	return result, err
@@ -113,6 +117,14 @@ func (s *TableServiceImpl) Update(tableName string, data map[string]interface{})
 func (s *TableServiceImpl) Delete(tableName string, data map[string]interface{}) error {
 	err := s.db.Table(tableName).
 		Where("id = ?", data["id"]).
+		Delete(&data).Error
+
+	return err
+}
+
+func (s *TableServiceImpl) BatchDelete(tableName string, data []string) error {
+	err := s.db.Table(tableName).
+		Where("id IN ?", data).
 		Delete(&data).Error
 
 	return err

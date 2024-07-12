@@ -39,10 +39,10 @@ interface FetchStorageRes {
 }
 
 const Storage = () => {
-  const [params, setParams] = useState<SearchParams>({
+  const [params, _] = useState<SearchParams>({
     search: "",
     page: 1,
-    page_size: 20,
+    page_size: 100,
   });
 
   const { data: files } = useQuery<FetchStorageRes>({
@@ -125,6 +125,11 @@ const Storage = () => {
           </Button>
         </div>
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+          {files?.total_files === 0 && (
+            <div className="text-center col-span-12 row-span-4 mt-15 font-semibold text-default-500 text-xl">
+              Storage is empty
+            </div>
+          )}
           {files?.files?.map((file) => (
             <StorageItem key={file.filename} file={file} />
           ))}

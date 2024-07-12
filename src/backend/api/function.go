@@ -9,6 +9,8 @@ import (
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -37,7 +39,7 @@ func NewFunctionAPI(ioc di.Container) FunctionAPI {
 }
 
 type Caller struct {
-	Data map[string]interface{}
+	Data map[string]interface{} `json:"data"`
 }
 
 type Function struct {
@@ -46,7 +48,6 @@ type Function struct {
 	Table    string                 `json:"table"`
 	Multiple bool                   `json:"multiple"`
 	Values   map[string]interface{} `json:"values"`
-	Filter   []Filter               `json:"filter"`
 	Columns  []string               `json:"columns"`
 }
 
@@ -165,17 +166,6 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 	savedData := map[string]interface{}{}
 	err = f.db.Transaction(func(db *gorm.DB) error {
 		for _, fun := range functions {
-			columns, err := f.service.Table.Columns(fun.Table, false)
-			if err != nil {
-				return err
-			}
-
-			for _, column := range columns {
-				if column.Type == "BLOB" {
-					
-				}
-			}
-
 			switch fun.Action {
 			case "insert":
 				if fun.Multiple {
@@ -232,27 +222,52 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 				}
 			case "delete":
 				data := caller.Data[fun.Name].(map[string]interface{})
-				filter := map[string]interface{}{}
-
-				for _, f := range fun.Filter {
-					if f.Value == "" {
-						filter[f.Column+f.Operator] = data[f.Column]
-					} else {
-						filter[f.Column+f.Operator] = f.Value
+				filter := ""
+				if ft, ok := data["filter"].(string); ok {
+					filter = ft
+					if strings.Contains(filter, "$user.id") {
+						filter = strings.ReplaceAll(ft, "$user.id", userID)
 					}
+				} else {
+					return errors.New("filter cant be empty when deleting")
 				}
 
-				table := db.Table(fun.Table)
-				for k, v := range filter {
-					table = table.Where(k, v)
-				}
-				err := table.Delete(nil).Error
+				query := `
+					DELETE FROM %s
+					WHERE %s
+				`
+
+				err := db.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
 				if err != nil {
 					return err
 				}
 			case "fetch":
+				data := caller.Data[fun.Name].(map[string]interface{})
+				columns := []string{"*"}
+				if col, ok := data["columns"].([]string); ok {
+					columns = col
+				}
+
+				filter := ""
+				if ft, ok := data["filter"].(string); ok {
+					filter = ft
+				}
+
+				query := `
+					SELECT %s
+					FROM %s
+				`
+				query = fmt.Sprintf(query, strings.Join(columns, ","), fun.Table)
+				if filter != "" {
+					query = query + fmt.Sprintf("WHERE %s", filter)
+				}
+
+				err := db.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
+				if err != nil {
+					return err
+				}
+
 				result := []map[string]interface{}{}
-				err := db.Table(fun.Table).Select(fun.Columns).Find(&result).Error
 				if err != nil {
 					return err
 				}
@@ -307,9 +322,34 @@ func Or(query *gorm.DB, key string, value interface{}) *gorm.DB {
 	return query.Or(fmt.Sprintf("%s = ?", key), value)
 }
 
+func parseCalculation(input string) (string, interface{}) {
+	re := regexp.MustCompile(`(\w+)\s*([-+*/])\s*(\d+)`)
+	matches := re.FindStringSubmatch(input)
+
+	if len(matches) != 4 {
+		return "", nil
+	}
+
+	column := matches[1]
+	operator := matches[2]
+	value, _ := strconv.Atoi(matches[3])
+
+	query := fmt.Sprintf("%s %s ?", column, operator)
+	return query, value
+}
+
 func BindSingularInput(template map[string]interface{}, input map[string]interface{}, savedData map[string]interface{}, userID string) map[string]interface{} {
 	result := map[string]interface{}{}
 	for k, v := range template {
+		if res, ok := input[k].(string); ok {
+			if strings.HasPrefix(res, "$") && v.(string) != "$user.id" {
+				inputValue := strings.TrimPrefix(res, "$")
+				key, value := parseCalculation(inputValue)
+				result[k] = gorm.Expr(key, value)
+				continue
+			}
+		}
+
 		if strings.HasPrefix(v.(string), "$") {
 			key := v.(string)[1:]
 			if v == "$user.id" {
@@ -317,8 +357,8 @@ func BindSingularInput(template map[string]interface{}, input map[string]interfa
 			} else {
 				result[k] = savedData[key]
 			}
-		} else {
-			result[k] = input[k]
+		} else if res, ok := input[k]; ok {
+			result[k] = res
 		}
 
 	}

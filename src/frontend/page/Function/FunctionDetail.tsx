@@ -174,14 +174,6 @@ const FunctionDelete = ({ func }: FunctionDeleteProps) => {
       <Checkbox isDisabled isSelected={func.multiple}>
         Multiple
       </Checkbox>
-      <p>Required Columns</p>
-      <div className="flex gap-1 items-center">
-        {Object.keys(func.values).map((key) => (
-          <Chip color="primary" className="px-2" key={key}>
-            {key}
-          </Chip>
-        ))}
-      </div>
     </div>
   );
 };

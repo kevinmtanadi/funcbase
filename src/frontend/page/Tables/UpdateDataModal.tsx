@@ -26,6 +26,7 @@ import { BsThreeDots } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
 import axiosInstance from "../../pkg/axiosInstance";
 import FileInput from "../../components/Inputs/FileInput";
+import RelationInput from "../../components/Inputs/RelationInput";
 
 interface UpdateDataModalProps {
   isOpen: boolean;
@@ -119,6 +120,23 @@ const UpdateDataModal = ({
             onChange={formik.handleChange}
           />
         );
+      case "RELATION":
+        return (
+          <RelationInput
+            id={column.name}
+            name={column.name}
+            isRequired={column.notnull === 0}
+            key={column.name}
+            label={column.name}
+            onChange={(value: string) =>
+              formik.setValues({
+                ...formik.values,
+                [column.name]: value,
+              })
+            }
+            relatedTable={column.reference}
+          />
+        );
       case "BLOB":
         return (
           <FileInput
@@ -200,7 +218,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync: deleteMutation } = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.delete(`/api/main/${tableName}/rows`, {
+      const res = await axiosInstance.delete(`/api/main/${tableName}/get`, {
         data: { id: [id] },
       });
       return res.data;
