@@ -47,6 +47,7 @@ func (api *API) Serve() {
 	api.router.GET("/function/:func_name", api.Function.FetchFunctionDetail, middleware.ValidateMainAPIKey)
 	api.router.DELETE("/function/:func_name", api.Function.DeleteFunction, middleware.ValidateMainAPIKey)
 	api.router.POST("/function/create", api.Function.CreateFunction, middleware.ValidateMainAPIKey)
+
 }
 
 func (api *API) MainAPI() {
@@ -63,6 +64,9 @@ func (api *API) MainAPI() {
 	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/backup", api.Database.Backup, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/restore/:filename", api.Database.Restore, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/backup", api.Database.FetchBackups, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 }
 
 func (api *API) AdminAPI() {

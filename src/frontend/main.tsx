@@ -18,6 +18,8 @@ import Setting from "./page/Setting/Setting.tsx";
 import Function from "./page/Function/Function.tsx";
 import CreateFunction from "./page/Function/CreateFunction.tsx";
 import Storage from "./page/Storage/Storage.tsx";
+import Test from "./page/Test.tsx";
+import Backup from "./page/Backup/Backup.tsx";
 
 const router = createBrowserRouter([
   {
@@ -57,6 +59,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/backup",
+        element: (
+          <ProtectedRoute>
+            <Backup />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "/storage",
         element: (
           <ProtectedRoute>
@@ -90,6 +100,10 @@ const router = createBrowserRouter([
   {
     path: "/signup",
     element: <InitialRegister />,
+  },
+  {
+    path: "/test",
+    element: <Test />,
   },
 ]);
 const queryClient = new QueryClient({

@@ -18,9 +18,15 @@ import {
   Selection,
   Card,
   CardBody,
+  Spinner,
 } from "@nextui-org/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 import { CgKey } from "react-icons/cg";
 import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";
@@ -37,6 +43,7 @@ import FloatingBox from "../../components/FloatingBox";
 import { TbCirclesRelation } from "react-icons/tb";
 import { toast } from "react-toastify";
 import { FaRegFile } from "react-icons/fa6";
+import { useInView } from "react-intersection-observer";
 
 interface TableDataProps {
   table: {
@@ -51,7 +58,24 @@ export interface FetchFilter {
   value: string;
 }
 
+const fetchRows = async (page: number, table: string) => {
+  if (table === undefined || table === "") {
+    return [];
+  }
+
+  const res = await axiosInstance.get(`/api/main/${table}/rows`, {
+    params: {
+      page: page,
+      page_size: 20,
+    },
+  });
+
+  return res.data;
+};
+
 const TableData = ({ table }: TableDataProps) => {
+  const [mounted, setMounted] = useState(false);
+
   const { data: columns } = useQuery<any[]>({
     queryKey: ["columns", table.name],
     queryFn: async () => {
@@ -70,34 +94,37 @@ const TableData = ({ table }: TableDataProps) => {
 
       return [];
     },
+    staleTime: 1000 * 30,
   });
 
   const {
-    data: rows,
+    data: rowsSplitted,
+    fetchNextPage,
     isLoading,
     isRefetching,
     isPending,
     isFetching,
-  } = useQuery<any>({
+    isFetchingNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
     queryKey: ["rows", table.name],
-    queryFn: async () => {
-      if (
-        table !== undefined &&
-        table.name !== "" &&
-        table.name !== undefined
-      ) {
-        const res = await axiosInstance.get(`/api/main/${table.name}/rows`, {
-          params: {
-            page: 1,
-            page_size: 20,
-          },
-        });
-        return res.data;
-      }
-
-      return [];
+    queryFn: ({ pageParam }) => fetchRows(pageParam, table.name),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPage = lastPage.total_data;
+      const pageSize = lastPage.page_size;
+      const currentPage = lastPage.page;
+      return totalPage > pageSize * currentPage ? currentPage + 1 : undefined;
     },
   });
+
+  const rows = rowsSplitted?.pages.flatMap((page) => page.data);
+
+  useEffect(() => {
+    if (!mounted && columns && rows) {
+      setMounted(true);
+    }
+  }, [columns, rows]);
 
   const queryClient = useQueryClient();
 
@@ -363,7 +390,6 @@ const TableData = ({ table }: TableDataProps) => {
       </div>
     );
   };
-
   const [selectedRows, setSelectedRows] = useState<Selection>(new Set([]));
   const { mutateAsync } = useMutation({
     mutationFn: async () => {
@@ -390,6 +416,14 @@ const TableData = ({ table }: TableDataProps) => {
     });
   };
 
+  const { ref, inView } = useInView();
+
+  useEffect(() => {
+    if (inView) {
+      fetchNextPage();
+    }
+  }, [inView]);
+
   if (columns?.length === 0) {
     return (
       <div className="flex h-full w-full mt-[50px] justify-center">
@@ -398,11 +432,28 @@ const TableData = ({ table }: TableDataProps) => {
     );
   }
 
+  if (!mounted) {
+    return <Spinner />;
+  }
+
   return (
     <>
       <div className="flex flex-col">
         <TopContent />
         <Table
+          bottomContent={
+            hasNextPage && (
+              <>
+                {isFetchingNextPage ? (
+                  <div className="w-full flex justify-center mb-20">
+                    <Spinner size="lg" color="default" />
+                  </div>
+                ) : (
+                  <div ref={ref} className="mb-20 w-full "></div>
+                )}
+              </>
+            )
+          }
           selectedKeys={selectedRows}
           onSelectionChange={(keys) => setSelectedRows(keys)}
           onRowAction={(key) => {
@@ -465,10 +516,7 @@ const TableData = ({ table }: TableDataProps) => {
           )}
 
           {columns && rows ? (
-            <TableBody
-              emptyContent="No records found"
-              items={rows.data as any[]}
-            >
+            <TableBody emptyContent="No records found" items={rows as any[]}>
               {(item) => (
                 <TableRow className="cursor-pointer" key={item.id}>
                   {(columnKey) => (

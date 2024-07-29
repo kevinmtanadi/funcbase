@@ -10,6 +10,7 @@ import (
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/service"
 	"react-golang/src/backend/utils"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -31,6 +32,10 @@ type DatabaseAPI interface {
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
+
+	Backup(c echo.Context) error
+	Restore(c echo.Context) error
+	FetchBackups(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -175,6 +180,9 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	}
 	if params.Sort != "" {
 		query = query + ` ORDER BY ` + params.Sort
+	}
+	if params.Page != 0 && params.PageSize != 0 {
+		query = query + ` LIMIT ` + strconv.Itoa(params.PageSize) + ` OFFSET ` + strconv.Itoa((params.Page-1)*params.PageSize)
 	}
 
 	res.Data = make([]map[string]interface{}, 0)
@@ -670,4 +678,50 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, nil)
+}
+
+func (d *DatabaseAPIImpl) Backup(c echo.Context) error {
+	err := d.service.Backup.Backup()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success",
+	})
+}
+
+func (d *DatabaseAPIImpl) Restore(c echo.Context) error {
+	filename := c.Param("filename")
+
+	err := d.service.Backup.Restore(filename)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success",
+	})
+}
+
+func (d *DatabaseAPIImpl) FetchBackups(c echo.Context) error {
+	backupPath := os.Getenv("BACKUP_PATH")
+
+	datas, err := os.ReadDir(backupPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	filenames := []string{}
+	for _, data := range datas {
+		filenames = append(filenames, data.Name())
+	}
+
+	return c.JSON(http.StatusOK, filenames)
 }

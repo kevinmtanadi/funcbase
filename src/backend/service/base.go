@@ -24,11 +24,13 @@ func (s *BaseService) WithService() *Service {
 type Service struct {
 	Table   TableService
 	Storage StorageService
+	Backup  BackupService
 }
 
 func NewService(ioc di.Container) *Service {
 	return &Service{
 		Table:   NewTableService(ioc),
 		Storage: NewStorageService(ioc),
+		Backup:  NewBackupService(ioc),
 	}
 }

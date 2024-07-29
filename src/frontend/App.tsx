@@ -1,5 +1,5 @@
 import Sidebar from "./Sidebar";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { TbCode } from "react-icons/tb";
@@ -33,6 +33,11 @@ const tabs = [
     icon: CgDatabase,
   },
   {
+    name: "Backup",
+    path: "/backup",
+    icon: CgDatabase,
+  },
+  {
     name: "Admins",
     path: "/admin",
     icon: LuUsers2,
@@ -45,22 +50,26 @@ const tabs = [
 ];
 
 const checkAuth = () => {
-  const { data: admin, isLoading } = useQuery<any>({
+  var isMounted = false;
+  const { data: admin } = useQuery<any>({
     queryKey: ["admin"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get("/api/admin");
-      return data;
+      const { data } = await axiosInstance.get("/api/admin").then((res) => {
+        isMounted = true;
+        return res.data;
+      });
+
+      return data || [];
     },
   });
 
-  if (isLoading || !admin) {
+  if (!isMounted) {
     return <>Loading...</>;
   }
 
   if (admin.rows.length === 0) {
     console.log(admin.rows.length);
-    window.location.href = "/signup";
-    return <></>;
+    return <Navigate to="/signup" />;
   }
 
   const isAuth = useIsAuthenticated();
@@ -75,7 +84,7 @@ const checkAuth = () => {
           setTimeout(checkAuthentication, 100);
         } else {
           if (!isAuth) {
-            window.location.href = "/signin";
+            return <Navigate to="/login" />;
           }
         }
       };

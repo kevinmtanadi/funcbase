@@ -70,7 +70,7 @@ const UpdateDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             value={formik.values ? formik.values[column.name] : ""}
             onChange={formik.handleChange}
@@ -84,7 +84,7 @@ const UpdateDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             value={formik.values ? formik.values[column.name] : ""}
             onChange={formik.handleChange}
@@ -96,7 +96,7 @@ const UpdateDataModal = ({
             isDisabled={isLoading}
             id={column.name}
             name={column.name}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             isSelected={formik.values ? formik.values[column.name] : ""}
             onChange={formik.handleChange}
@@ -110,7 +110,7 @@ const UpdateDataModal = ({
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
-            key={column.cid}
+            key={column.name}
             label={column.name}
             value={
               formik.values
@@ -123,6 +123,7 @@ const UpdateDataModal = ({
       case "RELATION":
         return (
           <RelationInput
+            value={formik.values ? formik.values[column.name] : ""}
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}

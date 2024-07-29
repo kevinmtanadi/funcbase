@@ -8,6 +8,7 @@ interface RelationInputProps {
   id?: string;
   name?: string;
   label: string;
+  value?: string;
   onChange: (value: string) => void;
   isRequired?: boolean;
   isDisabled?: boolean;
@@ -17,11 +18,13 @@ const RelationInput = ({
   id,
   name,
   label,
+  value,
   onChange,
   isRequired,
   isDisabled,
   relatedTable,
 }: RelationInputProps) => {
+  console.log(value);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { data, isLoading } = useQuery<any>({
     queryKey: ["rows", relatedTable, searchQuery],
@@ -44,6 +47,9 @@ const RelationInput = ({
 
   return (
     <Autocomplete
+      defaultSelectedKey={value}
+      selectedKey={value}
+      radius="sm"
       id={id}
       name={name}
       isDisabled={isDisabled}
