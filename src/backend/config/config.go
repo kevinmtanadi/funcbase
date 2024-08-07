@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"sync"
+	"time"
 )
 
 type Config struct {
@@ -120,4 +121,18 @@ func (c *Config) Set(key string, value interface{}) error {
 		}
 	}
 	return fmt.Errorf("no field found with json tag %s", key)
+}
+
+func (c *Config) WatchChanges(callback func()) {
+	go func() {
+		originalConfig := *c
+		for {
+			time.Sleep(1 * time.Minute) // Adjust the duration as needed
+			c.Load()
+			if originalConfig.CronSchedule != c.CronSchedule {
+				callback()
+				originalConfig = *c
+			}
+		}
+	}()
 }

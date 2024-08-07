@@ -1518,6 +1518,10 @@ video {
   width: 250px;
 }
 
+.w-\[300px\] {
+  width: 300px;
+}
+
 .w-\[45px\] {
   width: 45px;
 }
@@ -1586,10 +1590,6 @@ video {
 
 .w-screen {
   width: 100vw;
-}
-
-.w-\[300px\] {
-  width: 300px;
 }
 
 .min-w-0 {
@@ -2242,10 +2242,6 @@ video {
 
 .gap-5 {
   gap: 1.25rem;
-}
-
-.gap-8 {
-  gap: 2rem;
 }
 
 .gap-x-0 {
@@ -4775,6 +4771,13 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: none;
+}
+
 .placeholder\:text-danger::-moz-placeholder {
   --tw-text-opacity: 1;
   color: hsl(var(--nextui-danger) / var(--nextui-danger-opacity, var(--tw-text-opacity)));
@@ -5888,14 +5891,13 @@ input[type="number"] {
   background-color: hsl(var(--nextui-success-100) / var(--nextui-success-100-opacity, var(--tw-bg-opacity)));
 }
 
+.hover\:bg-transparent:hover {
+  background-color: transparent;
+}
+
 .hover\:bg-warning-100:hover {
   --tw-bg-opacity: 1;
   background-color: hsl(var(--nextui-warning-100) / var(--nextui-warning-100-opacity, var(--tw-bg-opacity)));
-}
-
-.hover\:bg-content2:hover {
-  --tw-bg-opacity: 1;
-  background-color: hsl(var(--nextui-content2) / var(--nextui-content2-opacity, var(--tw-bg-opacity)));
 }
 
 .hover\:\!text-danger-foreground:hover {

@@ -18,6 +18,8 @@ type Module struct {
 func (m *Module) New(app *echo.Echo) {
 	ioc := m.IOC(app)
 
+	go RunBatch(ioc)
+
 	middleware.UseMiddleware(app)
 	api := ioc.Get(constants.CONTAINER_API_NAME).(*api.API)
 	api.Serve()
