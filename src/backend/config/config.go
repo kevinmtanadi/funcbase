@@ -9,10 +9,12 @@ import (
 )
 
 type Config struct {
-	AppName        string   `json:"app_name"`
-	AppURL         string   `json:"app_url"`
-	APIKey         string   `json:"api_key"`
-	AllowedOrigins []string `json:"allowed_origins"`
+	AppName         string   `json:"app_name"`
+	AppURL          string   `json:"app_url"`
+	APIKey          string   `json:"api_key"`
+	AllowedOrigins  []string `json:"allowed_origins"`
+	AutomatedBackup bool     `json:"automated_backup"`
+	CronSchedule    string   `json:"cron_schedule"`
 }
 
 var (
@@ -43,6 +45,8 @@ func (c *Config) Load() error {
 					"http://localhost:8080",
 					"http://localhost:3000",
 				},
+				AutomatedBackup: false,
+				CronSchedule:    "",
 			}
 			config.Save()
 

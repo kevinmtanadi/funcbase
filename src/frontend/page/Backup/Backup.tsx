@@ -5,14 +5,22 @@ import {
   Card,
   CardBody,
   Divider,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Switch,
   useDisclosure,
 } from "@nextui-org/react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import RestoreModal from "./RestoreModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isValidCron } from "cron-validator";
+import { parseHumanReadable } from "cron-js-parser";
+import { toast } from "react-toastify";
 
 const Backup = () => {
   const { data: backups } = useQuery({
@@ -87,6 +95,7 @@ const Backup = () => {
               </div>
             </div>
             <Divider />
+            <AutomatedBackup />
           </div>
         </CardBody>
       </Card>
@@ -100,3 +109,183 @@ const Backup = () => {
 };
 
 export default Backup;
+
+const AutomatedBackup = () => {
+  interface BackupSetting {
+    automated_backup?: boolean;
+    cron_schedule: string;
+  }
+
+  const [setting, setSetting] = useState<BackupSetting>({
+    automated_backup: false,
+    cron_schedule: "",
+  });
+  const { isLoading, isFetching, isPending } = useQuery<any>({
+    queryKey: ["settings", "backup"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/api/settings", {
+        params: {
+          keys: "automated_backup,cron_schedule",
+        },
+      });
+      setSetting(res.data);
+      return res.data;
+    },
+  });
+  const [humanReadable, setHumanReadable] = useState("");
+
+  const [cronError, setCronError] = useState(false);
+  useEffect(() => {
+    if (setting.cron_schedule === "") {
+      setCronError(false);
+      return;
+    }
+    if (!isValidCron(setting.cron_schedule)) {
+      setCronError(true);
+      return;
+    }
+    setHumanReadable(
+      parseHumanReadable(
+        setting.cron_schedule,
+        {
+          runOnWeekDay: {
+            dayIndex: 0,
+            isLastWeek: false,
+          },
+        },
+        "en"
+      )
+    );
+    setCronError(false);
+  }, [setting.cron_schedule]);
+
+  const queryClient = useQueryClient();
+
+  const { mutateAsync } = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await axiosInstance.put("/api/settings", {
+        data: data,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "backup"] });
+    },
+  });
+
+  const saveSetting = async () => {
+    toast.promise(mutateAsync(setting), {
+      pending: "Saving setting...",
+      success: "Setting saved successfully",
+      error: "Error when saving setting",
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Switch
+        isDisabled={isLoading || isFetching || isPending}
+        isSelected={setting.automated_backup}
+        onValueChange={(value) =>
+          setSetting({
+            ...setting,
+            automated_backup: value,
+          })
+        }
+        classNames={{
+          base: "inline-flex justify-between flex-row-reverse w-full max-w-full items-center",
+        }}
+        id="automated_backup"
+        name="automated_backup"
+        color="default"
+      >
+        Allow Automated Backup
+      </Switch>
+      <div className="flex flex-col">
+        {setting.automated_backup && (
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center">
+              <label htmlFor="cron_schedule">CRON Expression</label>
+              <div className="border-2 rounded-md items-center flex justify-between">
+                <input
+                  value={setting.cron_schedule}
+                  onChange={(e) =>
+                    setSetting({
+                      ...setting,
+                      cron_schedule: e.target.value,
+                    })
+                  }
+                  id="cron_schedule"
+                  name="cron_schedule"
+                  placeholder="0 0 * * *"
+                  className="w-[300px] p-3 bg-transparent hover:bg-transparent font-semibold"
+                />
+                <Dropdown>
+                  <DropdownTrigger>
+                    <p className="text-xs mr-4 cursor-pointer border-2 rounded-md py-1 px-2">
+                      Preset
+                    </p>
+                  </DropdownTrigger>
+                  <DropdownMenu>
+                    <DropdownItem
+                      onClick={() =>
+                        setSetting({
+                          ...setting,
+                          cron_schedule: "0 0 * * *",
+                        })
+                      }
+                    >
+                      Every day at 00:00
+                    </DropdownItem>
+                    <DropdownItem
+                      onClick={() =>
+                        setSetting({
+                          ...setting,
+                          cron_schedule: "0 0 * * 1",
+                        })
+                      }
+                    >
+                      Every week on Monday at 00:00
+                    </DropdownItem>
+                    <DropdownItem
+                      onClick={() =>
+                        setSetting({
+                          ...setting,
+                          cron_schedule: "0 0 1 * *",
+                        })
+                      }
+                    >
+                      Every month on the 1st day at 00:00
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+              </div>
+            </div>
+            {cronError ? (
+              <p className="text-red-500 text-xs text-end">
+                Invalid cron schedule
+              </p>
+            ) : (
+              humanReadable && (
+                <p className="text-end text-xs">{humanReadable}</p>
+              )
+            )}
+            <div className="flex justify-end mt-10">
+              <Button radius="sm" className="bg-transparent hover:bg-slate-100">
+                Reset
+              </Button>
+              <Button
+                isDisabled={cronError || setting.cron_schedule === ""}
+                className="w-[125px] bg-slate-950 text-white font-semibold"
+                radius="sm"
+                onClick={saveSetting}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -1588,6 +1588,10 @@ video {
   width: 100vw;
 }
 
+.w-\[300px\] {
+  width: 300px;
+}
+
 .min-w-0 {
   min-width: 0px;
 }
@@ -2238,6 +2242,10 @@ video {
 
 .gap-5 {
   gap: 1.25rem;
+}
+
+.gap-8 {
+  gap: 2rem;
 }
 
 .gap-x-0 {
@@ -3516,6 +3524,10 @@ video {
 
 .text-start {
   text-align: start;
+}
+
+.text-end {
+  text-align: end;
 }
 
 .align-middle {
@@ -5879,6 +5891,11 @@ input[type="number"] {
 .hover\:bg-warning-100:hover {
   --tw-bg-opacity: 1;
   background-color: hsl(var(--nextui-warning-100) / var(--nextui-warning-100-opacity, var(--tw-bg-opacity)));
+}
+
+.hover\:bg-content2:hover {
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--nextui-content2) / var(--nextui-content2-opacity, var(--tw-bg-opacity)));
 }
 
 .hover\:\!text-danger-foreground:hover {
