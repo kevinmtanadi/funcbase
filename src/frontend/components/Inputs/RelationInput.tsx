@@ -18,11 +18,9 @@ const RelationInput = ({
   label,
   value,
   onChange,
-  isRequired,
-  isDisabled,
   relatedTable,
 }: RelationInputProps) => {
-  const { data, isLoading } = useQuery<any>({
+  const { data } = useQuery<any>({
     queryKey: ["rows", relatedTable, value],
     queryFn: async () => {
       const { data } = await axiosInstance.get(
