@@ -129,7 +129,8 @@ func (c *Config) WatchChanges(callback func()) {
 		for {
 			time.Sleep(1 * time.Minute) // Adjust the duration as needed
 			c.Load()
-			if originalConfig.CronSchedule != c.CronSchedule {
+			if originalConfig.CronSchedule != c.CronSchedule ||
+				originalConfig.AutomatedBackup != c.AutomatedBackup {
 				callback()
 				originalConfig = *c
 			}

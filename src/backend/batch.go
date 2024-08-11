@@ -27,9 +27,11 @@ func RunBatch(ioc di.Container) {
 }
 
 func (b *Batch) startCron() {
-	b.cron.AddFunc(b.configs.CronSchedule, func() {
-		b.services.Backup.Backup()
-	})
+	if b.configs.AutomatedBackup {
+		b.cron.AddFunc(b.configs.CronSchedule, func() {
+			b.services.Backup.Backup()
+		})
+	}
 
 	go func() {
 		b.cron.Start()
