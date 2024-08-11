@@ -268,10 +268,6 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 				}
 
 				result := []map[string]interface{}{}
-				if err != nil {
-					return err
-				}
-
 				savedData[fun.Name] = result
 			}
 		}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { TbCirclesRelation } from "react-icons/tb";
 import axiosInstance from "../../pkg/axiosInstance";
+import CustomAutocomplete from "./CustomAutocomplete";
 
 interface RelationInputProps {
   id?: string;
@@ -24,53 +25,54 @@ const RelationInput = ({
   isDisabled,
   relatedTable,
 }: RelationInputProps) => {
-  console.log(value);
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const { data, isLoading } = useQuery<any>({
-    queryKey: ["rows", relatedTable, searchQuery],
+    queryKey: ["rows", relatedTable, value],
     queryFn: async () => {
       const { data } = await axiosInstance.get(
         `/api/main/${relatedTable}/rows`,
         {
           params: {
-            filter: `id LIKE '${searchQuery}%'`,
+            filter: `id LIKE '${value}%'`,
           },
         }
       );
-      return data;
+      return data.data;
     },
   });
 
-  if (!data || !data.data) {
-    return <Input label={label} isDisabled />;
-  }
-
   return (
-    <Autocomplete
-      defaultSelectedKey={value}
-      selectedKey={value}
-      radius="sm"
+    <CustomAutocomplete
       id={id}
       name={name}
-      isDisabled={isDisabled}
-      isRequired={isRequired}
-      fullWidth
-      defaultItems={[]}
-      inputValue={searchQuery}
-      isLoading={isLoading || !data || !data.data}
-      items={data.data}
-      startContent={<TbCirclesRelation />}
-      label={label}
-      variant="bordered"
-      onInputChange={(value) => {
-        setSearchQuery(value);
-        onChange(value);
-      }}
-    >
-      {(item: any) => (
-        <AutocompleteItem key={item.id}>{item.id}</AutocompleteItem>
-      )}
-    </Autocomplete>
+      value={value}
+      onChange={onChange}
+      options={data}
+    />
+    // <Autocomplete
+    //   defaultSelectedKey={value}
+    //   selectedKey={value}
+    //   radius="sm"
+    //   id={id}
+    //   name={name}
+    //   isDisabled={isDisabled}
+    //   isRequired={isRequired}
+    //   fullWidth
+    //   defaultItems={[]}
+    //   inputValue={searchQuery}
+    //   isLoading={isLoading || !data || !data.data}
+    //   items={data.data}
+    //   startContent={<TbCirclesRelation />}
+    //   label={label}
+    //   variant="bordered"
+    //   onInputChange={(value) => {
+    //     setSearchQuery(value);
+    //     onChange(value);
+    //   }}
+    // >
+    //   {(item: any) => (
+    //     <AutocompleteItem key={item.id}>{item.id}</AutocompleteItem>
+    //   )}
+    // </Autocomplete>
   );
 };
 

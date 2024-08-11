@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "@nextui-org/react";
 import useSignOut from "react-auth-kit/hooks/useSignOut";
 import { IoMdExit } from "react-icons/io";
-import icon from "./assets/FULLBASE.png";
+import icon from "./assets/funcbase.svg";
 
 export interface Tab {
   name: string;

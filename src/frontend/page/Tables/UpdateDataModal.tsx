@@ -219,7 +219,7 @@ const UpdateDataModal = ({
 
   const { mutateAsync: deleteMutation } = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.delete(`/api/main/${tableName}/get`, {
+      const res = await axiosInstance.delete(`/api/main/${tableName}/rows`, {
         data: { id: [id] },
       });
       return res.data;

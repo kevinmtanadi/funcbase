@@ -39,8 +39,8 @@ func (c *Config) Load() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			config := Config{
-				AppName: "Fullbase",
-				AppURL:  "https://fullbase.com",
+				AppName: "Funcbase",
+				AppURL:  "https://funcbase.com",
 				APIKey:  "default-api-key",
 				AllowedOrigins: []string{
 					"http://localhost:8080",

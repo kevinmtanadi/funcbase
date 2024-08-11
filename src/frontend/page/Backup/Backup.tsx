@@ -12,6 +12,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Spinner,
   Switch,
   useDisclosure,
 } from "@nextui-org/react";
@@ -21,6 +22,7 @@ import { useEffect, useState } from "react";
 import { isValidCron } from "cron-validator";
 import { parseHumanReadable } from "cron-js-parser";
 import { toast } from "react-toastify";
+import BackupConfirmationModal from "./BackupConfirmationModal";
 
 const Backup = () => {
   const { data: backups } = useQuery({
@@ -31,67 +33,80 @@ const Backup = () => {
     },
   });
 
-  const { mutate } = useMutation({
-    mutationFn: async () => {
-      const res = await axiosInstance.post(`/api/main/backup`);
-      return res.data;
-    },
-  });
-
   const [selectedBackup, setSelectedBackup] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isConfirmOpen,
+    onOpen: onConfirmOpen,
+    onClose: onConfirmClose,
+  } = useDisclosure();
 
   return (
     <div className="flex flex-col items-center p-5 w-full">
       <Card className="max-w-2xl w-4/5" radius="sm">
         <CardBody>
           <div className="flex flex-col gap-4 px-7 py-7">
-            <p>Backup Data</p>
-            <div className="rounded-md px-2 py-2 bg-default-100 border-default-200 border-1">
+            <div className="flex w-full justify-between">
+              <p>Backup Data</p>
+              <Button
+                className="w-[125px] bg-slate-950 text-white font-semibold"
+                radius="sm"
+                onClick={onConfirmOpen}
+              >
+                Manual Backup
+              </Button>
+            </div>
+            <div className="rounded-md px-2 py-2 bg-default-100 border-default-200 border-1  min-h-[250px] h-[250px] max-h-[250px] overflow-y-scroll">
               <div className="flex flex-col gap-1">
-                {backups?.map((backup: any) => (
-                  <div className="flex justify-between items-center hover:bg-slate-300 px-3">
-                    <p>{backup}</p>
-                    <Popover
-                      classNames={{
-                        content: "rounded-sm",
-                      }}
-                      placement="left-start"
-                    >
-                      <PopoverTrigger>
-                        <div className="cursor-pointer px-1">
-                          <BsThreeDotsVertical size={12} />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent>
-                        <div className="flex flex-col w-full">
-                          <Button
-                            size="sm"
-                            className="bg-transparent hover:bg-default-200 rounded-sm"
-                            onClick={() => {
-                              setSelectedBackup(backup);
-                              onOpen();
-                            }}
-                          >
-                            Restore
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-transparent hover:bg-default-200 rounded-sm"
-                          >
-                            Download
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-transparent hover:bg-default-200 rounded-sm"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                {!backups || backups.length == 0 ? (
+                  <div className="w-full h-full text-center items-center justify-center text-default-300">
+                    <p>No backup yet</p>
                   </div>
-                ))}
+                ) : (
+                  backups?.map((backup: any) => (
+                    <div className="flex justify-between items-center hover:bg-slate-300 px-3">
+                      <p>{backup}</p>
+                      <Popover
+                        classNames={{
+                          content: "rounded-sm",
+                        }}
+                        placement="left-start"
+                      >
+                        <PopoverTrigger>
+                          <div className="cursor-pointer px-1">
+                            <BsThreeDotsVertical size={12} />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <div className="flex flex-col w-full">
+                            <Button
+                              size="sm"
+                              className="bg-transparent hover:bg-default-200 rounded-sm"
+                              onClick={() => {
+                                setSelectedBackup(backup);
+                                onOpen();
+                              }}
+                            >
+                              Restore
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-transparent hover:bg-default-200 rounded-sm"
+                            >
+                              Download
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-transparent hover:bg-default-200 rounded-sm"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
             <Divider />
@@ -103,6 +118,10 @@ const Backup = () => {
         isOpen={isOpen}
         onClose={onClose}
         filename={selectedBackup}
+      />
+      <BackupConfirmationModal
+        isOpen={isConfirmOpen}
+        onClose={onConfirmClose}
       />
     </div>
   );
@@ -181,6 +200,14 @@ const AutomatedBackup = () => {
     });
   };
 
+  if (isLoading || isFetching || isPending) {
+    return (
+      <div className="flex w-full items-center justify-center py-4">
+        <Spinner size="lg" color="default" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Switch
@@ -197,7 +224,6 @@ const AutomatedBackup = () => {
         }}
         id="automated_backup"
         name="automated_backup"
-        color="default"
       >
         Allow Automated Backup
       </Switch>
@@ -205,7 +231,9 @@ const AutomatedBackup = () => {
         {setting.automated_backup && (
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
-              <label htmlFor="cron_schedule">CRON Expression</label>
+              <label htmlFor="cron_schedule" className="mr-3">
+                CRON Expression
+              </label>
               <div className="border-2 rounded-md items-center flex justify-between">
                 <input
                   value={setting.cron_schedule}
@@ -218,11 +246,11 @@ const AutomatedBackup = () => {
                   id="cron_schedule"
                   name="cron_schedule"
                   placeholder="0 0 * * *"
-                  className="w-[300px] p-3 bg-transparent hover:bg-transparent font-semibold"
+                  className="w-full max-w-[300px] p-3 bg-transparent hover:bg-transparent font-semibold"
                 />
                 <Dropdown>
                   <DropdownTrigger>
-                    <p className="text-xs mr-4 cursor-pointer border-2 rounded-md py-1 px-2">
+                    <p className="text-xs mr-4 cursor-pointer border-2 rounded-md py-1 px-2 text-default-400 font-semibold">
                       Preset
                     </p>
                   </DropdownTrigger>
@@ -270,21 +298,21 @@ const AutomatedBackup = () => {
                 <p className="text-end text-xs">{humanReadable}</p>
               )
             )}
-            <div className="flex justify-end mt-10">
-              <Button radius="sm" className="bg-transparent hover:bg-slate-100">
-                Reset
-              </Button>
-              <Button
-                isDisabled={cronError || setting.cron_schedule === ""}
-                className="w-[125px] bg-slate-950 text-white font-semibold"
-                radius="sm"
-                onClick={saveSetting}
-              >
-                Save
-              </Button>
-            </div>
           </div>
         )}
+        <div className="flex justify-end mt-10">
+          <Button radius="sm" className="bg-transparent hover:bg-slate-100">
+            Reset
+          </Button>
+          <Button
+            isDisabled={cronError || setting.cron_schedule === ""}
+            className="w-[125px] bg-slate-950 text-white font-semibold"
+            radius="sm"
+            onClick={saveSetting}
+          >
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );
