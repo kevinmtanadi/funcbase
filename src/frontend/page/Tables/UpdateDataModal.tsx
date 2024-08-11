@@ -113,9 +113,9 @@ const UpdateDataModal = ({
             key={column.name}
             label={column.name}
             value={
-              formik.values
-                ? parseAbsoluteToLocal(new Date().toISOString())
-                : undefined
+              formik.values && formik.values[column.name]
+                ? parseAbsoluteToLocal(formik.values[column.name])
+                : parseAbsoluteToLocal(new Date().toISOString())
             }
             onChange={formik.handleChange}
           />
@@ -246,65 +246,71 @@ const UpdateDataModal = ({
     <>
       <Modal radius="sm" size="2xl" isOpen={isOpen} onClose={onClose}>
         <ModalContent>
-          <form onSubmit={formik.handleSubmit}>
-            <ModalHeader className="font-normal">
-              <div className="flex gap-2 items-center">
-                <Breadcrumbs
-                  separator="/"
-                  size="lg"
-                  isDisabled
-                  className="text-lg px-1 font-semibold"
+          <ModalHeader className="font-normal">
+            <div className="flex gap-2 items-center">
+              <Breadcrumbs
+                separator="/"
+                size="lg"
+                isDisabled
+                className="text-lg px-1 font-semibold"
+              >
+                <BreadcrumbItem>{tableName}</BreadcrumbItem>
+                <BreadcrumbItem>{id}</BreadcrumbItem>
+              </Breadcrumbs>
+              {isLoading ? (
+                <Spinner color="default" size="sm" />
+              ) : (
+                <Popover placement="bottom" radius="sm">
+                  <PopoverTrigger>
+                    <Button className="bg-transparent hover:bg-default-100 h-7 p-0 w-7 min-w-0">
+                      <BsThreeDots />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <Button
+                      onClick={handleDelete}
+                      className="bg-transparent min-w-0 w-full p-0"
+                    >
+                      <div className="flex gap-2 justify-between w-full items-center">
+                        <p className="font-semibold text-red-500">Delete</p>
+                        <FaRegTrashAlt className="text-red-500" />
+                      </div>
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          </ModalHeader>
+          {!formik.values ? (
+            <div className="w-full h-full flex justify-center py-3">
+              <Spinner size="lg" color="default" />
+            </div>
+          ) : (
+            <form onSubmit={formik.handleSubmit}>
+              <ModalBody className="mb-3">
+                <div className="flex flex-col gap-4">
+                  {columns?.map((column) => renderInputField(column, formik))}
+                </div>
+              </ModalBody>
+              <Divider />
+              <ModalFooter>
+                <Button
+                  radius="sm"
+                  onClick={onClose}
+                  className="bg-transparent hover:bg-slate-100"
                 >
-                  <BreadcrumbItem>{tableName}</BreadcrumbItem>
-                  <BreadcrumbItem>{id}</BreadcrumbItem>
-                </Breadcrumbs>
-                {isLoading ? (
-                  <Spinner color="default" size="sm" />
-                ) : (
-                  <Popover placement="bottom" radius="sm">
-                    <PopoverTrigger>
-                      <Button className="bg-transparent hover:bg-default-100 h-7 p-0 w-7 min-w-0">
-                        <BsThreeDots />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                      <Button
-                        onClick={handleDelete}
-                        className="bg-transparent min-w-0 w-full p-0"
-                      >
-                        <div className="flex gap-2 justify-between w-full items-center">
-                          <p className="font-semibold text-red-500">Delete</p>
-                          <FaRegTrashAlt className="text-red-500" />
-                        </div>
-                      </Button>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            </ModalHeader>
-            <ModalBody className="mb-3">
-              <div className="flex flex-col gap-4">
-                {columns?.map((column) => renderInputField(column, formik))}
-              </div>
-            </ModalBody>
-            <Divider />
-            <ModalFooter>
-              <Button
-                radius="sm"
-                onClick={onClose}
-                className="bg-transparent hover:bg-slate-100"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="w-[125px] bg-slate-950 text-white font-semibold"
-                radius="sm"
-              >
-                Save
-              </Button>
-            </ModalFooter>
-          </form>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-[125px] bg-slate-950 text-white font-semibold"
+                  radius="sm"
+                >
+                  Save
+                </Button>
+              </ModalFooter>
+            </form>
+          )}
         </ModalContent>
       </Modal>
     </>

@@ -23,7 +23,7 @@ const Sidebar = ({ tabs }: SidebarProps) => {
   return (
     <div className="pt-4 top-0 sticky flex flex-col justify-between h-screen w-[65px] bg-slate-200">
       <div className="flex flex-col gap-4 items-center">
-        <img src={icon} width="38" className="p-1" alt="Logo" />
+        <img src={icon} width="36" className="p-1" alt="Logo" />
         {tabs.map((tab) => (
           <SidebarItem
             key={tab.name}

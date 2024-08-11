@@ -1,7 +1,4 @@
-import { Autocomplete, AutocompleteItem, Input } from "@nextui-org/react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { TbCirclesRelation } from "react-icons/tb";
 import axiosInstance from "../../pkg/axiosInstance";
 import CustomAutocomplete from "./CustomAutocomplete";
 
@@ -42,6 +39,7 @@ const RelationInput = ({
 
   return (
     <CustomAutocomplete
+      label={label}
       id={id}
       name={name}
       value={value}

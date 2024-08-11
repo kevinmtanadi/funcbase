@@ -32,6 +32,8 @@ const QueryResult = ({ rows, columns }: QueryResultProps) => {
     ];
   }
 
+  console.log(columns, rows);
+
   return (
     <>
       <Table
@@ -59,9 +61,9 @@ const QueryResult = ({ rows, columns }: QueryResultProps) => {
       >
         {columns && rows ? (
           <TableHeader columns={columns}>
-            {(column) => (
+            {columns.map((column) => (
               <TableColumn key={column.name}>{column.name}</TableColumn>
-            )}
+            ))}
           </TableHeader>
         ) : (
           <TableHeader>
@@ -78,15 +80,13 @@ const QueryResult = ({ rows, columns }: QueryResultProps) => {
         )}
 
         <TableBody emptyContent="No records found" items={rows}>
-          {(item) => (
-            <TableRow key={item.id || item.cid}>
+          {rows.map((row) => (
+            <TableRow key={row.id || row.cid}>
               {(columnKey) => (
-                <TableCell key={columnKey}>
-                  {getKeyValue(item, columnKey) || ""}
-                </TableCell>
+                <TableCell>{getKeyValue(row, columnKey) || ""}</TableCell>
               )}
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
     </>

@@ -5,7 +5,6 @@ import {
   ModalBody,
   Card,
   CardBody,
-  Divider,
   ModalFooter,
   Button,
 } from "@nextui-org/react";

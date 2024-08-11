@@ -12,6 +12,7 @@ import (
 	"react-golang/src/backend/utils"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -512,6 +513,8 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 		}
 		updatedData[k] = v[0]
 	}
+
+	updatedData["updated_at"] = time.Now()
 
 	for k, files := range form.File {
 		file, err := files[0].Open()

@@ -2,6 +2,7 @@ import { Divider } from "@nextui-org/react";
 import classNames from "classnames";
 import React from "react";
 import { FaAngleDown } from "react-icons/fa6";
+import { TbCirclesRelation } from "react-icons/tb";
 
 interface CustomAutocompleteProps {
   id?: string;
@@ -24,8 +25,13 @@ const CustomAutocomplete = ({
 
   return (
     <>
-      <div className="flex flex-col border-2 rounded-md p-2">
-        {label && <label className="text-sm font-semibold">{label}</label>}
+      <div className="flex flex-col border-2 rounded-md px-3 py-1">
+        {label && (
+          <div className="flex gap-1 items-center">
+            <TbCirclesRelation />
+            <label className="text-sm font-semibold">{label}</label>
+          </div>
+        )}
         <div className="flex">
           <input
             id={id}
