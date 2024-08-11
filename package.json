@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "tailwind": "npx tailwindcss build -i ./src/frontend/index.css -o ./src/frontend/tailwind.css --watch",
+    "build-tailwind": "npx tailwindcss build -i ./src/frontend/index.css -o ./src/frontend/tailwind.css --minify",
     "backend": "nodemon --ext go --exec \"node dev.cjs || exit 1\"",
     "dev": "concurrently \"npm run tailwind\" \"npm run backend\" \"vite\"",
     "build-frontend": "tsc && vite build",
     "build-backend": "node build.cjs",
-    "build": "npm run build-frontend && npm run build-backend",
+    "build": "npm run build-tailwind && npm run build-frontend && npm run build-backend",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "start": "node start.cjs"
