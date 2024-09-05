@@ -327,7 +327,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                         isLoading={isLoading}
                         startContent={dtype.icon}
                         onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-tl-md"
+                        className="hover:bg-slate-200 bg-transparent rounded-md"
                       >
                         {dtype.label}
                       </Button>
@@ -335,7 +335,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                       <Button
                         startContent={dtype.icon}
                         onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-tl-md"
+                        className="hover:bg-slate-200 bg-transparent rounded-md"
                       >
                         {dtype.label}
                       </Button>

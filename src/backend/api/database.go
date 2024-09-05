@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,8 @@ type DatabaseAPI interface {
 	UpdateData(c echo.Context) error
 	DeleteData(c echo.Context) error
 	DeleteTable(c echo.Context) error
+	AlterColumn(c echo.Context) error
+	AddColumn(c echo.Context) error
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
@@ -214,17 +217,17 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-type fields struct {
-	FieldType    string `json:"field_type"`
-	FieldName    string `json:"field_name"`
+type field struct {
+	Type         string `json:"field_type"`
+	Name         string `json:"field_name"`
 	Nullable     bool   `json:"nullable"`
 	RelatedTable string `json:"related_table,omitempty"`
 	Indexed      bool   `json:"indexed"`
 	Unique       bool   `json:"unique"`
 }
 
-func (f *fields) convertTypeToSQLiteType() string {
-	switch f.FieldType {
+func (f *field) convertTypeToSQLiteType() string {
+	switch f.Type {
 	case "text":
 		return "TEXT"
 	case "number":
@@ -243,10 +246,10 @@ func (f *fields) convertTypeToSQLiteType() string {
 }
 
 type createTableReq struct {
-	TableName string   `json:"table_name"`
-	IDType    string   `json:"id_type"`
-	Fields    []fields `json:"fields"`
-	Type      string   `json:"table_type"`
+	TableName string  `json:"table_name"`
+	IDType    string  `json:"id_type"`
+	Fields    []field `json:"fields"`
+	Type      string  `json:"table_type"`
 }
 
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
@@ -298,10 +301,10 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 		var field string
 		if dtype == "RELATION" {
-			field = fmt.Sprintf("%s %s", params.Fields[i].FieldName, "TEXT")
-			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].FieldName, params.Fields[i].RelatedTable))
+			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "TEXT")
+			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].Name, params.Fields[i].RelatedTable))
 		} else {
-			field = fmt.Sprintf("%s %s", params.Fields[i].FieldName, dtype)
+			field = fmt.Sprintf("%s %s", params.Fields[i].Name, dtype)
 		}
 
 		if !params.Fields[i].Nullable {
@@ -309,11 +312,11 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		}
 
 		if params.Fields[i].Indexed {
-			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].FieldName, params.TableName, params.Fields[i].FieldName))
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].Name, params.TableName, params.Fields[i].Name))
 		}
 
 		if params.Fields[i].Unique {
-			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].FieldName))
+			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].Name))
 		}
 
 		fields = append(fields, field)
@@ -680,6 +683,114 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+	return c.JSON(http.StatusOK, nil)
+}
+
+type alterColumns struct {
+	Original string `json:"original"`
+	Altered  string `json:"altered"`
+}
+type alterColumnReq struct {
+	Columns []alterColumns `json:"columns"`
+}
+
+func (d *DatabaseAPIImpl) AlterColumn(c echo.Context) error {
+	alterColumns := new(alterColumnReq)
+
+	tableName := c.Param("table_name")
+
+	if err := c.Bind(&alterColumns); err != nil {
+		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
+	}
+
+	query := fmt.Sprintf("ALTER TABLE %s", tableName)
+	for _, column := range alterColumns.Columns {
+		query = fmt.Sprintf("%s RENAME %s TO %s", query, column.Original, column.Altered)
+	}
+
+	err := d.db.Exec(query).Error
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
+type addColumnReq struct {
+	Fields []field `json:"fields"`
+}
+
+func (d *DatabaseAPIImpl) AddColumn(c echo.Context) error {
+	tableName := c.Param("table_name")
+	params := new(addColumnReq)
+
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
+	}
+
+	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN ", tableName)
+	fields := []string{}
+	foreignKeys := []string{}
+	uniques := []string{}
+	indexes := []string{}
+
+	for i := 0; i < len(params.Fields); i++ {
+		dtype := params.Fields[i].convertTypeToSQLiteType()
+		// IGNORE UNSUPPORTED DATATYPES FOR NOW
+		if dtype == "" {
+			continue
+		}
+
+		var field string
+		if dtype == "RELATION" {
+			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "TEXT")
+			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].Name, params.Fields[i].RelatedTable))
+		} else {
+			field = fmt.Sprintf("%s %s", params.Fields[i].Name, dtype)
+		}
+
+		if !params.Fields[i].Nullable {
+			field += " NOT NULL"
+		}
+
+		if params.Fields[i].Indexed {
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].Name, tableName, params.Fields[i].Name))
+		}
+
+		if params.Fields[i].Unique {
+			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].Name))
+		}
+
+		fields = append(fields, field)
+	}
+
+	query = fmt.Sprintf("%s %s", query, strings.Join(fields, ", "))
+
+	err := d.db.Transaction(func(tx *gorm.DB) error {
+		err := d.db.Exec(query).Error
+		if err != nil {
+			return err
+		}
+
+		// add index
+		for _, index := range indexes {
+			err = d.db.Exec(index).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"message": "Failed to add column",
+			"error":   err.Error(),
+		})
+	}
+
 	return c.JSON(http.StatusOK, nil)
 }
 
