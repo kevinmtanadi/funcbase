@@ -33,6 +33,7 @@ type DatabaseAPI interface {
 	DeleteTable(c echo.Context) error
 	AlterColumn(c echo.Context) error
 	AddColumn(c echo.Context) error
+	DeleteColumn(c echo.Context) error
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
@@ -787,6 +788,41 @@ func (d *DatabaseAPIImpl) AddColumn(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"message": "Failed to add column",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
+type deleteColumnReq struct {
+	Columns []string `json:"columns"`
+}
+
+func (d *DatabaseAPIImpl) DeleteColumn(c echo.Context) error {
+	tableName := c.Param("table_name")
+
+	params := new(deleteColumnReq)
+
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
+	}
+
+	err := d.db.Transaction(func(tx *gorm.DB) error {
+		for _, col := range params.Columns {
+			query := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s", tableName, col)
+
+			err := d.db.Exec(query).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"message": "Failed when deleting column",
 			"error":   err.Error(),
 		})
 	}

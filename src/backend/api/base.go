@@ -68,6 +68,7 @@ func (api *API) MainAPI() {
 	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.PUT("/:table_name/alter", api.Database.AlterColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.PUT("/:table_name/add_column", api.Database.AddColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.DELETE("/:table_name/delete_column", api.Database.DeleteColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.POST("/backup", api.Database.Backup, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.POST("/restore/:filename", api.Database.Restore, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))

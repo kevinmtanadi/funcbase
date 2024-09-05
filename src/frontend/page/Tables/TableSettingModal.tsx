@@ -15,6 +15,13 @@ import {
   AccordionItem,
   Divider,
   useDisclosure,
+  Checkbox,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHeader,
+  TableColumn,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaRegTrashAlt } from "react-icons/fa";
@@ -43,28 +50,6 @@ const TableSettingModal = ({
   onClose,
   tableName,
 }: TableSettingModalProps) => {
-  const queryClient = useQueryClient();
-  const { mutateAsync } = useMutation({
-    mutationFn: () => {
-      return axiosInstance.delete(`/api/main/${tableName}`);
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ["tables"],
-        type: "active",
-      });
-      onClose();
-    },
-  });
-
-  const deleteTable = () => {
-    toast.promise(mutateAsync(), {
-      pending: "Deleting table...",
-      success: "Table deleted successfully",
-      error: "Error when deleting table",
-    });
-  };
-
   return (
     <Modal radius="sm" size="2xl" isOpen={isOpen} onClose={onClose}>
       <ModalContent>
@@ -87,18 +72,7 @@ const TableSettingModal = ({
               <ColumnPage table={tableName} />
             </Tab>
             <Tab key={"danger"} title="Danger Zone">
-              <Button
-                radius="sm"
-                variant="bordered"
-                className="bg-transparent  min-w-0 w-full"
-                color="danger"
-                onClick={() => deleteTable()}
-              >
-                <div className="flex gap-2 justify-between w-full items-center">
-                  <p className="font-semibold text-red-600">Delete Table</p>
-                  <FaRegTrashAlt className="text-red-600" />
-                </div>
-              </Button>
+              <DangerPage table={tableName} onDelete={onClose} />
             </Tab>
           </Tabs>
         </ModalBody>
@@ -202,7 +176,7 @@ const ColumnPage = ({ table }: ColumnPageProps) => {
               }),
             }}
             isDisabled={
-              ["id", "created_at", "updated_at", "salt"].includes(col.name) ||
+              ["id", "created_at", "updated_at", "email"].includes(col.name) ||
               col.type === "RELATION"
             }
           />
@@ -492,6 +466,198 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
             onClick={updateTable}
           >
             Add Columns
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+interface DangerPageProps {
+  table: string;
+  onDelete: () => void;
+}
+
+const DangerPage = ({ table, onDelete }: DangerPageProps) => {
+  const queryClient = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: () => {
+      return axiosInstance.delete(`/api/main/${table}`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({
+        queryKey: ["tables"],
+        type: "active",
+      });
+      onDelete();
+    },
+  });
+
+  const deleteTable = () => {
+    toast.promise(mutateAsync(), {
+      pending: "Deleting table...",
+      success: "Table deleted successfully",
+      error: "Error when deleting table",
+    });
+  };
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <Button
+          radius="sm"
+          variant="bordered"
+          className="bg-transparent  min-w-0 w-full"
+          onClick={onOpen}
+        >
+          <div className="flex gap-2 justify-between w-full items-center">
+            <p className="font-semibold">Delete Column</p>
+          </div>
+        </Button>
+        <Button
+          radius="sm"
+          variant="bordered"
+          className="bg-transparent  min-w-0 w-full"
+          color="danger"
+          onClick={() => deleteTable()}
+        >
+          <div className="flex gap-2 justify-between w-full items-center">
+            <p className="font-semibold text-red-600">Delete Table</p>
+            <FaRegTrashAlt className="text-red-600" />
+          </div>
+        </Button>
+      </div>
+      <DeleteColumnModal isOpen={isOpen} onClose={onClose} table={table} />
+    </>
+  );
+};
+
+interface DeleteColumnModalProps {
+  table: string;
+  onClose: () => void;
+  isOpen: boolean;
+}
+const DeleteColumnModal = ({
+  table,
+  isOpen,
+  onClose,
+}: DeleteColumnModalProps) => {
+  const queryClient = useQueryClient();
+
+  const { data: columns } = useQuery<any[]>({
+    queryKey: ["columns", table],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/main/${table}/columns`);
+      return res.data;
+    },
+  });
+
+  if (!columns || columns.length === 0) {
+    return <></>;
+  }
+
+  const [selectedCol, setSelectedCol] = useState<string[]>([]);
+
+  const { mutateAsync } = useMutation({
+    mutationFn: () => {
+      return axiosInstance.delete(`/api/main/${table}/delete_column`, {
+        data: {
+          columns: selectedCol,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({
+        queryKey: ["tables"],
+        type: "active",
+      });
+      queryClient.refetchQueries({
+        queryKey: ["columns", table],
+        type: "active",
+      });
+      queryClient.refetchQueries({
+        queryKey: ["rows", table],
+        type: "active",
+      });
+      onClose();
+    },
+  });
+
+  const deleteColumns = () => {
+    toast.promise(mutateAsync(), {
+      pending: "Deleting columns...",
+      success: "Columns deleted successfully",
+      error: "Error when deleting columns",
+    });
+  };
+
+  return (
+    <Modal size="md" isOpen={isOpen} onClose={onClose}>
+      <ModalContent>
+        <ModalHeader>Delete columns from [{table}]</ModalHeader>
+        <ModalBody>
+          <div className="flex flex-col gap-2">
+            <Table isStriped hideHeader removeWrapper>
+              <TableHeader>
+                <TableColumn>Column Name</TableColumn>
+                <TableColumn>Is Checked</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {columns.map((column: any) => (
+                  <TableRow key={column.name}>
+                    <TableCell
+                      className={classNames({
+                        "font-semibold": true,
+                        "text-default-300": [
+                          "id",
+                          "created_at",
+                          "updated_at",
+                          "email",
+                        ].includes(column.name),
+                      })}
+                    >
+                      {column.name}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Checkbox
+                        isDisabled={[
+                          "id",
+                          "created_at",
+                          "updated_at",
+                          "email",
+                        ].includes(column.name)}
+                        isSelected={selectedCol.includes(column.name)}
+                        onValueChange={() =>
+                          setSelectedCol((prev) =>
+                            prev.includes(column.name)
+                              ? prev.filter((item) => item !== column.name)
+                              : [...prev, column.name]
+                          )
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            fullWidth
+            className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            className="rounded-md w-full bg-slate-950 text-white font-semibold"
+            isDisabled={selectedCol.length === 0}
+            onClick={deleteColumns}
+          >
+            Delete Columns
           </Button>
         </ModalFooter>
       </ModalContent>
