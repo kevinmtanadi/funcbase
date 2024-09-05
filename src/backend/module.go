@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"react-golang/src/backend/api"
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/middleware"
+	pkg_logger "react-golang/src/backend/pkg/logger"
 	pkg_sqlite "react-golang/src/backend/pkg/sqlite"
 	"react-golang/src/backend/service"
 
@@ -17,6 +19,12 @@ type Module struct {
 
 func (m *Module) New(app *echo.Echo) {
 	ioc := m.IOC(app)
+
+	err := pkg_logger.LoadLogs()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 
 	go RunBatch(ioc)
 

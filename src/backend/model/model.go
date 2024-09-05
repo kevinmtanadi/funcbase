@@ -33,6 +33,8 @@ type FunctionStored struct {
 	Function string `json:"function" gorm:"column:function"`
 }
 
+
+
 func Migrate(db *gorm.DB) error {
 	err := db.AutoMigrate(&Admin{}, &Tables{}, &QueryHistory{}, &FunctionStored{})
 	if err != nil {

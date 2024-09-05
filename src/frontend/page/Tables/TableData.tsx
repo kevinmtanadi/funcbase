@@ -461,7 +461,9 @@ const TableData = ({ table }: TableDataProps) => {
             setSelectedRow(key.toString());
           }}
           isHeaderSticky={true}
+          className="scroll-shadow"
           classNames={{
+            wrapper: "scroll-shadow",
             base: "pb-15 max-h-[calc(100dvh_-_45px_-_5px)] max-w-[calc(100vw_-_315px)] overflow-y-scroll overflow-x-scroll",
             thead: "[&>tr]:first:rounded-none",
             th: [

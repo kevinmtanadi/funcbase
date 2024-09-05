@@ -16,6 +16,7 @@ type API struct {
 	Function FunctionAPI
 	Setting  SettingAPI
 	Storage  StorageAPI
+	Logs     LogsAPI
 }
 
 type Search struct {
@@ -32,6 +33,7 @@ func NewAPI(app *echo.Echo, ioc di.Container) *API {
 		Function: NewFunctionAPI(ioc),
 		Setting:  NewSettingAPI(ioc),
 		Storage:  NewStorageAPI(ioc),
+		Logs:     NewLogsAPI(ioc),
 	}
 }
 
@@ -41,6 +43,7 @@ func (api *API) Serve() {
 	api.AuthAPI()
 	api.SettingAPI()
 	api.StorageAPI()
+	api.LogsAPI()
 
 	api.router.POST("/:func_name", api.Function.RunFunction, middleware.RequireAuth(false), middleware.ValidateAPIKey)
 	api.router.GET("/function", api.Function.FetchFunctionList, middleware.ValidateMainAPIKey)
@@ -99,4 +102,10 @@ func (api *API) StorageAPI() {
 	storageRouter.GET("/:filename", api.Storage.Retrieve)
 	storageRouter.POST("/upload", api.Storage.Upload, middleware.ValidateAPIKey)
 	storageRouter.DELETE("/:filename", api.Storage.Delete, middleware.ValidateMainAPIKey)
+}
+
+func (api *API) LogsAPI() {
+	logsRouter := api.router.Group("/logs")
+
+	logsRouter.GET("", api.Logs.Get)
 }

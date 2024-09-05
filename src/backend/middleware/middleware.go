@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"react-golang/src/backend/config"
+	pkg_logger "react-golang/src/backend/pkg/logger"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -18,8 +20,43 @@ func UseMiddleware(app *echo.Echo) {
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization, "X-API-KEY"},
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
+
+	app.Use(WriteLog)
 	app.Use(middleware.Logger())
 	app.Use(middleware.Recover())
+}
+
+func WriteLog(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		endpoint := c.Request().RequestURI
+
+		// only log call to api
+		if !strings.HasPrefix(endpoint, "/api/") {
+			return next(c)
+		}
+
+		start := time.Now()
+		err := next(c)
+		log := pkg_logger.APILog{
+			Endpoint:  endpoint,
+			Status:    c.Response().Status,
+			Host:      c.Request().Host,
+			Method:    c.Request().Method,
+			ExecTime:  time.Since(start).String(),
+			Error:     err,
+			CreatedAt: time.Now(),
+		}
+
+		pkg_logger.AppendLog(log)
+
+		if err != nil {
+			return c.JSON(err.(*echo.HTTPError).Code, map[string]interface{}{
+				"error": err,
+			})
+		}
+
+		return nil
+	}
 }
 
 func RequireAuth(required bool) echo.MiddlewareFunc {
