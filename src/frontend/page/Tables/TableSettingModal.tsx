@@ -38,6 +38,7 @@ import { RxComponentBoolean } from "react-icons/rx";
 import { TbCirclesRelation } from "react-icons/tb";
 import GeneralField from "../../components/Fields/GeneralField";
 import RelationField from "../../components/Fields/RelationField";
+import { CgKey } from "react-icons/cg";
 
 interface TableSettingModalProps {
   isOpen: boolean;
@@ -86,65 +87,22 @@ interface ColumnPageProps {
 }
 
 const ColumnPage = ({ table }: ColumnPageProps) => {
-  const [cols, setCols] = useState<any[]>([]);
-
-  const {
-    data: columns,
-    isLoading,
-    isFetching,
-    isPending,
-  } = useQuery({
+  const { data: columns, isLoading } = useQuery({
     queryKey: ["columns", table],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/main/${table}/columns`);
-      setCols(res.data);
       return res.data;
     },
   });
 
-  const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (data: any) => {
-      return axiosInstance.put(`/api/main/${table}/alter`, {
-        columns: data,
-      });
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ["columns", table],
-        type: "active",
-      });
-
-      queryClient.refetchQueries({
-        queryKey: ["rows", table],
-        type: "active",
-      });
-    },
-  });
-
-  const alterColumn = () => {
-    const alteredColumns = cols.map((col: any, idx) => {
-      if (col.name !== columns[idx].name) {
-        return {
-          original: columns[idx].name,
-          altered: col.name,
-        };
-      }
-
-      return null;
-    });
-
-    toast.promise(mutateAsync(alteredColumns.filter((col) => col !== null)), {
-      pending: "Updating column name",
-      success: "Column name updated successfully",
-      error: "Error when updating column name",
-    });
-  };
-
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isRenameOpen,
+    onOpen: onRenameOpen,
+    onClose: onRenameClose,
+  } = useDisclosure();
 
-  if (isLoading || isFetching || isPending) {
+  if (isLoading) {
     return (
       <div className="flex flex-col w-full justify-center items-center">
         <Spinner color="default" size="lg" />
@@ -155,33 +113,35 @@ const ColumnPage = ({ table }: ColumnPageProps) => {
   return (
     <>
       <div className="flex flex-col gap-2">
-        {cols.map((col: any, idx) => (
-          <Input
-            id={idx.toString()}
-            name={idx.toString()}
-            key={idx}
-            value={col.name}
-            onChange={(e) => {
-              setCols([
-                ...cols.slice(0, idx),
-                { ...cols[idx], name: e.target.value },
-                ...cols.slice(idx + 1),
-              ]);
-            }}
-            variant="bordered"
-            radius="sm"
-            classNames={{
-              inputWrapper: classNames({
-                "border-yellow-300": col.name !== columns[idx].name,
-              }),
-            }}
-            isDisabled={
-              ["id", "created_at", "updated_at", "email"].includes(col.name) ||
-              col.type === "RELATION"
-            }
-          />
-        ))}
-
+        <Table>
+          <TableHeader>
+            <TableColumn>name</TableColumn>
+            <TableColumn>type</TableColumn>
+            <TableColumn>nullable</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {columns?.map((col: any, idx: number) => (
+              <TableRow key={idx}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <p>{col.name}</p>
+                    {col.pk === 1 && <CgKey size={16} />}
+                  </div>
+                </TableCell>
+                <TableCell>{col.type}</TableCell>
+                <TableCell>{col.notnull ? "Yes" : "No"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <Button
+          variant="bordered"
+          className="font-semibold"
+          radius="sm"
+          onClick={onRenameOpen}
+        >
+          Change Column Names
+        </Button>
         <Button
           variant="bordered"
           className="font-semibold"
@@ -191,25 +151,12 @@ const ColumnPage = ({ table }: ColumnPageProps) => {
         >
           Add New Column
         </Button>
-        <div className="flex w-full mt-5 gap-2">
-          <Button
-            fullWidth
-            className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
-            onClick={() => {
-              setCols(columns);
-            }}
-          >
-            Reset
-          </Button>
-          <Button
-            fullWidth
-            className="rounded-md w-full bg-slate-950 text-white font-semibold"
-            onClick={() => alterColumn()}
-          >
-            Save
-          </Button>
-        </div>
       </div>
+      <RenameColumnModal
+        table={table}
+        isOpen={isRenameOpen}
+        onClose={onRenameClose}
+      />
       <AddColumnModal table={table} isOpen={isOpen} onClose={onClose} />
     </>
   );
@@ -467,6 +414,147 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
           >
             Add Columns
           </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+interface RenameColumnModalProps {
+  table: string;
+  onClose: () => void;
+  isOpen: boolean;
+}
+const RenameColumnModal = ({
+  table,
+  onClose,
+  isOpen,
+}: RenameColumnModalProps) => {
+  const [cols, setCols] = useState<any[]>([]);
+
+  const {
+    data: columns,
+    isLoading,
+    isFetching,
+    isPending,
+  } = useQuery({
+    queryKey: ["columns", table],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/main/${table}/columns`);
+      setCols(res.data);
+      return res.data;
+    },
+  });
+
+  const queryClient = useQueryClient();
+
+  const { mutateAsync } = useMutation({
+    mutationFn: (data: any) => {
+      return axiosInstance.put(`/api/main/${table}/alter`, {
+        columns: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({
+        queryKey: ["columns", table],
+        type: "active",
+      });
+
+      queryClient.refetchQueries({
+        queryKey: ["rows", table],
+        type: "active",
+      });
+    },
+  });
+
+  const alterColumn = () => {
+    const alteredColumns = cols.map((col: any, idx) => {
+      if (col.name !== columns[idx].name) {
+        return {
+          original: columns[idx].name,
+          altered: col.name,
+        };
+      }
+
+      return null;
+    });
+
+    toast.promise(mutateAsync(alteredColumns.filter((col) => col !== null)), {
+      pending: "Updating column name",
+      success: "Column name updated successfully",
+      error: "Error when updating column name",
+    });
+  };
+
+  if (isLoading || isFetching || isPending) {
+    return (
+      <div className="flex flex-col w-full justify-center items-center">
+        <Spinner color="default" size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalContent>
+        <ModalHeader>Rename column from [{table}]</ModalHeader>
+        <ModalBody>
+          <div className="flex flex-col gap-2">
+            {cols
+              .filter(
+                (col) =>
+                  ![
+                    "id",
+                    "created_at",
+                    "updated_at",
+                    "email",
+                    "salt",
+                    "password",
+                  ].includes(col.name) && col.type !== "RELATION"
+              )
+              .map((col: any, idx) => (
+                <Input
+                  id={idx.toString()}
+                  name={idx.toString()}
+                  key={idx}
+                  value={col.name}
+                  onChange={(e) => {
+                    setCols([
+                      ...cols.slice(0, idx),
+                      { ...cols[idx], name: e.target.value },
+                      ...cols.slice(idx + 1),
+                    ]);
+                  }}
+                  variant="bordered"
+                  radius="sm"
+                  isDisabled={
+                    ["id", "created_at", "updated_at", "email"].includes(
+                      col.name
+                    ) || col.type === "RELATION"
+                  }
+                />
+              ))}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <div className="flex w-full mt-5 gap-2">
+            <Button
+              fullWidth
+              className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
+              onClick={() => {
+                setCols(columns);
+              }}
+            >
+              Reset
+            </Button>
+            <Button
+              fullWidth
+              className="rounded-md w-full bg-slate-950 text-white font-semibold"
+              onClick={() => alterColumn()}
+            >
+              Save
+            </Button>
+          </div>
         </ModalFooter>
       </ModalContent>
     </Modal>

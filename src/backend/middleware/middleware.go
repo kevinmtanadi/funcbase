@@ -6,7 +6,6 @@ import (
 	"os"
 	"react-golang/src/backend/config"
 	pkg_logger "react-golang/src/backend/pkg/logger"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -28,28 +27,26 @@ func UseMiddleware(app *echo.Echo) {
 
 func WriteLog(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		endpoint := c.Request().RequestURI
-
-		// only log call to api
-		if !strings.HasPrefix(endpoint, "/api/") {
-			return next(c)
-		}
 
 		start := time.Now()
 		err := next(c)
-		log := pkg_logger.APILog{
-			Endpoint:  endpoint,
-			Status:    c.Response().Status,
-			Host:      c.Request().Host,
-			Method:    c.Request().Method,
-			ExecTime:  time.Since(start).String(),
-			Error:     err,
-			CreatedAt: time.Now(),
-		}
 
-		pkg_logger.AppendLog(log)
-
+		// only logs when error happens
 		if err != nil {
+			endpoint := c.Request().RequestURI
+
+			log := pkg_logger.APILog{
+				Endpoint:  endpoint,
+				Status:    c.Response().Status,
+				Host:      c.Request().Host,
+				Method:    c.Request().Method,
+				ExecTime:  time.Since(start).String(),
+				Error:     err,
+				CreatedAt: time.Now(),
+			}
+
+			pkg_logger.AppendLog(log)
+
 			return c.JSON(err.(*echo.HTTPError).Code, map[string]interface{}{
 				"error": err,
 			})
