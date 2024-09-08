@@ -20,7 +20,7 @@ import CreateFunction from "./page/Function/CreateFunction.tsx";
 import Storage from "./page/Storage/Storage.tsx";
 import Test from "./page/Test.tsx";
 import Backup from "./page/Backup/Backup.tsx";
-import Logs from "./page/Logs/Logs.tsx";
+import Logs from "./page/Log/Logs.tsx";
 
 const router = createBrowserRouter([
   {
