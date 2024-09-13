@@ -78,10 +78,8 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 					}
 
 					// token is expired
-					if float64(time.Now().Unix()) > claims["exp"].(float64) {
-						if required {
-							return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-						}
+					if float64(time.Now().Unix()) > claims["exp"].(float64) && required {
+						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 					}
 
 					userID, ok := claims["sub"].(string)
@@ -96,6 +94,10 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 
 					return next(c)
 				}
+			}
+
+			if !required {
+				return next(c)
 			}
 
 			return c.JSON(http.StatusUnauthorized, unauthorizedErr)

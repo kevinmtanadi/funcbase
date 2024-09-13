@@ -442,7 +442,7 @@ const TableData = ({ table }: TableDataProps) => {
         <TopContent />
         <Table
           bottomContent={
-            hasNextPage && (
+            hasNextPage ? (
               <>
                 {isFetchingNextPage ? (
                   <div className="w-full flex justify-center mb-20">
@@ -452,6 +452,8 @@ const TableData = ({ table }: TableDataProps) => {
                   <div ref={ref} className="mb-20 w-full "></div>
                 )}
               </>
+            ) : (
+              <div className="mb-12"></div>
             )
           }
           selectedKeys={selectedRows}

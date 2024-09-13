@@ -55,26 +55,20 @@ const tabs = [
   },
 ];
 
-const checkAuth = () => {
-  var isMounted = false;
-  const { data: admin } = useQuery<any>({
+function App() {
+  const { data: admin, isLoading } = useQuery<any>({
     queryKey: ["admin"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get("/api/admin").then((res) => {
-        isMounted = true;
-        return res.data;
-      });
-
-      return data || [];
+      const res = await axiosInstance.get("/api/admin");
+      return res.data;
     },
   });
 
-  if (!isMounted) {
+  if (isLoading) {
     return <>Loading...</>;
   }
 
   if (admin.rows.length === 0) {
-    console.log(admin.rows.length);
     return <Navigate to="/signup" />;
   }
 
@@ -98,11 +92,6 @@ const checkAuth = () => {
       checkAuthentication();
     }
   }
-};
-
-function App() {
-  checkAuth();
-
   return (
     <>
       <div className="max-h-screen overflow-hidden h-screen w-full flex">

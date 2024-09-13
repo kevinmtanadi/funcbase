@@ -4,7 +4,7 @@ import { Formik } from "formik";
 import { useState } from "react";
 import useSignIn from "react-auth-kit/hooks/useSignIn";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa6";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
 import axiosInstance from "../pkg/axiosInstance";
 
@@ -22,8 +22,8 @@ const InitialRegister = () => {
   const { data: admin, isLoading } = useQuery<any>({
     queryKey: ["admin"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get("/api/admin");
-      return data || [];
+      const res = await axiosInstance.get("/api/admin");
+      return res.data;
     },
   });
 
@@ -60,10 +60,8 @@ const InitialRegister = () => {
     return <>Loading...</>;
   }
 
-  if (admin.rows.length !== 0) {
-    console.log(admin.rows.length);
-    window.location.href = "/";
-    return <></>;
+  if (admin && admin.rows.length !== undefined && admin.rows.length !== 0) {
+    return <Navigate to="/" />;
   }
 
   return (
