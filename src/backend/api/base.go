@@ -72,6 +72,7 @@ func (api *API) MainAPI() {
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.POST("/backup", api.Database.Backup, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.POST("/restore/:filename", api.Database.Restore, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.DELETE("/backup/:filename", api.Database.DeleteBackup, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.GET("/backup", api.Database.FetchBackups, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 }
 

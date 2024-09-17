@@ -20,7 +20,6 @@ import CreateFunction from "./page/Function/CreateFunction.tsx";
 import Storage from "./page/Storage/Storage.tsx";
 import Test from "./page/Test.tsx";
 import Backup from "./page/Backup/Backup.tsx";
-import Logs from "./page/Log/Logs.tsx";
 
 const router = createBrowserRouter([
   {
@@ -80,14 +79,6 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Admin />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "/logs",
-        element: (
-          <ProtectedRoute>
-            <Logs />
           </ProtectedRoute>
         ),
       },

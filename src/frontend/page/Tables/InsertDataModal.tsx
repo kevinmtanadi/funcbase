@@ -6,6 +6,7 @@ import {
   Divider,
   ModalFooter,
   Button,
+  DateValue,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import TextInput from "../../components/Inputs/TextInput";
@@ -18,6 +19,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
 import FileInput from "../../components/Inputs/FileInput";
+import { useEffect } from "react";
 
 interface InsertDataModalProps {
   isOpen: boolean;
@@ -75,6 +77,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
+            value={formik.values ? formik.values[column.name] : ""}
             key={column.name}
             label={column.name}
             onChange={formik.handleChange}
@@ -87,6 +90,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
+            value={formik.values ? formik.values[column.name] : ""}
             key={column.name}
             label={column.name}
             onChange={formik.handleChange}
@@ -111,7 +115,9 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             isRequired={column.notnull === 0}
             key={column.name}
             label={column.name}
-            onChange={formik.handleChange}
+            onChange={(value: DateValue) => {
+              formik.setFieldValue(column.name, value.toString());
+            }}
           />
         );
       case "RELATION":
@@ -122,6 +128,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             isRequired={column.notnull === 0}
             key={column.name}
             label={column.name}
+            value={formik.values ? formik.values[column.name] : ""}
             onChange={(value: string) =>
               formik.setValues({
                 ...formik.values,
@@ -228,6 +235,10 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
       });
     },
   });
+
+  useEffect(() => {
+    console.log(formik.values);
+  }, [formik.values]);
 
   return (
     <>

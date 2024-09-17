@@ -274,6 +274,7 @@ const TableData = ({ table }: TableDataProps) => {
       const dtype = columns?.find((col) => col.name === columnKey)?.type;
       switch (dtype) {
         case "TIMESTAMP":
+        case "DATETIME":
           const date = new Date(cellValue);
           const dateString = formatDate(date.toISOString(), "dd-mm-yyyy");
           const timeString = formatDate(date.toISOString(), "HH:MM:SS");

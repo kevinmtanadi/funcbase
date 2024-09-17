@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"os"
 	"react-golang/src/backend/constants"
 	pkg_backup "react-golang/src/backend/pkg/backup"
@@ -12,6 +13,7 @@ import (
 type BackupService interface {
 	Backup() error
 	Restore(filename string) error
+	Delete(filename string) error
 }
 
 type BackupServiceImpl struct {
@@ -37,5 +39,16 @@ func (s *BackupServiceImpl) Restore(filename string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *BackupServiceImpl) Delete(filename string) error {
+	fileDirectory := fmt.Sprintf("%s/%s", os.Getenv("BACKUP_PATH"), filename)
+
+	err := os.Remove(fileDirectory)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

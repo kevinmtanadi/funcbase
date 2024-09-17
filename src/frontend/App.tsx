@@ -10,7 +10,6 @@ import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "./pkg/axiosInstance";
 import { BiWrench } from "react-icons/bi";
 import { AiOutlineTable } from "react-icons/ai";
-import { SlGraph } from "react-icons/sl";
 
 const tabs = [
   {
@@ -42,11 +41,6 @@ const tabs = [
     name: "Admins",
     path: "/admin",
     icon: LuUsers2,
-  },
-  {
-    name: "Logs",
-    path: "/logs",
-    icon: SlGraph,
   },
   {
     name: "Settings",

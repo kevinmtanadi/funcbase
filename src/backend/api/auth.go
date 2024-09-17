@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
@@ -90,8 +89,6 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		}
 		newUser[k] = v
 	}
-
-	fmt.Println(newUser)
 
 	err = h.db.Table(tableName).Create(&newUser).Error
 	if err != nil {

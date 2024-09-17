@@ -27,7 +27,7 @@ const RelationInput = ({
         `/api/main/${relatedTable}/rows`,
         {
           params: {
-            filter: `id LIKE '${value}%'`,
+            filter: `${value ? `id = '${value}'` : ""}`,
           },
         }
       );

@@ -1,10 +1,9 @@
 import { DatePicker, DateValue } from "@nextui-org/react";
-
 interface DateInputProps {
   id?: string;
   name?: string;
   label: string;
-  onChange: () => void;
+  onChange: (value: DateValue) => void;
   value?: DateValue;
   isRequired?: boolean;
   isDisabled?: boolean;
@@ -30,6 +29,7 @@ const DatetimeInput = ({
       granularity="second"
       isRequired={isRequired}
       isDisabled={isDisabled}
+      hourCycle={24}
     />
   );
 };

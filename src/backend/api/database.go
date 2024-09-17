@@ -39,6 +39,7 @@ type DatabaseAPI interface {
 	FetchQueryHistory(c echo.Context) error
 
 	Backup(c echo.Context) error
+	DeleteBackup(c echo.Context) error
 	Restore(c echo.Context) error
 	FetchBackups(c echo.Context) error
 }
@@ -832,6 +833,22 @@ func (d *DatabaseAPIImpl) DeleteColumn(c echo.Context) error {
 
 func (d *DatabaseAPIImpl) Backup(c echo.Context) error {
 	err := d.service.Backup.Backup()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success",
+	})
+}
+
+func (d *DatabaseAPIImpl) DeleteBackup(c echo.Context) error {
+	filename := c.Param("filename")
+
+	err := d.service.Backup.Delete(filename)
+	fmt.Println("error is: ", err)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
