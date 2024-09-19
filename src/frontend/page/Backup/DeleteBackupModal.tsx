@@ -55,10 +55,10 @@ const DeleteBackupModal = ({
           <Card radius="sm" className="bg-red-100">
             <CardBody>
               <div className="flex flex-col gap-3">
-                <p className="text-sm text-center font-semibold">{filename}</p>
                 <p className="text-sm text-center">
                   Are you sure you want to delete this backup?
                 </p>
+                <p className="text-sm text-center font-semibold">{filename}</p>
                 <Divider />
                 <b className="text-sm text-center">
                   Note: This action cannot be reversed.

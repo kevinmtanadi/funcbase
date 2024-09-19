@@ -19,6 +19,7 @@ import {
   Card,
   CardBody,
   Spinner,
+  Input,
 } from "@nextui-org/react";
 import {
   useInfiniteQuery,
@@ -28,7 +29,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { CgKey } from "react-icons/cg";
-import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
+import { FaRegCalendar, FaHashtag, FaPlus, FaSearch } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";
 import { LuCopy, LuSettings, LuRefreshCw } from "react-icons/lu";
 import { RiText } from "react-icons/ri";
@@ -58,7 +59,7 @@ export interface FetchFilter {
   value: string;
 }
 
-const fetchRows = async (page: number, table: string) => {
+const fetchRows = async (page: number, table: string, params: any) => {
   if (table === undefined || table === "") {
     return [];
   }
@@ -67,6 +68,7 @@ const fetchRows = async (page: number, table: string) => {
     params: {
       page: page,
       page_size: 20,
+      ...params,
     },
   });
 
@@ -97,6 +99,11 @@ const TableData = ({ table }: TableDataProps) => {
     staleTime: 1000 * 30,
   });
 
+  const [params, setParams] = useState({
+    filter: "",
+    sort: "",
+  });
+
   const {
     data: rowsSplitted,
     fetchNextPage,
@@ -107,8 +114,8 @@ const TableData = ({ table }: TableDataProps) => {
     isFetchingNextPage,
     hasNextPage,
   } = useInfiniteQuery({
-    queryKey: ["rows", table.name],
-    queryFn: ({ pageParam }) => fetchRows(pageParam, table.name),
+    queryKey: ["rows", table.name, params],
+    queryFn: ({ pageParam }) => fetchRows(pageParam, table.name, params),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const totalPage = lastPage.total_data;
@@ -278,6 +285,7 @@ const TableData = ({ table }: TableDataProps) => {
           const date = new Date(cellValue);
           const dateString = formatDate(date.toISOString(), "dd-mm-yyyy");
           const timeString = formatDate(date.toISOString(), "HH:MM:SS");
+          console.log(cellValue);
           return (
             <div className="flex flex-col">
               <p>{dateString}</p>
@@ -341,52 +349,82 @@ const TableData = ({ table }: TableDataProps) => {
 
   const [selectedRow, setSelectedRow] = useState<string>("");
 
+  const [search, setSearch] = useState("");
+  const applySearch = () => {
+    setParams({ ...params, filter: search });
+  };
+
   const TopContent = () => {
     return (
-      <div className="my-3 mx-3 md:flex block items-center justify-between">
-        <div className="flex gap-2 items-center justify-between md:justify-normal">
-          <Breadcrumbs
-            size="lg"
-            isDisabled
-            separator="/"
-            className="text-xl font-semibold"
-          >
-            <BreadcrumbItem>Table</BreadcrumbItem>
-            <BreadcrumbItem>
-              <p>{table.name}</p>
-            </BreadcrumbItem>
-          </Breadcrumbs>
-          <div className="flex gap-2 items-center">
-            <Button
-              radius="sm"
-              className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+      <div className="flex flex-col">
+        <div className="my-3 mx-3 md:flex block items-center justify-between">
+          <div className="flex gap-2 items-center justify-between md:justify-normal">
+            <Breadcrumbs
+              size="lg"
+              isDisabled
+              separator="/"
+              className="text-xl font-semibold"
             >
-              <LuSettings
-                onClick={onSettingOpen}
-                fontSize={"1.25rem"}
-                className="cursor-pointer"
-              />
-            </Button>
+              <BreadcrumbItem>Table</BreadcrumbItem>
+              <BreadcrumbItem>
+                <p>{table.name}</p>
+              </BreadcrumbItem>
+            </Breadcrumbs>
+            <div className="flex gap-2 items-center">
+              <Button
+                radius="sm"
+                className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+              >
+                <LuSettings
+                  onClick={onSettingOpen}
+                  fontSize={"1.25rem"}
+                  className="cursor-pointer"
+                />
+              </Button>
+              <Button
+                radius="sm"
+                className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+              >
+                <LuRefreshCw
+                  onClick={refetchData}
+                  fontSize={"1.25rem"}
+                  className="cursor-pointer"
+                />
+              </Button>
+            </div>
+          </div>
+          <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
             <Button
-              radius="sm"
-              className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+              onClick={onInsertOpen}
+              startContent={<FaPlus />}
+              className="rounded-md w-full md:w-[150px] bg-slate-950 text-white font-semibold"
             >
-              <LuRefreshCw
-                onClick={refetchData}
-                fontSize={"1.25rem"}
-                className="cursor-pointer"
-              />
+              New Data
             </Button>
           </div>
         </div>
-        <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
-          <Button
-            onClick={onInsertOpen}
-            startContent={<FaPlus />}
-            className="rounded-md w-full md:w-[150px] bg-slate-950 text-white font-semibold"
-          >
-            New Data
-          </Button>
+        <div className="px-5 py-3">
+          <Input
+            value={search}
+            onValueChange={setSearch}
+            variant="bordered"
+            className="text-lg"
+            size="lg"
+            radius="sm"
+            placeholder={`Search for item or filter created_at > "2022-01-01"`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applySearch();
+            }}
+            endContent={
+              <Button
+                className="rounded-md bg-slate-950 text-white font-semibold"
+                size="sm"
+                onClick={applySearch}
+              >
+                Search
+              </Button>
+            }
+          />
         </div>
       </div>
     );
@@ -437,6 +475,8 @@ const TableData = ({ table }: TableDataProps) => {
     return <Spinner />;
   }
 
+  const temp = true;
+
   return (
     <>
       <div className="flex flex-col">
@@ -445,16 +485,16 @@ const TableData = ({ table }: TableDataProps) => {
           bottomContent={
             hasNextPage ? (
               <>
-                {isFetchingNextPage ? (
-                  <div className="w-full flex justify-center mb-20">
+                {temp ? (
+                  <div className="w-full flex justify-center mb-4">
                     <Spinner size="lg" color="default" />
                   </div>
                 ) : (
-                  <div ref={ref} className="mb-20 w-full "></div>
+                  <div ref={ref} className="mb-4 w-full "></div>
                 )}
               </>
             ) : (
-              <div className="mb-12"></div>
+              <div></div>
             )
           }
           selectedKeys={selectedRows}
@@ -464,10 +504,10 @@ const TableData = ({ table }: TableDataProps) => {
             setSelectedRow(key.toString());
           }}
           isHeaderSticky={true}
-          className="scroll-shadow"
+          className="scroll-shadow scrollbar-hide"
           classNames={{
             wrapper: "scroll-shadow",
-            base: "pb-15 max-h-[calc(100dvh_-_45px_-_5px)] max-w-[calc(100vw_-_315px)] overflow-y-scroll overflow-x-scroll",
+            base: "pb-15 max-h-[calc(100dvh_-_181px)] max-w-[calc(100vw_-_315px)] overflow-y-scroll overflow-x-scroll ",
             thead: "[&>tr]:first:rounded-none",
             th: [
               "text-default-500",

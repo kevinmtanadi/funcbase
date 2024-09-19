@@ -94,7 +94,12 @@ function App() {
         </div>
         <div className="w-full">
           <Outlet />
-          <ToastContainer draggable position="bottom-center" />
+          <ToastContainer
+            draggable
+            position="top-right"
+            pauseOnFocusLoss={false}
+            pauseOnHover={false}
+          />
         </div>
       </div>
     </>

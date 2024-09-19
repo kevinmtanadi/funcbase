@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
+  DateValue,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import TextInput from "../../components/Inputs/TextInput";
@@ -21,12 +22,13 @@ import BoolInput from "../../components/Inputs/BoolInput";
 import { useFormik } from "formik";
 import { toast } from "react-toastify";
 import { useEffect } from "react";
-import { parseAbsoluteToLocal } from "@internationalized/date";
+import { parseDateTime } from "@internationalized/date";
 import { BsThreeDots } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
 import axiosInstance from "../../pkg/axiosInstance";
 import FileInput from "../../components/Inputs/FileInput";
 import RelationInput from "../../components/Inputs/RelationInput";
+import { formatDate } from "../../utils/utils";
 
 interface UpdateDataModalProps {
   isOpen: boolean;
@@ -106,19 +108,39 @@ const UpdateDataModal = ({
       case "TIMESTAMP":
         return (
           <DatetimeInput
-            isDisabled={true}
+            isDisabled={
+              isLoading ||
+              column.name === "created_at" ||
+              column.name === "updated_at"
+            }
             id={column.name}
             name={column.name}
             isRequired={column.notnull === 0}
             key={column.name}
             label={column.name}
             value={
-              formik.values && formik.values[column.name]
-                ? parseAbsoluteToLocal(formik.values[column.name])
-                : parseAbsoluteToLocal(new Date().toISOString())
+              formatDate(
+                new Date(formik.values[column.name]).toISOString(),
+                "yyyy-mm-ddTHH:MM:SS"
+              ) || ""
+              // "200-04-23T00:00:00"
             }
-            onChange={formik.handleChange}
+            onChange={(value: DateValue) => {
+              formik.setFieldValue(column.name, value.toString());
+            }}
           />
+          // <DatetimeInputV2
+          //   id={column.name}
+          //   name={column.name}
+          //   key={column.name}
+          //   label={column.name}
+          //   value={formik.values[column.name]}
+          //   onChange={(value: Date | null) => {
+          //     if (value !== null) {
+          //       formik.setFieldValue(column.name, value);
+          //     }
+          //   }}
+          // />
         );
       case "RELATION":
         return (
@@ -281,7 +303,9 @@ const UpdateDataModal = ({
               )}
             </div>
           </ModalHeader>
-          {!formik.values ? (
+          {formik.values === undefined ||
+          formik.values.length === 0 ||
+          Object.keys(formik.values).length === 0 ? (
             <div className="w-full h-full flex justify-center py-3">
               <Spinner size="lg" color="default" />
             </div>

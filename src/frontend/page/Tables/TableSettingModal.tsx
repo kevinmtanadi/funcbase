@@ -39,6 +39,7 @@ import { TbCirclesRelation } from "react-icons/tb";
 import GeneralField from "../../components/Fields/GeneralField";
 import RelationField from "../../components/Fields/RelationField";
 import { CgKey } from "react-icons/cg";
+import DeleteTableConfirmModal from "./DeleteTableConfirmModal";
 
 interface TableSettingModalProps {
   isOpen: boolean;
@@ -567,30 +568,12 @@ interface DangerPageProps {
 }
 
 const DangerPage = ({ table, onDelete }: DangerPageProps) => {
-  const queryClient = useQueryClient();
-  const { mutateAsync } = useMutation({
-    mutationFn: () => {
-      return axiosInstance.delete(`/api/main/${table}`);
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ["tables"],
-        type: "active",
-      });
-      onDelete();
-    },
-  });
-
-  const deleteTable = () => {
-    toast.promise(mutateAsync(), {
-      pending: "Deleting table...",
-      success: "Table deleted successfully",
-      error: "Error when deleting table",
-    });
-  };
-
   const { isOpen, onOpen, onClose } = useDisclosure();
-
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -609,7 +592,7 @@ const DangerPage = ({ table, onDelete }: DangerPageProps) => {
           variant="bordered"
           className="bg-transparent  min-w-0 w-full"
           color="danger"
-          onClick={() => deleteTable()}
+          onClick={onDeleteOpen}
         >
           <div className="flex gap-2 justify-between w-full items-center">
             <p className="font-semibold text-red-600">Delete Table</p>
@@ -618,6 +601,12 @@ const DangerPage = ({ table, onDelete }: DangerPageProps) => {
         </Button>
       </div>
       <DeleteColumnModal isOpen={isOpen} onClose={onClose} table={table} />
+      <DeleteTableConfirmModal
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        table={table}
+        onDelete={onDelete}
+      />
     </>
   );
 };

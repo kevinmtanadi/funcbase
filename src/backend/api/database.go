@@ -125,6 +125,21 @@ type fetchRowsRes struct {
 	TotalData int64                    `json:"total_data"`
 }
 
+var sqlTerms = []string{"LIKE", "=", ">=", "<=", ">", "<", "!=", "AND", "OR", "NOT"}
+
+func isSQLTerm(term string) bool {
+	if strings.Contains(term, "(") || strings.Contains(term, ")") {
+		return true
+	}
+
+	for _, sqlTerm := range sqlTerms {
+		if strings.Contains(term, sqlTerm) {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
 	var res fetchRowsRes
@@ -178,11 +193,42 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	`
 	query := fmt.Sprintf(rawQuery, columns, tableName)
 
+	/*
+		smart filtering
+
+		if not SQL term, then do search on every single column
+		ex:
+		The Catcher
+		all_column LIKE (%The Catcher%)
+
+		if SQL term
+		ex:
+		title = "The Catcher in the Rye" and author = "J.D. Salinger" just apply it
+	*/
+
+	filters := []string{}
 	if params.Filter != "" {
 		if strings.Contains(params.Filter, "$user.id") {
 			params.Filter = strings.ReplaceAll(params.Filter, "$user.id", userID)
 		}
-		query = query + `WHERE ` + params.Filter
+
+		if isSQLTerm(params.Filter) {
+			filters = append(filters, params.Filter)
+			query = query + `WHERE ` + params.Filter
+		} else {
+			columns, err := d.service.Table.Columns(tableName, false)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]interface{}{
+					"message": "failed to get columns",
+					"error":   err.Error(),
+				})
+			}
+
+			for _, column := range columns {
+				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", column.Name, params.Filter))
+			}
+			query = query + `WHERE ` + strings.Join(filters, " OR ")
+		}
 	}
 	if params.Sort != "" {
 		query = query + ` ORDER BY ` + params.Sort
@@ -205,7 +251,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	`
 	query = fmt.Sprintf(rawCountQuery, tableName)
 	if params.Filter != "" {
-		query = query + `WHERE ` + params.Filter
+		query = query + `WHERE ` + strings.Join(filters, " OR ")
 	}
 	if err := d.db.Raw(query).First(&res.TotalData).Error; err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{

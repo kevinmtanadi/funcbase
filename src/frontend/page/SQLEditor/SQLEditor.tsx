@@ -5,7 +5,7 @@ import "ace-builds/src-noconflict/theme-sqlserver";
 import "ace-builds/src-noconflict/ext-language_tools";
 import { Button, Code, ScrollShadow } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axiosInstance from "../../pkg/axiosInstance";
 import QueryResult from "./QueryResult";
 import { PiPaperPlaneRightFill } from "react-icons/pi";
@@ -48,7 +48,6 @@ const SQLEditor = () => {
           setRows(res.data);
         })
         .catch((err) => {
-          console.log(err.response.data.error);
           toast.error(err.response.data.error, {
             draggable: true,
           });
@@ -75,6 +74,21 @@ const SQLEditor = () => {
       queryClient.invalidateQueries({ queryKey: ["query"] });
     },
   });
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === "Enter") {
+        console.log(query);
+        mutate(query);
+      }
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+
+    return () => {
+      window.removeEventListener("keydown", handleShortcut);
+    };
+  }, [query]);
 
   return (
     <div className="flex flex-col h-screen">

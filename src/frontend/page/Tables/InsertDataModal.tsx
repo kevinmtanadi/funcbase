@@ -20,6 +20,8 @@ import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
 import FileInput from "../../components/Inputs/FileInput";
 import { useEffect } from "react";
+import { formatDate } from "../../utils/utils";
+import { parseDateTime } from "@internationalized/date";
 
 interface InsertDataModalProps {
   isOpen: boolean;
@@ -115,6 +117,14 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
             isRequired={column.notnull === 0}
             key={column.name}
             label={column.name}
+            value={
+              formik.values && formik.values[column.name]
+                ? formatDate(
+                    new Date(formik.values[column.name]).toISOString(),
+                    "yyyy-mm-ddTHH:MM:SS"
+                  )
+                : undefined
+            }
             onChange={(value: DateValue) => {
               formik.setFieldValue(column.name, value.toString());
             }}
@@ -235,10 +245,6 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
       });
     },
   });
-
-  useEffect(() => {
-    console.log(formik.values);
-  }, [formik.values]);
 
   return (
     <>

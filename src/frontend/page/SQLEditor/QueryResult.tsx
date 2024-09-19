@@ -32,8 +32,6 @@ const QueryResult = ({ rows, columns }: QueryResultProps) => {
     ];
   }
 
-  console.log(columns, rows);
-
   return (
     <>
       <Table

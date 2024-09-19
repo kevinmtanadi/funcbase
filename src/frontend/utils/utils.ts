@@ -4,50 +4,50 @@ export const formatDate = (time: string, format?: string): string => {
     }
   
     const date = new Date(time);
-    
     if (!format) {
         format = "dd-mm-yyyy HH:MM:SS";
     }
 
     // SHORT FORM
    if (format.includes('dd')) {
-    const dd = date.getDate().toString().padStart(2, '0');
+    const dd = date.getUTCDate().toString().padStart(2, '0');
     format = format.replace('dd', dd);
    }
    if (format.includes('mm') && !format.includes('mmm')) {
-    const mm = date.getMonth().toString().padStart(2, '0');
+    const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');
     format = format.replace('mm', mm);
    }
    if (format.includes('yy') && !format.includes('yyyy')) {
-    const yy = date.getFullYear().toString().slice(-2);
+    const yy = date.getUTCFullYear().toString().slice(-2);
     format = format.replace('yy', yy);
    }
-   
    // LONG FORM
    if (format.includes('month')) {
-    const month = new Intl.DateTimeFormat('id', { month: 'long' }).format(date);
+    const mNum = date.getUTCMonth() + 1;
+    const month = new Intl.DateTimeFormat('id', { month: 'long' }).format(mNum);
     format = format.replace('month', month);
    }
    if (format.includes('yyyy')) {
-    const year = date.getFullYear();
-    format = format.replace('yyyy', year.toString());
+    let year = date.getUTCFullYear().toString().padStart(4, '0');
+    format = format.replace('yyyy', year);
    }
    if (format.includes('mmm')) {
-    const mmm = new Intl.DateTimeFormat('id', { month: 'short' }).format(date);
+    const mNum = date.getUTCMonth() + 1;
+    const mmm = new Intl.DateTimeFormat('id', { month: 'short' }).format(mNum);
     format = format.replace('mmm', mmm);
    }
    
    // TIME
    if (format.includes('HH')) {
-    const hours = date.getHours().toString().padStart(2, '0');
+    const hours = date.getUTCHours().toString().padStart(2, '0');
     format = format.replace('HH', hours);
    }
    if (format.includes('MM')) {
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
     format = format.replace('MM', minutes);
    }
    if (format.includes('SS')) {
-    const seconds = date.getSeconds().toString().padStart(2, '0');
+    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
     format = format.replace('SS', seconds);
    }
 
