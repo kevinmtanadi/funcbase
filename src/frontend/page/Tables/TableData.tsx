@@ -1,9 +1,6 @@
 import {
   Tooltip,
-  Popover,
-  PopoverTrigger,
   Button,
-  PopoverContent,
   useDisclosure,
   Breadcrumbs,
   BreadcrumbItem,
@@ -29,7 +26,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { CgKey } from "react-icons/cg";
-import { FaRegCalendar, FaHashtag, FaPlus, FaSearch } from "react-icons/fa";
+import { FaRegCalendar, FaHashtag, FaPlus } from "react-icons/fa";
 import { HiOutlineHashtag } from "react-icons/hi";
 import { LuCopy, LuSettings, LuRefreshCw } from "react-icons/lu";
 import { RiText } from "react-icons/ri";
@@ -51,6 +48,7 @@ interface TableDataProps {
     name: string;
     is_auth: boolean;
   };
+  resetTable: () => void;
 }
 
 export interface FetchFilter {
@@ -75,7 +73,7 @@ const fetchRows = async (page: number, table: string, params: any) => {
   return res.data;
 };
 
-const TableData = ({ table }: TableDataProps) => {
+const TableData = ({ table, resetTable }: TableDataProps) => {
   const [mounted, setMounted] = useState(false);
 
   const { data: columns } = useQuery<any[]>({
@@ -257,25 +255,16 @@ const TableData = ({ table }: TableDataProps) => {
 
       if (pk === 1)
         return (
-          <Popover placement="bottom-start">
-            <PopoverTrigger>
-              <Button
-                onClick={() => navigator.clipboard.writeText(cellValue)}
-                className="bg-slate-100 h-7 p-0 px-3 min-w-0"
-                variant="light"
-              >
-                <div className="flex items-center gap-3">
-                  {cellValue}
-                  <LuCopy />
-                </div>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent>
-              <div className="px-1 py-2">
-                <div className="text-sm font-bold">Copied</div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <Button
+            onClick={() => navigator.clipboard.writeText(cellValue)}
+            className="h-7 p-0 px-3 min-w-0 bg-slate-50"
+            variant="light"
+          >
+            <div className="flex items-center gap-3">
+              {cellValue}
+              <LuCopy />
+            </div>
+          </Button>
         );
 
       const dtype = columns?.find((col) => col.name === columnKey)?.type;
@@ -475,8 +464,6 @@ const TableData = ({ table }: TableDataProps) => {
     return <Spinner />;
   }
 
-  const temp = true;
-
   return (
     <>
       <div className="flex flex-col">
@@ -485,7 +472,7 @@ const TableData = ({ table }: TableDataProps) => {
           bottomContent={
             hasNextPage ? (
               <>
-                {temp ? (
+                {isLoading ? (
                   <div className="w-full flex justify-center mb-4">
                     <Spinner size="lg" color="default" />
                   </div>
@@ -600,12 +587,21 @@ const TableData = ({ table }: TableDataProps) => {
       <TableSettingModal
         tableName={table.name}
         isOpen={isSettingOpen}
-        onClose={onSettingClose}
+        onClose={() => {
+          onSettingClose();
+          setSelectedRow("");
+        }}
+        onDeleteTable={() => {
+          resetTable();
+        }}
       />
       <UpdateDataModal
         tableName={table.name}
         isOpen={isUpdateOpen}
-        onClose={onUpdateClose}
+        onClose={() => {
+          onUpdateClose();
+          setSelectedRow("");
+        }}
         id={selectedRow}
       />
       <FloatingBox isOpen={(selectedRows as any).size > 0}>

@@ -86,6 +86,7 @@ function App() {
       checkAuthentication();
     }
   }
+
   return (
     <>
       <div className="max-h-screen overflow-hidden h-screen w-full flex">

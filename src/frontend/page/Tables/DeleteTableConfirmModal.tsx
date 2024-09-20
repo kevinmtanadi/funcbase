@@ -36,6 +36,7 @@ const DeleteTableConfirmModal = ({
         type: "active",
       });
       onDelete();
+      onClose();
     },
   });
 
@@ -48,7 +49,7 @@ const DeleteTableConfirmModal = ({
   };
 
   return (
-    <Modal size="md" isOpen={isOpen} onClose={onClose}>
+    <Modal id="del-table" size="md" isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         <ModalHeader>Delete table {table}</ModalHeader>
         <ModalBody>
@@ -71,6 +72,7 @@ const DeleteTableConfirmModal = ({
           <Button
             fullWidth
             className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
+            onClick={onClose}
           >
             Cancel
           </Button>

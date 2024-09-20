@@ -45,41 +45,96 @@ interface TableSettingModalProps {
   isOpen: boolean;
   onClose: () => void;
   tableName: string;
+  onDeleteTable: () => void;
 }
 
 const TableSettingModal = ({
   isOpen,
   onClose,
   tableName,
+  onDeleteTable,
 }: TableSettingModalProps) => {
+  const {
+    isOpen: isDelColOpen,
+    onOpen: onDelColOpen,
+    onClose: onDelColClose,
+  } = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
+
   return (
-    <Modal radius="sm" size="2xl" isOpen={isOpen} onClose={onClose}>
-      <ModalContent>
-        <ModalHeader>
-          <Breadcrumbs
-            size="lg"
-            isDisabled
-            separator="/"
-            className="text-xl font-semibold"
-          >
-            <BreadcrumbItem>Table</BreadcrumbItem>
-            <BreadcrumbItem>
-              <p>{tableName}</p>
-            </BreadcrumbItem>
-          </Breadcrumbs>
-        </ModalHeader>
-        <ModalBody>
-          <Tabs fullWidth>
-            <Tab key={"columns"} title="Columns">
-              <ColumnPage table={tableName} />
-            </Tab>
-            <Tab key={"danger"} title="Danger Zone">
-              <DangerPage table={tableName} onDelete={onClose} />
-            </Tab>
-          </Tabs>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+    <>
+      <Modal radius="sm" size="2xl" isOpen={isOpen} onClose={onClose}>
+        <ModalContent>
+          <ModalHeader>
+            <Breadcrumbs
+              size="lg"
+              isDisabled
+              separator="/"
+              className="text-xl font-semibold"
+            >
+              <BreadcrumbItem>Table</BreadcrumbItem>
+              <BreadcrumbItem>
+                <p>{tableName}</p>
+              </BreadcrumbItem>
+            </Breadcrumbs>
+          </ModalHeader>
+          <ModalBody>
+            <Tabs fullWidth>
+              <Tab key={"columns"} title="Columns">
+                <ColumnPage table={tableName} />
+              </Tab>
+              <Tab key={"danger"} title="Danger Zone">
+                <div className="flex flex-col gap-2">
+                  <Button
+                    radius="sm"
+                    variant="bordered"
+                    className="bg-transparent  min-w-0 w-full"
+                    onClick={onDelColOpen}
+                  >
+                    <div className="flex gap-2 justify-between w-full items-center">
+                      <p className="font-semibold">Delete Column</p>
+                    </div>
+                  </Button>
+                  <Button
+                    radius="sm"
+                    variant="bordered"
+                    className="bg-transparent  min-w-0 w-full"
+                    color="danger"
+                    onClick={() => {
+                      onClose();
+                      onDeleteOpen();
+                    }}
+                  >
+                    <div className="flex gap-2 justify-between w-full items-center">
+                      <p className="font-semibold text-red-600">Delete Table</p>
+                      <FaRegTrashAlt className="text-red-600" />
+                    </div>
+                  </Button>
+                </div>
+              </Tab>
+            </Tabs>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+      <DeleteColumnModal
+        isOpen={isDelColOpen}
+        onClose={onDelColClose}
+        table={tableName}
+      />
+      <DeleteTableConfirmModal
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        table={tableName}
+        onDelete={() => {
+          onDeleteClose();
+          onDeleteTable();
+        }}
+      />
+    </>
   );
 };
 
@@ -369,9 +424,10 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
             >
               <Divider className="" />
               <div className="grid grid-cols-3 w-full gap-2 mt-3">
-                {datatypes.map((dtype) =>
+                {datatypes.map((dtype, idx) =>
                   dtype.dtype === "RELATION" ? (
                     <Button
+                      id={idx.toString()}
                       isDisabled={!tables || tables.length === 0}
                       isLoading={isLoading}
                       startContent={dtype.icon}
@@ -382,6 +438,7 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
                     </Button>
                   ) : (
                     <Button
+                      id={idx.toString()}
                       startContent={dtype.icon}
                       onClick={() => addNewField(dtype.value)}
                       className="hover:bg-slate-200 bg-transparent rounded-md"
@@ -562,55 +619,6 @@ const RenameColumnModal = ({
   );
 };
 
-interface DangerPageProps {
-  table: string;
-  onDelete: () => void;
-}
-
-const DangerPage = ({ table, onDelete }: DangerPageProps) => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const {
-    isOpen: isDeleteOpen,
-    onOpen: onDeleteOpen,
-    onClose: onDeleteClose,
-  } = useDisclosure();
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <Button
-          radius="sm"
-          variant="bordered"
-          className="bg-transparent  min-w-0 w-full"
-          onClick={onOpen}
-        >
-          <div className="flex gap-2 justify-between w-full items-center">
-            <p className="font-semibold">Delete Column</p>
-          </div>
-        </Button>
-        <Button
-          radius="sm"
-          variant="bordered"
-          className="bg-transparent  min-w-0 w-full"
-          color="danger"
-          onClick={onDeleteOpen}
-        >
-          <div className="flex gap-2 justify-between w-full items-center">
-            <p className="font-semibold text-red-600">Delete Table</p>
-            <FaRegTrashAlt className="text-red-600" />
-          </div>
-        </Button>
-      </div>
-      <DeleteColumnModal isOpen={isOpen} onClose={onClose} table={table} />
-      <DeleteTableConfirmModal
-        isOpen={isDeleteOpen}
-        onClose={onDeleteClose}
-        table={table}
-        onDelete={onDelete}
-      />
-    </>
-  );
-};
-
 interface DeleteColumnModalProps {
   table: string;
   onClose: () => void;
@@ -630,10 +638,6 @@ const DeleteColumnModal = ({
       return res.data;
     },
   });
-
-  if (!columns || columns.length === 0) {
-    return <></>;
-  }
 
   const [selectedCol, setSelectedCol] = useState<string[]>([]);
 
@@ -670,8 +674,12 @@ const DeleteColumnModal = ({
     });
   };
 
+  if (!columns || columns.length === 0) {
+    return <></>;
+  }
+
   return (
-    <Modal size="md" isOpen={isOpen} onClose={onClose}>
+    <Modal id="tab-set" size="md" isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         <ModalHeader>Delete columns from [{table}]</ModalHeader>
         <ModalBody>

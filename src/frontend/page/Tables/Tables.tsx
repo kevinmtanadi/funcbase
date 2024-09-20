@@ -45,6 +45,14 @@ const Tables = () => {
     }
   }, [tables]);
 
+  const resetTable = () => {
+    if (tables && tables.length > 0) {
+      setSelectedTable(tables[0]);
+    } else {
+      setSelectedTable({ name: "", is_auth: false });
+    }
+  };
+
   const {
     isOpen: isCreateOpen,
     onOpen: onCreateOpen,
@@ -95,8 +103,8 @@ const Tables = () => {
           </div>
         </div>
         <div className="w-full">
-          {selectedTable ? (
-            <TableData table={selectedTable} />
+          {selectedTable && selectedTable.name !== "" ? (
+            <TableData table={selectedTable} resetTable={resetTable} />
           ) : (
             <div className="w-full mt-10 flex items-center justify-center">
               <p className="text-lg text-slate-400">No tables found</p>
