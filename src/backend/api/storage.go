@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -149,7 +148,6 @@ func (s *StorageAPIImpl) Upload(c echo.Context) error {
 		defer file.Close()
 
 		storageDir := filepath.Join("..", "public", files[0].Filename)
-		fmt.Println(storageDir)
 		err = s.service.Storage.Save(file, storageDir)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{

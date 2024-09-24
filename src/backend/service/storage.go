@@ -43,6 +43,12 @@ func (s *StorageServiceImpl) Get(directory string, writer io.Writer) error {
 }
 
 func (s *StorageServiceImpl) Save(file io.Reader, directory string) error {
+	// check if file already exist
+	_, err := os.Stat(directory)
+	if os.IsExist(err) {
+		os.Remove(directory)
+	}
+
 	dst, err := os.Create(directory)
 	if err != nil {
 		return err

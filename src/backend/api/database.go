@@ -1,9 +1,9 @@
 package api
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -518,7 +518,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 		defer file.Close()
 
-		newFileName := utils.GenerateUUIDV7()
+		newFileName := base64.StdEncoding.EncodeToString([]byte(id + k))
 		fileExtension := filepath.Ext(files[0].Filename)
 
 		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
@@ -566,6 +566,7 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	}
 
 	updatedData["updated_at"] = time.Now()
+	id := updatedData["id"].(string)
 
 	for k, files := range form.File {
 		file, err := files[0].Open()
@@ -577,26 +578,14 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 
 		defer file.Close()
 
-		newFileName := utils.GenerateUUIDV7()
+		newFileName := base64.StdEncoding.EncodeToString([]byte(id + k))
 		fileExtension := filepath.Ext(files[0].Filename)
 		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
-		_, err = os.Stat(storageDir)
-		if os.IsExist(err) {
-			os.Remove(storageDir)
-		}
 
-		dst, err := os.Create(storageDir)
+		err = d.service.Storage.Save(file, storageDir)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to create destination file",
-			})
-		}
-		defer dst.Close()
-
-		// Copy file to destination
-		if _, err := io.Copy(dst, file); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to save file",
+				"error": err.Error(),
 			})
 		}
 
