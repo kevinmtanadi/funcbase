@@ -109,7 +109,6 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     isRefetching,
     isPending,
     isFetching,
-    isFetchingNextPage,
     hasNextPage,
   } = useInfiniteQuery({
     queryKey: ["rows", table.name, params],

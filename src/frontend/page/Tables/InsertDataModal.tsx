@@ -19,9 +19,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
 import FileInput from "../../components/Inputs/FileInput";
-import { useEffect } from "react";
 import { formatDate } from "../../utils/utils";
-import { parseDateTime } from "@internationalized/date";
 
 interface InsertDataModalProps {
   isOpen: boolean;
