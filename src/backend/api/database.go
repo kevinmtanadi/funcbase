@@ -193,19 +193,6 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	`
 	query := fmt.Sprintf(rawQuery, columns, tableName)
 
-	/*
-		smart filtering
-
-		if not SQL term, then do search on every single column
-		ex:
-		The Catcher
-		all_column LIKE (%The Catcher%)
-
-		if SQL term
-		ex:
-		title = "The Catcher in the Rye" and author = "J.D. Salinger" just apply it
-	*/
-
 	filters := []string{}
 	if params.Filter != "" {
 		if strings.Contains(params.Filter, "$user.id") {
@@ -225,7 +212,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 			}
 
 			for _, column := range columns {
-				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", column.Name, params.Filter))
+				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", column["name"], params.Filter))
 			}
 			query = query + `WHERE ` + strings.Join(filters, " OR ")
 		}
@@ -535,7 +522,12 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 	filteredData["id"] = id
 
-	d.service.Table.Insert(tableName, filteredData)
+	err = d.service.Table.Insert(tableName, filteredData)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success",
@@ -658,6 +650,7 @@ func (d *DatabaseAPIImpl) RunQuery(c echo.Context) error {
 				"error": err.Error(),
 			})
 		}
+
 		result = append(result, row)
 	}
 

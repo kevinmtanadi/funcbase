@@ -37,3 +37,19 @@ button:focus {
   /* Opera doesn't support this in the shorthand */
   background-attachment: local, local, scroll, scroll;
 }
+
+.key {
+  color: #2e7ad4;
+}
+
+.string {
+  color: #ab4a1e;
+}
+
+.number {
+  color: #608b44;
+}
+
+.boolean {
+  color: #4186c3;
+}

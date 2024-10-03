@@ -310,17 +310,6 @@ export const FunctionUpdate = ({
                 },
                 ...functionParts.slice(idx + 1),
               ]);
-              // setFunctionParts((prevParts) => [
-              //   ...prevParts.slice(0, idx),
-              //   {
-              //     ...prevParts[idx],
-              //     values: {
-              //       ...prevParts[idx].values,
-              //       [column.name]: e.target.value,
-              //     },
-              //   },
-              //   ...prevParts.slice(idx + 1),
-              // ]);
             }
           }}
         >

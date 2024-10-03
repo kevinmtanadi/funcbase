@@ -33,8 +33,6 @@ type FunctionStored struct {
 	Function string `json:"function" gorm:"column:function"`
 }
 
-
-
 func Migrate(db *gorm.DB) error {
 	err := db.AutoMigrate(&Admin{}, &Tables{}, &QueryHistory{}, &FunctionStored{})
 	if err != nil {
@@ -59,7 +57,7 @@ type Column struct {
 	CID       int    `json:"cid"`
 	Default   string `json:"dflt_value"`
 	Name      string `json:"name"`
-	NotNull   bool   `json:"notnull"`
+	NotNull   int    `json:"notnull"`
 	PK        int    `json:"pk"`
 	Type      string `json:"type"`
 	Reference string `json:"reference,omitempty"`

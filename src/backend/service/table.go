@@ -11,7 +11,7 @@ import (
 
 type TableService interface {
 	Info(tableName string) (model.Tables, error)
-	Columns(tableName string, fetchAuthColumn bool) ([]model.Column, error)
+	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
 	Insert(tableName string, data map[string]interface{}) error
 	Update(tableName string, data map[string]interface{}) error
 	Delete(tableName string, data map[string]interface{}) error
@@ -43,11 +43,11 @@ func (s *TableServiceImpl) Info(tableName string) (model.Tables, error) {
 	return table, nil
 }
 
-func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]model.Column, error) {
-	var result []model.Column
-	if err := s.db.Raw(fmt.Sprintf(`
+func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error) {
+	var result []map[string]interface{}
+	rows, err := s.db.Raw(fmt.Sprintf(`
 		SELECT 
-			info.cid,
+			CAST(info.cid AS INT) AS cid,
 			info.name,
 			info.'type',
 			info.pk,
@@ -57,15 +57,23 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]mo
 		FROM pragma_table_info('%s') AS info
 		LEFT JOIN pragma_foreign_key_list('%s') AS fk ON
 		info.name = fk.'from'
-	`, tableName, tableName)).
-		Scan(&result).
-		Error; err != nil {
+	`, tableName, tableName)).Rows()
+	if err != nil {
 		return result, err
 	}
 
+	defer rows.Close()
+	for rows.Next() {
+		var row map[string]interface{}
+		if err := s.db.ScanRows(rows, &row); err != nil {
+			return result, err
+		}
+		result = append(result, row)
+	}
+
 	for i, col := range result {
-		if col.Reference != "" {
-			result[i].Type = "RELATION"
+		if col["reference"] != nil {
+			result[i]["type"] = "RELATION"
 		}
 	}
 
@@ -76,10 +84,10 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]mo
 
 	// If table is user type, prevent displaying authentication fields
 	if table.IsAuth {
-		var cleanedResult []model.Column
+		var cleanedResult []map[string]interface{}
 		if fetchAuthColumn {
 			for _, row := range result {
-				if row.Name != "salt" {
+				if row["name"] != "salt" {
 					cleanedResult = append(cleanedResult, row)
 				}
 			}
@@ -88,7 +96,7 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]mo
 		}
 
 		for _, row := range result {
-			if row.Name != "password" && row.Name != "salt" {
+			if row["name"] != "password" && row["name"] != "salt" {
 				cleanedResult = append(cleanedResult, row)
 			}
 		}

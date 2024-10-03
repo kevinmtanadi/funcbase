@@ -67,8 +67,8 @@ function App() {
   }
 
   const isAuth = useIsAuthenticated();
-  if (admin?.rows.length > 0) {
-    if (!isAuth) {
+  if (!isAuth) {
+    if (admin?.rows.length > 0) {
       const maxAttempts = 10;
       let attempts = 0;
 

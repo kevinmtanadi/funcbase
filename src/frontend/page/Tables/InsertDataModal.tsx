@@ -76,7 +76,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
           <TextInput
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull === 1}
             value={formik.values ? formik.values[column.name] : ""}
             key={column.name}
             label={column.name}
@@ -89,7 +89,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
           <NumberInput
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull === 1}
             value={formik.values ? formik.values[column.name] : ""}
             key={column.name}
             label={column.name}
@@ -112,7 +112,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
           <DatetimeInput
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull === 1}
             key={column.name}
             label={column.name}
             value={

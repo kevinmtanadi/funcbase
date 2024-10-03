@@ -40,8 +40,9 @@ import axiosInstance from "../../pkg/axiosInstance";
 import FloatingBox from "../../components/FloatingBox";
 import { TbCirclesRelation } from "react-icons/tb";
 import { toast } from "react-toastify";
-import { FaRegFile } from "react-icons/fa6";
+import { FaCode, FaRegFile } from "react-icons/fa6";
 import { useInView } from "react-intersection-observer";
+import APIPreview from "./APIPreview";
 
 interface TableDataProps {
   table: {
@@ -57,7 +58,7 @@ export interface FetchFilter {
   value: string;
 }
 
-const fetchRows = async (page: number, table: string, params: any) => {
+export const fetchRows = async (page: number, table: string, params: any) => {
   if (table === undefined || table === "") {
     return [];
   }
@@ -322,6 +323,11 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     onOpen: onInsertOpen,
     onClose: onInsertClose,
   } = useDisclosure();
+  const {
+    isOpen: isPreviewOpen,
+    onOpen: onPreviewOpen,
+    onClose: onPreviewClose,
+  } = useDisclosure();
 
   const {
     isOpen: isSettingOpen,
@@ -382,6 +388,14 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             </div>
           </div>
           <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
+            <Button
+              onClick={onPreviewOpen}
+              startContent={<FaCode />}
+              variant="bordered"
+              className="rounded-md w-full md:w-[150px] bg-default-100 border-slate-950 text-slate-950 font-semibold"
+            >
+              API Preview
+            </Button>
             <Button
               onClick={onInsertOpen}
               startContent={<FaPlus />}
@@ -602,6 +616,12 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
           setSelectedRow("");
         }}
         id={selectedRow}
+      />
+      <APIPreview
+        table={table.name}
+        isAuth={table.is_auth}
+        isOpen={isPreviewOpen}
+        onClose={onPreviewClose}
       />
       <FloatingBox isOpen={(selectedRows as any).size > 0}>
         <Card>
