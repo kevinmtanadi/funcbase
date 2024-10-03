@@ -20,6 +20,7 @@ import { Table } from "./Tables";
 import RelationInput from "../../components/Inputs/RelationInput";
 import FileInput from "../../components/Inputs/FileInput";
 import { formatDate } from "../../utils/utils";
+import { useEffect } from "react";
 
 interface InsertDataModalProps {
   isOpen: boolean;
@@ -243,6 +244,10 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
       });
     },
   });
+
+  useEffect(() => {
+    formik.setValues(initialValues);
+  }, [isOpen]);
 
   return (
     <>
