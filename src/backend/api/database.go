@@ -10,7 +10,6 @@ import (
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/service"
-	"react-golang/src/backend/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -183,9 +182,9 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	}
 
 	paramUser := c.Get("user_id")
-	var userID string
+	var userID int
 	if paramUser != nil {
-		userID = paramUser.(string)
+		userID = paramUser.(int)
 	}
 
 	rawQuery := `
@@ -196,7 +195,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	filters := []string{}
 	if params.Filter != "" {
 		if strings.Contains(params.Filter, "$user.id") {
-			params.Filter = strings.ReplaceAll(params.Filter, "$user.id", userID)
+			params.Filter = strings.ReplaceAll(params.Filter, "$user.id", string(userID))
 		}
 
 		if isSQLTerm(params.Filter) {
@@ -212,7 +211,8 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 			}
 
 			for _, column := range columns {
-				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", column["name"], params.Filter))
+				cName := column["name"].(*interface{})
+				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", *cName, params.Filter))
 			}
 			query = query + `WHERE ` + strings.Join(filters, " OR ")
 		}
@@ -295,16 +295,16 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		})
 	}
 
-	id := "id %s"
+	id := "id INTEGER PRIMARY KEY"
 
-	switch params.IDType {
-	case "string":
-		id = fmt.Sprintf(id, "TEXT PRIMARY KEY DEFAULT (hex(randomblob(8)))")
-	case "manual":
-		id = fmt.Sprintf(id, "TEXT PRIMARY KEY")
-	default:
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid id type")
-	}
+	// switch params.IDType {
+	// case "string":
+	// 	id = fmt.Sprintf(id, "TEXT PRIMARY KEY DEFAULT (hex(randomblob(8)))")
+	// case "manual":
+	// 	id = fmt.Sprintf(id, "TEXT PRIMARY KEY")
+	// default:
+	// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid id type")
+	// }
 
 	fields := []string{
 		id,
@@ -474,7 +474,6 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 	filteredData := make(map[string]interface{})
 
-	id, _ := utils.GenerateRandomString(16)
 	form := c.Request().MultipartForm
 
 	for k, v := range form.Value {
@@ -495,6 +494,13 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		filteredData[k] = v[0]
 	}
 
+	id, err := d.service.Table.Insert(tableName, filteredData)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
 	for k, files := range form.File {
 		file, err := files[0].Open()
 		if err != nil {
@@ -505,7 +511,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 		defer file.Close()
 
-		newFileName := base64.StdEncoding.EncodeToString([]byte(id + k))
+		newFileName := base64.StdEncoding.EncodeToString([]byte(id.(string) + k))
 		fileExtension := filepath.Ext(files[0].Filename)
 
 		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
@@ -518,15 +524,6 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 		filteredData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
 		continue
-	}
-
-	filteredData["id"] = id
-
-	err = d.service.Table.Insert(tableName, filteredData)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{

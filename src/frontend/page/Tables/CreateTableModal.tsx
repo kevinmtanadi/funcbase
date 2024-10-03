@@ -10,7 +10,6 @@ import {
   SelectItem,
   Button,
   ModalFooter,
-  Selection,
   Accordion,
   AccordionItem,
 } from "@nextui-org/react";
@@ -63,7 +62,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
 
   const [tableType, setTableType] = useState("");
   const [tableName, setTableName] = useState("");
-  const [idType, setIdType] = useState<Selection>(new Set(["string"]));
 
   // override the close to empty the fields
   const handleClose = () => {
@@ -79,7 +77,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     mutationFn: () => {
       return axiosInstance.post("/api/main/table/create", {
         table_name: tableName,
-        id_type: (idType as any).currentKey || "string",
         fields: fields.map((field) => {
           if (field.field_type === "relation" && !field.related_table) return;
           if (field.field_name === "") return;
@@ -259,54 +256,13 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
               <p className="font-semibold">Fields</p>
               <p className="text-sm">
                 Automatically created fields:{" "}
+                <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">created_at</Code>
                 ,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
               </p>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <Select
-                  defaultSelectedKeys={"string"}
-                  selectionMode="single"
-                  variant="bordered"
-                  isRequired
-                  selectedKeys={idType}
-                  onSelectionChange={setIdType}
-                  label={<b>ID Type</b>}
-                  classNames={{
-                    trigger: "rounded-md",
-                    popoverContent: "rounded-t-none rounded-b-md",
-                  }}
-                >
-                  <SelectItem
-                    variant="bordered"
-                    textValue="Automated (String)"
-                    className="rounded-sm"
-                    key="string"
-                  >
-                    <div className="flex">
-                      <p className="font-bold">Automated</p>
-                      <p className="ml-1">(String)</p>
-                    </div>
-                    <p className="text-sm text-default-500">
-                      System will automatically generate a 16 characters random
-                      ID for every record
-                    </p>
-                  </SelectItem>
-                  <SelectItem
-                    textValue="Manual Input"
-                    className="rounded-sm"
-                    key="manual"
-                  >
-                    <b>Manual Input</b>
-                    <p className="text-sm text-default-500">
-                      ID will have to be manually inputted
-                    </p>
-                  </SelectItem>
-                </Select>
-              </div>
-            </div>
+
             <Divider />
             <Accordion className="rounded-md" variant="bordered">
               <AccordionItem
@@ -372,6 +328,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
               <p className="font-semibold">Fields</p>
               <p className="text-sm">
                 Automatically created fields:{" "}
+                <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">email</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">password</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">salt</Code>,{" "}
@@ -380,49 +337,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                 <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
               </p>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <Select
-                  defaultSelectedKeys={"string"}
-                  selectionMode="single"
-                  variant="bordered"
-                  isRequired
-                  selectedKeys={idType}
-                  onSelectionChange={setIdType}
-                  label={<b>ID Type</b>}
-                  classNames={{
-                    trigger: "rounded-md",
-                    popoverContent: "rounded-t-none rounded-b-md",
-                  }}
-                >
-                  <SelectItem
-                    variant="bordered"
-                    textValue="Automated (String)"
-                    className="rounded-sm"
-                    key="string"
-                  >
-                    <div className="flex">
-                      <p className="font-bold">Automated</p>
-                      <p className="ml-1">(String)</p>
-                    </div>
-                    <p className="text-sm text-default-500">
-                      System will automatically generate a 16 characters random
-                      ID for every record
-                    </p>
-                  </SelectItem>
-                  <SelectItem
-                    textValue="Manual Input"
-                    className="rounded-sm"
-                    key="manual"
-                  >
-                    <b>Manual Input</b>
-                    <p className="text-sm text-default-500">
-                      ID will have to be manually inputted
-                    </p>
-                  </SelectItem>
-                </Select>
-              </div>
-            </div>
+
             <Divider />
             <Accordion className="rounded-md" variant="bordered">
               <AccordionItem

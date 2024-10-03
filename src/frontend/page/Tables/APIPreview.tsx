@@ -61,7 +61,7 @@ const generateDummyJson = (columns: any[]) => {
 
   const dummyRow: { [key: string]: any } = {};
 
-  columns.forEach((column: { name: string; type: string }) => {
+  columns.forEach((column: { name: string; type: string }, idx) => {
     switch (column.type) {
       case "TEXT":
       case "RELATION":
@@ -73,7 +73,11 @@ const generateDummyJson = (columns: any[]) => {
         break;
       case "INTEGER":
       case "REAL":
-        dummyRow[column.name] = 17; // For integer type
+        if (column.name === "id") {
+          dummyRow[column.name] = idx; // For integer type
+        } else {
+          dummyRow[column.name] = 17; // For real type
+        }
         break;
       default:
         dummyRow[column.name] = "example_string"; // Default to string if type is unknown
@@ -707,6 +711,7 @@ const DeletePreview = ({ table }: PreviewProps) => {
 const AuthPreview = ({ table }: PreviewProps) => {
   return (
     <div className="flex flex-col m-5">
+      <p>{table}</p>
       <Tabs isVertical>
         <Tab
           key="fetch"

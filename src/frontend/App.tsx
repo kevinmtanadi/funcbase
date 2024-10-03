@@ -78,7 +78,7 @@ function App() {
           setTimeout(checkAuthentication, 100);
         } else {
           if (!isAuth) {
-            return <Navigate to="/login" />;
+            return <Navigate to="/signin" />;
           }
         }
       };

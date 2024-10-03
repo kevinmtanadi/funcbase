@@ -12,7 +12,7 @@ import (
 type TableService interface {
 	Info(tableName string) (model.Tables, error)
 	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
-	Insert(tableName string, data map[string]interface{}) error
+	Insert(tableName string, data map[string]interface{}) (interface{}, error)
 	Update(tableName string, data map[string]interface{}) error
 	Delete(tableName string, data map[string]interface{}) error
 	BatchDelete(tableName string, data []string) error
@@ -107,11 +107,11 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 	return result, err
 }
 
-func (s *TableServiceImpl) Insert(tableName string, data map[string]interface{}) error {
+func (s *TableServiceImpl) Insert(tableName string, data map[string]interface{}) (interface{}, error) {
 	err := s.db.Table(tableName).
 		Create(&data).Error
 
-	return err
+	return data["id"], err
 }
 
 func (s *TableServiceImpl) Update(tableName string, data map[string]interface{}) error {

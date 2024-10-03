@@ -9,6 +9,7 @@ const ProtectedRoute = ({ children }: Props) => {
   const isAuthenticated = useIsAuthenticated();
 
   if (!isAuthenticated) {
+    console.log("Fuck you, you're not signed in");
     return <Navigate to="/signin" />;
   }
 

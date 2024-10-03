@@ -5,7 +5,6 @@ import (
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
 	"react-golang/src/backend/service"
-	"react-golang/src/backend/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -75,9 +74,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		})
 	}
 
-	id, _ := utils.GenerateRandomString(16)
 	newUser := map[string]interface{}{
-		"id":       id,
 		"email":    body.Data["email"],
 		"password": hashedPassword,
 		"salt":     salt,
@@ -163,7 +160,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 	}
 
 	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
-		"sub":   user["id"].(string),
+		"sub":   user["id"].(int),
 		"email": user["email"].(string),
 		"role":  tableName,
 	})
@@ -179,7 +176,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 }
 
 func (h *AuthAPIImpl) GetMyUserID(c echo.Context) error {
-	userID, ok := c.Get("user_id").(string)
+	userID, ok := c.Get("user_id").(int)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"error": "JWT Not found",

@@ -8,7 +8,6 @@ import (
 	"react-golang/src/backend/constants"
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/service"
-	"react-golang/src/backend/utils"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type FunctionAPI interface {
@@ -168,28 +168,52 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 		for _, fun := range functions {
 			switch fun.Action {
 			case "insert":
-				if fun.Multiple {
-					bindedInput := BindMultipleInput(fun.Values, caller.Data[fun.Name].([]interface{}), savedData, userID)
-					for i := range bindedInput {
-						bindedInput[i]["id"], _ = utils.GenerateRandomString(16)
-					}
+				if data, ok := caller.Data[fun.Name].([]interface{}); ok {
+					bindedInput := BindMultipleInput(fun.Values, data, savedData, userID)
+					// for i := range bindedInput {
+					// 	bindedInput[i]["id"], _ = utils.GenerateRandomString(16)
+					// }
 					err := db.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
-				} else {
-					bindedInput := BindSingularInput(fun.Values, caller.Data[fun.Name].(map[string]interface{}), savedData, userID)
-					bindedInput["id"], _ = utils.GenerateRandomString(16)
-					err := db.Table(fun.Table).Create(bindedInput).Error
+				} else if data, ok := caller.Data[fun.Name].(map[string]interface{}); ok {
+					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
+					err := db.Table(fun.Table).Clauses(clause.Returning{
+						Columns: []clause.Column{
+							{
+								Name: "id",
+							},
+						},
+					}).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
 
 					savedData[fun.Name] = bindedInput["id"]
 				}
+				// if fun.Multiple {
+				// 	bindedInput := BindMultipleInput(fun.Values, caller.Data[fun.Name].([]interface{}), savedData, userID)
+				// 	for i := range bindedInput {
+				// 		bindedInput[i]["id"], _ = utils.GenerateRandomString(16)
+				// 	}
+				// 	err := db.Table(fun.Table).Create(bindedInput).Error
+				// 	if err != nil {
+				// 		return err
+				// 	}
+				// } else {
+				// 	bindedInput := BindSingularInput(fun.Values, caller.Data[fun.Name].(map[string]interface{}), savedData, userID)
+				// 	bindedInput["id"], _ = utils.GenerateRandomString(16)
+				// 	err := db.Table(fun.Table).Create(bindedInput).Error
+				// 	if err != nil {
+				// 		return err
+				// 	}
+
+				// 	savedData[fun.Name] = bindedInput["id"]
+				// }
 			case "update":
-				if fun.Multiple {
-					for _, input := range caller.Data[fun.Name].([]map[string]interface{}) {
+				if data, ok := caller.Data[fun.Name].([]map[string]interface{}); ok {
+					for _, input := range data {
 						filter := map[string]interface{}{
 							"id = ?": input["id"],
 						}
@@ -204,13 +228,12 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 							return err
 						}
 					}
-				} else {
-					data := caller.Data[fun.Name].(map[string]interface{})
+				} else if data, ok := caller.Data[fun.Name].(map[string]interface{}); ok {
 					filter := map[string]interface{}{
 						"id = ?": data["id"],
 					}
 
-					bindedInput := BindSingularInput(fun.Values, caller.Data[fun.Name].(map[string]interface{}), savedData, userID)
+					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
 					table := db.Table(fun.Table)
 					for k, v := range filter {
 						table = table.Where(k, v)
