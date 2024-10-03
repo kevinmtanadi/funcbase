@@ -271,10 +271,10 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
       switch (dtype) {
         case "TIMESTAMP":
         case "DATETIME":
+          if (!cellValue) return "";
           const date = new Date(cellValue);
           const dateString = formatDate(date.toISOString(), "dd-mm-yyyy");
           const timeString = formatDate(date.toISOString(), "HH:MM:SS");
-          console.log(cellValue);
           return (
             <div className="flex flex-col">
               <p>{dateString}</p>

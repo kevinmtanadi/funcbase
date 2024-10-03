@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../../pkg/axiosInstance";
 import {
   Button,
@@ -20,9 +20,7 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import { TbCirclesRelation } from "react-icons/tb";
-import { fetchRows } from "../../page/Tables/TableData";
 import { useCallback, useState } from "react";
-import { useInView } from "react-intersection-observer";
 import classNames from "classnames";
 import { LuCopy } from "react-icons/lu";
 import { formatDate } from "../../utils/utils";

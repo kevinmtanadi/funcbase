@@ -70,7 +70,7 @@ const UpdateDataModal = ({
             isDisabled={isLoading || column.name === "id"}
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.name}
             label={column.name}
             value={formik.values ? formik.values[column.name] : ""}
@@ -84,7 +84,7 @@ const UpdateDataModal = ({
             isDisabled={isLoading}
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.name}
             label={column.name}
             value={formik.values ? formik.values[column.name] : ""}
@@ -114,15 +114,16 @@ const UpdateDataModal = ({
             }
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.name}
             label={column.name}
             value={
-              formatDate(
-                new Date(formik.values[column.name]).toISOString(),
-                "yyyy-mm-ddTHH:MM:SS"
-              ) || ""
-              // "200-04-23T00:00:00"
+              formik.values && formik.values[column.name]
+                ? formatDate(
+                    new Date(formik.values[column.name]).toISOString(),
+                    "yyyy-mm-ddTHH:MM:SS"
+                  )
+                : undefined
             }
             onChange={(value: DateValue) => {
               formik.setFieldValue(column.name, value.toString());
@@ -147,7 +148,7 @@ const UpdateDataModal = ({
             value={formik.values ? formik.values[column.name] : ""}
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.name}
             label={column.name}
             onChange={(value: string) =>
@@ -164,7 +165,7 @@ const UpdateDataModal = ({
           <FileInput
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.name}
             label={column.name}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,7 +182,7 @@ const UpdateDataModal = ({
             isDisabled={isLoading}
             id={column.name}
             name={column.name}
-            isRequired={column.notnull === 0}
+            isRequired={column.notnull !== 0}
             key={column.cid}
             label={column.name}
             value={formik.values ? formik.values[column.name] : ""}
