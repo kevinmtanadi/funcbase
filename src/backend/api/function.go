@@ -312,6 +312,13 @@ func Or(query *gorm.DB, key string, value interface{}) *gorm.DB {
 	return query.Or(fmt.Sprintf("%s = ?", key), value)
 }
 
+// parseCalculation
+//
+// Parse the input string and return the query and the value
+// ex:
+//
+//	input: "$number - 1"
+//	output: decrease number updated by 1
 func parseCalculation(input string) (string, interface{}) {
 	re := regexp.MustCompile(`(\w+)\s*([-+*/])\s*(\d+)`)
 	matches := re.FindStringSubmatch(input)

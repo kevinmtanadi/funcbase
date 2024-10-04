@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AuthAPI interface {
@@ -87,14 +88,20 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		newUser[k] = v
 	}
 
-	err = h.db.Table(tableName).Create(&newUser).Error
+	err = h.db.Table(tableName).Clauses(clause.Returning{
+		Columns: []clause.Column{
+			{
+				Name: "id",
+			},
+		},
+	}).Create(&newUser).Error
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
 	if body.ReturnsToken {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
-			"sub":   newUser["id"].(string),
+			"sub":   newUser["id"].(int64),
 			"email": newUser["email"].(string),
 			"roles": []string{"user", "admin"},
 		})

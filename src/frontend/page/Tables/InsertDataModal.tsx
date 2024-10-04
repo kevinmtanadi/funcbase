@@ -198,7 +198,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
         });
 
         const res = await axiosInstance.post(
-          `/api/auth/register/${table.name}`,
+          `/api/auth/${table.name}/register`,
           {
             data: cleanedData,
             returns_token: false,
