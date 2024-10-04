@@ -14,7 +14,7 @@ In production, the react app will be compiled into a static file which would be 
 
 ```bash
 # Go to the directory
-cd react-golang
+cd funcbase
 
 # Install dependencies
 npm install
