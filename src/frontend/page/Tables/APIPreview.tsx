@@ -51,7 +51,7 @@ function syntaxHighlight(json: any) {
   );
 }
 
-const generateDummyJson = (columns: any[]) => {
+const generateDummyJson = (columns: any[], single?: boolean) => {
   const dummyDataTemplate = {
     data: [] as { [key: string]: string | number }[],
     page: 1,
@@ -61,28 +61,36 @@ const generateDummyJson = (columns: any[]) => {
 
   const dummyRow: { [key: string]: any } = {};
 
-  columns.forEach((column: { name: string; type: string }) => {
-    switch (column.type) {
-      case "TEXT":
-      case "RELATION":
-        dummyRow[column.name] = "example_string"; // For string and relation types
-        break;
-      case "DATETIME":
-      case "TIMESTAMP":
-        dummyRow[column.name] = "2024-01-01 13:47:29"; // For datetime or timestamp types
-        break;
-      case "INTEGER":
-      case "REAL":
-        dummyRow[column.name] = 17; // For integer type
-        break;
-      default:
-        dummyRow[column.name] = "example_string"; // Default to string if type is unknown
-        break;
-    }
-  });
+  for (let i = 1; i <= 2; i++) {
+    columns.forEach((column: { name: string; type: string }) => {
+      switch (column.type) {
+        case "TEXT":
+        case "RELATION":
+          dummyRow[column.name] = "example_string"; // For string and relation types
+          break;
+        case "DATETIME":
+        case "TIMESTAMP":
+          dummyRow[column.name] = "2024-01-01 13:47:29"; // For datetime or timestamp types
+          break;
+        case "INTEGER":
+        case "REAL":
+          if (column.name === "id") {
+            dummyRow[column.name] = i; // For id
+          } else {
+            dummyRow[column.name] = 17; // For other numbers
+          }
+          break;
+        default:
+          dummyRow[column.name] = "example_string"; // Default to string if type is unknown
+          break;
+      }
+    });
+
+    if (single) return dummyRow;
+    dummyDataTemplate.data.push({ ...dummyRow });
+  }
 
   // Add two dummy rows
-  dummyDataTemplate.data.push({ ...dummyRow }, { ...dummyRow });
 
   return dummyDataTemplate;
 };
@@ -106,6 +114,13 @@ const GeneralPreview = ({ table }: PreviewProps) => {
   return (
     <div className="flex flex-col m-5">
       <Tabs isVertical>
+        <Tab
+          key="fetch_single"
+          className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
+          title="Fetch Single"
+        >
+          <FetchSinglePreview table={table} />
+        </Tab>
         <Tab
           key="fetch"
           className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
@@ -139,6 +154,100 @@ const GeneralPreview = ({ table }: PreviewProps) => {
   );
 };
 
+const FetchSinglePreview = ({ table }: PreviewProps) => {
+  const { data: columns, isLoading } = useQuery({
+    queryKey: ["columns", table],
+    queryFn: async () => {
+      if (!table || table === "") return [];
+      const res = await axiosInstance.get(`/api/main/${table}/columns`);
+      return res.data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 pl-5 mb-10">
+      <p className="text-lg font-semibold">Fetching Single Data / {table}</p>
+      <p className="text-sm">Fetching single data by ID.</p>
+      <div className="gap-2 flex flex-col">
+        <p>API Details</p>
+        <div className="bg-primary-50 w-full flex items-center p-1.5 border-1 border-primary-300 rounded-md gap-2">
+          <div className="bg-primary-300 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
+            GET
+          </div>
+          <p>
+            /api/main/<span className="font-semibold">{table}</span>/
+            <span className="font-semibold">[id]</span>
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p>Path Parameters</p>
+        <Table
+          removeWrapper
+          classNames={{
+            table: "border",
+            th: [
+              "text-default-500",
+              "border-divider",
+              "hover:bg-slate-200",
+              "first:hover:bg-gray-100",
+            ],
+            tr: "[&>th]:first:rounded-none [&>th]:last:rounded-none border-b-1 rounded-none",
+            td: [
+              "group-data-[first=true]:first:before:rounded-none",
+              "group-data-[first=true]:last:before:rounded-none",
+              "group-data-[middle=true]:before:rounded-none",
+              "group-data-[last=true]:first:before:rounded-none",
+              "group-data-[last=true]:last:before:rounded-none",
+              "py-2",
+            ],
+          }}
+        >
+          <TableHeader>
+            <TableColumn key="parameter">Parameter</TableColumn>
+            <TableColumn key="type">Type</TableColumn>
+            <TableColumn maxWidth={10} width={10} key="required">
+              Required
+            </TableColumn>
+            <TableColumn key="description">Description</TableColumn>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>id</TableCell>
+              <TableCell>integer</TableCell>
+              <TableCell>
+                <div className="bg-green-200 rounded-full text-center p-1 text-green-700">
+                  yes
+                </div>
+              </TableCell>
+              <TableCell>ID of the data to fetch</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex flex-col gap-3">
+        <p>Responses</p>
+        <div className="p-3 bg-slate-200 rounded-md w-full text-sm">
+          <pre
+            dangerouslySetInnerHTML={{
+              __html: syntaxHighlight(
+                JSON.stringify(generateDummyJson(columns, true), undefined, 4)
+              ),
+            }}
+          ></pre>
+        </div>
+      </div>
+    </div>
+  );
+};
 const FetchPreview = ({ table }: PreviewProps) => {
   const { data: columns, isLoading } = useQuery({
     queryKey: ["columns", table],
@@ -159,7 +268,7 @@ const FetchPreview = ({ table }: PreviewProps) => {
 
   return (
     <div className="flex flex-col gap-3 pl-5 mb-10">
-      <p className="text-lg font-semibold">Fetching Data - {table}</p>
+      <p className="text-lg font-semibold">Fetching Data / {table}</p>
       <p className="text-sm">
         Fetching paginated data, with support on filtering and sorting.
       </p>
@@ -354,7 +463,7 @@ const InsertPreview = ({ table }: PreviewProps) => {
 
   return (
     <div className="flex flex-col gap-3 pl-5 mb-10">
-      <p className="text-lg font-semibold">Inserting Data - {table}</p>
+      <p className="text-lg font-semibold">Registering / {table}</p>
       <div className="flex flex-col">
         <p className="text-sm">Insert a new data.</p>
         <p className="text-sm">
@@ -406,25 +515,32 @@ const InsertPreview = ({ table }: PreviewProps) => {
             <TableColumn key="required">Required</TableColumn>
           </TableHeader>
           <TableBody>
-            {columns?.map((column: any) => (
-              <TableRow key={column.name}>
-                <TableCell>{column.name}</TableCell>
-                <TableCell>
-                  <span className="px-2 py-1 bg-slate-200 rounded-full text-sm">
-                    {convertToJSDatatype(column.type)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm ${
-                      column.notnull ? "bg-green-200" : "bg-red-200"
-                    }`}
-                  >
-                    {column.notnull ? "Yes" : "No"}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
+            {columns
+              ?.filter(
+                (column: any) =>
+                  column.name !== "id" &&
+                  column.name !== "created_at" &&
+                  column.name !== "updated_at"
+              )
+              .map((column: any) => (
+                <TableRow key={column.name}>
+                  <TableCell>{column.name}</TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 bg-slate-200 rounded-full text-sm">
+                      {convertToJSDatatype(column.type)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm ${
+                        column.notnull ? "bg-green-200" : "bg-red-200"
+                      }`}
+                    >
+                      {column.notnull ? "Yes" : "No"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </div>
@@ -485,7 +601,7 @@ const UpdatePreview = ({ table }: PreviewProps) => {
 
   return (
     <div className="flex flex-col gap-3 pl-5 mb-10">
-      <p className="text-lg font-semibold">Updating Data - {table}</p>
+      <p className="text-lg font-semibold">Updating Data / {table}</p>
       <div className="flex flex-col">
         <p className="text-sm">
           Update an existing data. It updates the data based on the given ID.
@@ -539,25 +655,29 @@ const UpdatePreview = ({ table }: PreviewProps) => {
             <TableColumn key="required">Required</TableColumn>
           </TableHeader>
           <TableBody>
-            {columns?.map((column: any) => (
-              <TableRow key={column.name}>
-                <TableCell>{column.name}</TableCell>
-                <TableCell>
-                  <span className="px-2 py-1 bg-slate-200 rounded-full text-sm">
-                    {convertToJSDatatype(column.type)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm ${
-                      column.pk === 1 ? "bg-green-200" : "bg-red-200"
-                    }`}
-                  >
-                    {column.pk === 1 ? "Yes" : "No"}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
+            {columns
+              ?.filter(
+                (c: any) => c.name !== "created_at" && c.name !== "updated_at"
+              )
+              .map((column: any) => (
+                <TableRow key={column.name}>
+                  <TableCell>{column.name}</TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 bg-slate-200 rounded-full text-sm">
+                      {convertToJSDatatype(column.type)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm ${
+                        column.pk === 1 ? "bg-green-200" : "bg-red-200"
+                      }`}
+                    >
+                      {column.pk === 1 ? "Yes" : "No"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </div>
@@ -601,7 +721,7 @@ const UpdatePreview = ({ table }: PreviewProps) => {
 const DeletePreview = ({ table }: PreviewProps) => {
   return (
     <div className="flex flex-col gap-3 pl-5 mb-10">
-      <p className="text-lg font-semibold">Deleting Data - {table}</p>
+      <p className="text-lg font-semibold">Deleting Data / {table}</p>
       <div className="flex flex-col">
         <p className="text-sm">
           Deletes an existing data. It deletes the data based on the given ID.
@@ -709,11 +829,234 @@ const AuthPreview = ({ table }: PreviewProps) => {
     <div className="flex flex-col m-5">
       <Tabs isVertical>
         <Tab
+          key="register"
+          className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
+          title="Register"
+        >
+          <RegisterPreview table={table} />
+        </Tab>
+        <Tab
           key="fetch"
           className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
           title="Fetch"
-        ></Tab>
+        >
+          <FetchPreview table={table} />
+        </Tab>
+        <Tab
+          key="insert"
+          title="Insert"
+          className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
+        >
+          <InsertPreview table={table} />
+        </Tab>
+        <Tab
+          key="update"
+          title="Update"
+          className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
+        >
+          <UpdatePreview table={table} />
+        </Tab>
+        <Tab
+          key="delete"
+          title="Delete"
+          className="w-full max-h-screen overflow-y-scroll scrollbar-hide"
+        >
+          <DeletePreview table={table} />
+        </Tab>
       </Tabs>
+    </div>
+  );
+};
+
+function convertToTypeObject(columns: any[]): {
+  [key: string]: string;
+} {
+  return columns.reduce((acc, column) => {
+    const tsType = convertToJSDatatype(column.type) || "any";
+    acc[column.name] = tsType;
+    return acc;
+  }, {} as { [key: string]: string });
+}
+
+const RegisterPreview = ({ table }: PreviewProps) => {
+  const { data: columns, isLoading } = useQuery({
+    queryKey: ["columns", table],
+    queryFn: async () => {
+      if (!table || table === "") return [];
+      const res = await axiosInstance.get(`/api/main/${table}/columns`);
+      return res.data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 pl-5 mb-10">
+      <p className="text-lg font-semibold">Register User / {table}</p>
+      <div className="flex flex-col">
+        <p className="text-sm">
+          Create a new user. Can return a JWT Token to be stored for later API
+          calls.
+        </p>
+        <p className="text-sm">
+          {" "}
+          Body parameters must be sent as{" "}
+          <code className="bg-slate-200 p-1 rounded-md">application/json</code>.
+        </p>
+      </div>
+      <div className="gap-2 flex flex-col">
+        <p>API Details</p>
+        <div className="bg-green-100 w-full flex items-center p-1.5 border-1 border-green-400 rounded-md gap-2">
+          <div className="bg-green-400 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
+            POST
+          </div>
+          <p>
+            /api/auth/<span className="font-semibold">{table}</span>/register
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p>Body Parameters</p>
+        <Table
+          removeWrapper
+          classNames={{
+            table: "border",
+            th: [
+              "text-default-500",
+              "border-divider",
+              "hover:bg-slate-200",
+              "first:hover:bg-gray-100",
+            ],
+            tr: "[&>th]:first:rounded-none [&>th]:last:rounded-none border-b-1 rounded-none",
+            td: [
+              "group-data-[first=true]:first:before:rounded-none",
+              "group-data-[first=true]:last:before:rounded-none",
+              "group-data-[middle=true]:before:rounded-none",
+              "group-data-[last=true]:first:before:rounded-none",
+              "group-data-[last=true]:last:before:rounded-none",
+              "py-2",
+            ],
+          }}
+        >
+          <TableHeader>
+            <TableColumn key="parameter">Parameter</TableColumn>
+            <TableColumn key="type">Type</TableColumn>
+            <TableColumn key="required">Required</TableColumn>
+            <TableColumn key="required">Description</TableColumn>
+          </TableHeader>
+          <TableBody>
+            <TableRow key={"data"}>
+              <TableCell>data</TableCell>
+              <TableCell>object</TableCell>
+              <TableCell>
+                <span className={`px-2 py-1 rounded-full text-sm bg-green-200`}>
+                  Yes
+                </span>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-2">
+                  <p>Data of the user</p>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: syntaxHighlight(
+                        JSON.stringify(
+                          convertToTypeObject(
+                            columns.filter(
+                              (col: any) =>
+                                col.name !== "id" &&
+                                col.name !== "salt" &&
+                                col.name !== "created_at" &&
+                                col.name !== "updated_at"
+                            ) || []
+                          ),
+                          undefined,
+                          4
+                        )
+                      ),
+                    }}
+                  ></pre>
+                </div>
+              </TableCell>
+            </TableRow>
+            <TableRow key={"returns_token"}>
+              <TableCell>returns_token</TableCell>
+              <TableCell>boolean</TableCell>
+              <TableCell>
+                <span className={`px-2 py-1 rounded-full text-sm bg-green-200`}>
+                  Yes
+                </span>
+              </TableCell>
+              <TableCell>
+                Whether the server should return a JWT token on the response
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p>Response</p>
+        <Tabs>
+          <Tab key="returns-token" title="Returns Token">
+            <div className="p-3 bg-slate-200 rounded-md w-full text-sm">
+              <pre
+                className="break-words whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: syntaxHighlight(
+                    JSON.stringify(
+                      {
+                        message: "success",
+                        token: "JWT-TOKEN",
+                      },
+                      undefined,
+                      4
+                    )
+                  ),
+                }}
+              ></pre>
+            </div>
+          </Tab>
+          <Tab key="no-token" title="No Token">
+            <div className="p-3 bg-slate-200 rounded-md w-full text-sm">
+              <pre
+                className="break-words whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: syntaxHighlight(
+                    JSON.stringify(
+                      {
+                        message: "success",
+                      },
+                      undefined,
+                      4
+                    )
+                  ),
+                }}
+              ></pre>
+            </div>
+          </Tab>
+        </Tabs>
+
+        <div className="p-3 bg-slate-200 rounded-md w-full text-sm">
+          <pre
+            dangerouslySetInnerHTML={{
+              __html: syntaxHighlight(
+                JSON.stringify(
+                  {
+                    error: "error message",
+                  },
+                  undefined,
+                  4
+                )
+              ),
+            }}
+          ></pre>
+        </div>
+      </div>
     </div>
   );
 };

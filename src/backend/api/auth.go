@@ -5,11 +5,11 @@ import (
 	"react-golang/src/backend/constants"
 	auth_libraries "react-golang/src/backend/library/auth"
 	"react-golang/src/backend/service"
-	"react-golang/src/backend/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AuthAPI interface {
@@ -75,9 +75,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		})
 	}
 
-	id, _ := utils.GenerateRandomString(16)
 	newUser := map[string]interface{}{
-		"id":       id,
 		"email":    body.Data["email"],
 		"password": hashedPassword,
 		"salt":     salt,
@@ -90,14 +88,20 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		newUser[k] = v
 	}
 
-	err = h.db.Table(tableName).Create(&newUser).Error
+	err = h.db.Table(tableName).Clauses(clause.Returning{
+		Columns: []clause.Column{
+			{
+				Name: "id",
+			},
+		},
+	}).Create(&newUser).Error
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
 	if body.ReturnsToken {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
-			"sub":   newUser["id"].(string),
+			"sub":   newUser["id"].(int64),
 			"email": newUser["email"].(string),
 			"roles": []string{"user", "admin"},
 		})
@@ -163,7 +167,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 	}
 
 	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
-		"sub":   user["id"].(string),
+		"sub":   user["id"].(int),
 		"email": user["email"].(string),
 		"role":  tableName,
 	})
@@ -179,7 +183,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 }
 
 func (h *AuthAPIImpl) GetMyUserID(c echo.Context) error {
-	userID, ok := c.Get("user_id").(string)
+	userID, ok := c.Get("user_id").(int)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"error": "JWT Not found",

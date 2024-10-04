@@ -82,9 +82,10 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 					}
 
-					userID, ok := claims["sub"].(string)
+					// valueType := reflect.TypeOf(claims["sub"])
+					userID, ok := claims["sub"].(float64)
 					if ok {
-						c.Set("user_id", userID)
+						c.Set("user_id", int(userID))
 						return next(c)
 					}
 

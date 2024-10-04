@@ -348,89 +348,6 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     setParams({ ...params, filter: search });
   };
 
-  const TopContent = () => {
-    return (
-      <div className="flex flex-col">
-        <div className="my-3 mx-3 md:flex block items-center justify-between">
-          <div className="flex gap-2 items-center justify-between md:justify-normal">
-            <Breadcrumbs
-              size="lg"
-              isDisabled
-              separator="/"
-              className="text-xl font-semibold"
-            >
-              <BreadcrumbItem>Table</BreadcrumbItem>
-              <BreadcrumbItem>
-                <p>{table.name}</p>
-              </BreadcrumbItem>
-            </Breadcrumbs>
-            <div className="flex gap-2 items-center">
-              <Button
-                radius="sm"
-                className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
-              >
-                <LuSettings
-                  onClick={onSettingOpen}
-                  fontSize={"1.25rem"}
-                  className="cursor-pointer"
-                />
-              </Button>
-              <Button
-                radius="sm"
-                className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
-              >
-                <LuRefreshCw
-                  onClick={refetchData}
-                  fontSize={"1.25rem"}
-                  className="cursor-pointer"
-                />
-              </Button>
-            </div>
-          </div>
-          <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
-            <Button
-              onClick={onPreviewOpen}
-              startContent={<FaCode />}
-              variant="bordered"
-              className="rounded-md w-full md:w-[150px] bg-default-100 border-slate-950 text-slate-950 font-semibold"
-            >
-              API Preview
-            </Button>
-            <Button
-              onClick={onInsertOpen}
-              startContent={<FaPlus />}
-              className="rounded-md w-full md:w-[150px] bg-slate-950 text-white font-semibold"
-            >
-              New Data
-            </Button>
-          </div>
-        </div>
-        <div className="px-5 py-3">
-          <Input
-            value={search}
-            onValueChange={setSearch}
-            variant="bordered"
-            className="text-lg"
-            size="lg"
-            radius="sm"
-            placeholder={`Search for item or filter created_at > "2022-01-01"`}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applySearch();
-            }}
-            endContent={
-              <Button
-                className="rounded-md bg-slate-950 text-white font-semibold"
-                size="sm"
-                onClick={applySearch}
-              >
-                Search
-              </Button>
-            }
-          />
-        </div>
-      </div>
-    );
-  };
   const [selectedRows, setSelectedRows] = useState<Selection>(new Set([]));
   const { mutateAsync } = useMutation({
     mutationFn: async () => {
@@ -480,7 +397,85 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
   return (
     <>
       <div className="flex flex-col">
-        <TopContent />
+        <div className="flex flex-col">
+          <div className="my-3 mx-3 md:flex block items-center justify-between">
+            <div className="flex gap-2 items-center justify-between md:justify-normal">
+              <Breadcrumbs
+                size="lg"
+                isDisabled
+                separator="/"
+                className="text-xl font-semibold"
+              >
+                <BreadcrumbItem>Table</BreadcrumbItem>
+                <BreadcrumbItem>
+                  <p>{table.name}</p>
+                </BreadcrumbItem>
+              </Breadcrumbs>
+              <div className="flex gap-2 items-center">
+                <Button
+                  radius="sm"
+                  className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+                >
+                  <LuSettings
+                    onClick={onSettingOpen}
+                    fontSize={"1.25rem"}
+                    className="cursor-pointer"
+                  />
+                </Button>
+                <Button
+                  radius="sm"
+                  className="h-7 p-0 w-7 hover:bg-slate-200 bg-transparent min-w-0"
+                >
+                  <LuRefreshCw
+                    onClick={refetchData}
+                    fontSize={"1.25rem"}
+                    className="cursor-pointer"
+                  />
+                </Button>
+              </div>
+            </div>
+            <div className="flex h-full justify-end gap-2 items-center md:mt-0 mt-3">
+              <Button
+                onClick={onPreviewOpen}
+                startContent={<FaCode />}
+                variant="bordered"
+                className="rounded-md w-full md:w-[150px] bg-default-100 border-slate-950 text-slate-950 font-semibold"
+              >
+                API Preview
+              </Button>
+              <Button
+                onClick={onInsertOpen}
+                startContent={<FaPlus />}
+                className="rounded-md w-full md:w-[150px] bg-slate-950 text-white font-semibold"
+              >
+                New Data
+              </Button>
+            </div>
+          </div>
+          <div className="px-5 py-3">
+            <Input
+              value={search}
+              onValueChange={setSearch}
+              variant="bordered"
+              className="text-lg"
+              size="lg"
+              radius="sm"
+              placeholder={`Search for item or filter created_at > "2022-01-01"`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applySearch();
+              }}
+              endContent={
+                <Button
+                  className="rounded-md bg-slate-950 text-white font-semibold"
+                  size="sm"
+                  onClick={applySearch}
+                >
+                  Search
+                </Button>
+              }
+            />
+          </div>
+        </div>
         <Table
           bottomContent={
             hasNextPage ? (

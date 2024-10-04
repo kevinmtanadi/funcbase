@@ -62,7 +62,7 @@ function App() {
     return <>Loading...</>;
   }
 
-  if (admin.rows.length === 0) {
+  if (admin?.rows.length === 0) {
     return <Navigate to="/signup" />;
   }
 
@@ -78,7 +78,7 @@ function App() {
           setTimeout(checkAuthentication, 100);
         } else {
           if (!isAuth) {
-            return <Navigate to="/login" />;
+            return <Navigate to="/signin" />;
           }
         }
       };

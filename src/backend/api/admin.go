@@ -7,7 +7,6 @@ import (
 	auth_libraries "react-golang/src/backend/library/auth"
 	"react-golang/src/backend/model"
 	"react-golang/src/backend/service"
-	"react-golang/src/backend/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -64,9 +63,7 @@ func (h *AdminAPIImpl) Register(c echo.Context) error {
 		})
 	}
 
-	id, _ := utils.GenerateRandomString(16)
 	newAdmin := model.Admin{
-		ID:       id,
 		Email:    body.Email,
 		Username: body.Username,
 		Password: hashedPassword,
@@ -80,7 +77,7 @@ func (h *AdminAPIImpl) Register(c echo.Context) error {
 
 	if body.ReturnsToken {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
-			"sub":   id,
+			"sub":   newAdmin.ID,
 			"email": newAdmin.Email,
 			"roles": []string{"user", "admin"},
 		})

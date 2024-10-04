@@ -61,7 +61,7 @@ func (api *API) MainAPI() {
 	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.GET("/:table_name/rows", api.Database.FetchRows, middleware.ValidateAPIKey, middleware.RequireAuth(false))
-	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.ValidateAPIKey)
+	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
@@ -87,8 +87,8 @@ func (api *API) AdminAPI() {
 func (api *API) AuthAPI() {
 	authRouter := api.router.Group("/auth", middleware.ValidateAPIKey)
 
-	authRouter.POST("/register/:table_name", api.Auth.Register)
-	authRouter.POST("/login/:table_name", api.Auth.Login)
+	authRouter.POST("/:table_name/register", api.Auth.Register)
+	authRouter.POST("/:table_name/login", api.Auth.Login)
 	authRouter.GET("/me", api.Auth.GetMyUserID, middleware.RequireAuth(true))
 }
 

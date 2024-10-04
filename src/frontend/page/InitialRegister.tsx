@@ -60,7 +60,7 @@ const InitialRegister = () => {
     return <>Loading...</>;
   }
 
-  if (admin && admin.rows.length !== undefined && admin.rows.length !== 0) {
+  if (admin && admin.rows.length !== undefined && admin.rows.length > 0) {
     return <Navigate to="/" />;
   }
 
