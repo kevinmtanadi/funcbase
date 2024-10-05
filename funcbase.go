@@ -6,6 +6,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 )
 
 func main() {
@@ -15,6 +16,8 @@ func main() {
 	config.Load()
 
 	app := echo.New()
+
+	app.Logger.SetLevel(log.OFF)
 
 	module := Module{}
 	module.New(app)

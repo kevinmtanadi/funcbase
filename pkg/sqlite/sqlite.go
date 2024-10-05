@@ -51,7 +51,9 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	}
 
 	db.Exec("PRAGMA journal_mode=WAL")
+	db.Exec("PRAGMA synchronous=NORMAL")
 	db.Exec("PRAGMA journal_size_limit=16777216")
+	db.Exec("PRAGMA cache_size=10000");
 
 	if _, found := os.LookupEnv("DB_MAX_OPEN_CONNECTION"); found {
 		if maxOpenConnection, err := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNECTION")); err == nil {

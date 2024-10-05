@@ -66,7 +66,6 @@ export const fetchRows = async (page: number, table: string, params: any) => {
   const res = await axiosInstance.get(`/api/main/${table}/rows`, {
     params: {
       page: page,
-      page_size: 20,
       ...params,
     },
   });
@@ -101,6 +100,8 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
   const [params, setParams] = useState({
     filter: "",
     sort: "",
+    page_size: 20,
+    get_count: false,
   });
 
   const {
@@ -116,10 +117,9 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     queryFn: ({ pageParam }) => fetchRows(pageParam, table.name, params),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const totalPage = lastPage.total_data;
       const pageSize = lastPage.page_size;
       const currentPage = lastPage.page;
-      return totalPage > pageSize * currentPage ? currentPage + 1 : undefined;
+      return lastPage.data.length === pageSize ? currentPage + 1 : undefined;
     },
   });
 

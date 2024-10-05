@@ -4,6 +4,7 @@ import (
 	"funcbase/api"
 	"funcbase/constants"
 	"funcbase/middleware"
+	"funcbase/pkg/cache"
 	pkg_sqlite "funcbase/pkg/sqlite"
 	"funcbase/service"
 	"os"
@@ -47,6 +48,13 @@ func (m *Module) IOC(app *echo.Echo) di.Container {
 			Name: constants.CONTAINER_SERVICE,
 			Build: func(ctn di.Container) (interface{}, error) {
 				return service.NewService(ctn), nil
+			},
+		},
+		di.Def{
+			Name: constants.CONTAINER_CACHE,
+			Build: func(ctn di.Container) (interface{}, error) {
+				cache, err := cache.NewCache()
+				return cache, err
 			},
 		},
 	)

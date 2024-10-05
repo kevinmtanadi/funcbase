@@ -111,6 +111,7 @@ const SelectRelationModal = ({
     sort: "",
     page_size: 5,
     page: 1,
+    get_count: false,
   });
 
   const { data: rows, isLoading } = useQuery({
@@ -127,8 +128,6 @@ const SelectRelationModal = ({
       return res.data;
     },
   });
-
-  console.log(rows);
 
   const renderCell = useCallback(
     (row: any, columnKey: React.Key) => {

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/patrickmn/go-cache"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
 )
@@ -46,12 +47,14 @@ type DatabaseAPI interface {
 type DatabaseAPIImpl struct {
 	db      *gorm.DB
 	service *service.Service
+	cache   *cache.Cache
 }
 
 func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 	return &DatabaseAPIImpl{
 		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
+		cache:   ioc.Get(constants.CONTAINER_CACHE).(*cache.Cache),
 	}
 }
 
@@ -115,6 +118,7 @@ type fetchRowsParam struct {
 	Sort     string `query:"sort"`
 	Page     int    `query:"page"`
 	PageSize int    `query:"page_size"`
+	GetCount bool   `query:"get_count"`
 }
 
 type fetchRowsRes struct {
@@ -159,10 +163,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 
 	columns := "*"
 	if table.IsAuth {
-		allColumn := []model.Column{}
-		err = d.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", tableName)).
-			Scan(&allColumn).
-			Error
+		columnsArr, err := d.service.Table.Columns(tableName, false)
 
 		if err != nil {
 			return err
@@ -170,14 +171,17 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 
 		columns = ""
 
-		for _, column := range allColumn {
-			if column.Name != "password" && column.Name != "salt" {
-				if columns != "" {
-					columns = fmt.Sprintf("%s, %s", columns, column.Name)
-				} else {
-					columns = column.Name
-				}
+		for _, column := range columnsArr {
+			col := column["name"].(*interface{})
+			if *col == "password" || *col == "salt" {
+				continue
 			}
+
+			if columns != "" {
+				columns = fmt.Sprintf("%s, %s", columns, *col)
+				continue
+			}
+			columns = fmt.Sprintf("%s", *col)
 		}
 	}
 
@@ -220,9 +224,13 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	if params.Sort != "" {
 		query = query + ` ORDER BY ` + params.Sort
 	}
-	if params.Page != 0 && params.PageSize != 0 {
-		query = query + ` LIMIT ` + strconv.Itoa(params.PageSize) + ` OFFSET ` + strconv.Itoa((params.Page-1)*params.PageSize)
+	if params.Page == 0 {
+		params.Page = 1
 	}
+	if params.PageSize == 0 {
+		params.PageSize = 20
+	}
+	query = query + ` LIMIT ` + strconv.Itoa(params.PageSize) + ` OFFSET ` + strconv.Itoa((params.Page-1)*params.PageSize)
 
 	res.Data = make([]map[string]interface{}, 0)
 	if err := d.db.Raw(query).
@@ -233,17 +241,19 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 		})
 	}
 
-	rawCountQuery := `
-	SELECT COUNT(*) FROM %s
-	`
-	query = fmt.Sprintf(rawCountQuery, tableName)
-	if params.Filter != "" {
-		query = query + `WHERE ` + strings.Join(filters, " OR ")
-	}
-	if err := d.db.Raw(query).First(&res.TotalData).Error; err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"error": err.Error(),
-		})
+	if params.GetCount {
+		rawCountQuery := `
+		SELECT COUNT(*) FROM %s
+		`
+		query = fmt.Sprintf(rawCountQuery, tableName)
+		if params.Filter != "" {
+			query = query + `WHERE ` + strings.Join(filters, " OR ")
+		}
+		if err := d.db.Raw(query).First(&res.TotalData).Error; err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
 	}
 
 	res.Page = params.Page
@@ -455,7 +465,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 
 	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": "Failed to parse multipart form",
 		})
 	}
@@ -742,6 +752,9 @@ func (d *DatabaseAPIImpl) AlterColumn(c echo.Context) error {
 		})
 	}
 
+	cacheKey := "columns_" + tableName
+	d.cache.Delete(cacheKey)
+
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -818,6 +831,9 @@ func (d *DatabaseAPIImpl) AddColumn(c echo.Context) error {
 		})
 	}
 
+	cacheKey := "columns_" + tableName
+	d.cache.Delete(cacheKey)
+
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -852,6 +868,9 @@ func (d *DatabaseAPIImpl) DeleteColumn(c echo.Context) error {
 			"error":   err.Error(),
 		})
 	}
+
+	cacheKey := "columns_" + tableName
+	d.cache.Delete(cacheKey)
 
 	return c.JSON(http.StatusOK, nil)
 }

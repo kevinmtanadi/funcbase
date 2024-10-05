@@ -7,7 +7,6 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Tables from "./page/Tables/Tables.tsx";
 import SQLEditor from "./page/SQLEditor/SQLEditor.tsx";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
 import createStore from "react-auth-kit/createStore";
 import AuthProvider from "react-auth-kit";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
@@ -126,9 +125,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <AuthProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <NextUIProvider>
-          <NextThemesProvider attribute="class" defaultTheme="light">
-            <RouterProvider router={router} />
-          </NextThemesProvider>
+          <RouterProvider router={router} />
         </NextUIProvider>
       </QueryClientProvider>
     </AuthProvider>

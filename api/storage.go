@@ -92,7 +92,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 			continue
 		}
 
-		fi, _ := os.Stat(filepath.Join("..\\storage", data.Name()))
+		fi, _ := os.Stat(filepath.Join("storage", data.Name()))
 
 		file := file{
 			Filename: data.Name(),
@@ -114,7 +114,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 func (s *StorageAPIImpl) Retrieve(c echo.Context) error {
 	filename := c.Param("filename")
 
-	dir := filepath.Join("..", "storage", filename)
+	dir := filepath.Join("storage", filename)
 	err := s.service.Storage.Get(dir, c.Response().Writer)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -126,7 +126,7 @@ func (s *StorageAPIImpl) Retrieve(c echo.Context) error {
 		"message": "success",
 	})
 }
-
+  
 func (s *StorageAPIImpl) Upload(c echo.Context) error {
 	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
 	if err != nil {

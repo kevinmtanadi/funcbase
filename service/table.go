@@ -5,6 +5,7 @@ import (
 	"funcbase/constants"
 	"funcbase/model"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
 )
@@ -21,16 +22,24 @@ type TableService interface {
 type TableServiceImpl struct {
 	service *BaseService
 	db      *gorm.DB
+	cache   *cache.Cache
 }
 
 func NewTableService(ioc di.Container) TableService {
 	return &TableServiceImpl{
 		service: NewBaseService(ioc),
 		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		cache:   ioc.Get(constants.CONTAINER_CACHE).(*cache.Cache),
 	}
 }
 
 func (s *TableServiceImpl) Info(tableName string) (model.Tables, error) {
+	cacheKey := "table_" + tableName
+	if storedCache, ok := s.cache.Get(cacheKey); ok {
+		fmt.Println("Fetched table from cache!")
+		return storedCache.(model.Tables), nil
+	}
+
 	var table model.Tables
 	err := s.db.Model(&model.Tables{}).
 		Where("is_system = ?", false).
@@ -40,11 +49,19 @@ func (s *TableServiceImpl) Info(tableName string) (model.Tables, error) {
 		return table, err
 	}
 
+	s.cache.Set(cacheKey, table, cache.DefaultExpiration)
+
 	return table, nil
 }
 
 func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error) {
 	var result []map[string]interface{}
+	cacheKey := "columns_" + tableName
+	storedCache, ok := s.cache.Get(cacheKey)
+	if ok {
+		return storedCache.([]map[string]interface{}), nil
+	}
+
 	rows, err := s.db.Raw(fmt.Sprintf(`
 		SELECT 
 			CAST(info.cid AS INT) AS cid,
@@ -103,6 +120,8 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 
 		return cleanedResult, nil
 	}
+
+	s.cache.Set(cacheKey, result, cache.DefaultExpiration)
 
 	return result, err
 }
