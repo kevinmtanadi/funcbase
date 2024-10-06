@@ -36,7 +36,6 @@ func NewTableService(ioc di.Container) TableService {
 func (s *TableServiceImpl) Info(tableName string) (model.Tables, error) {
 	cacheKey := "table_" + tableName
 	if storedCache, ok := s.cache.Get(cacheKey); ok {
-		fmt.Println("Fetched table from cache!")
 		return storedCache.(model.Tables), nil
 	}
 

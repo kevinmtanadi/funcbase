@@ -22,7 +22,7 @@ func RunBatch(ioc di.Container) {
 		cron:     cron.New(),
 	}
 
-	batch.configs.WatchChanges(batch.restartCron)
+	batch.configs.WatchCronChanges(batch.restartCron)
 	batch.startCron()
 }
 

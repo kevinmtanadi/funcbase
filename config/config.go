@@ -11,12 +11,15 @@ import (
 )
 
 type Config struct {
-	AppName         string   `json:"app_name"`
-	AppURL          string   `json:"app_url"`
-	APIKey          string   `json:"api_key"`
-	AllowedOrigins  []string `json:"allowed_origins"`
-	AutomatedBackup bool     `json:"automated_backup"`
-	CronSchedule    string   `json:"cron_schedule"`
+	AppName             string   `json:"app_name"`
+	AppURL              string   `json:"app_url"`
+	APIKey              string   `json:"api_key"`
+	AllowedOrigins      []string `json:"allowed_origins"`
+	AutomatedBackup     bool     `json:"automated_backup"`
+	CronSchedule        string   `json:"cron_schedule"`
+	DBMaxOpenConnection int      `json:"db_max_open_connection"`
+	DBMaxIdleConnection int      `json:"db_max_idle_connection"`
+	DBMaxLifetime       int      `json:"db_max_lifetime"`
 }
 
 var (
@@ -47,8 +50,11 @@ func (c *Config) Load() error {
 					"http://localhost:8080",
 					"http://localhost:3000",
 				},
-				AutomatedBackup: false,
-				CronSchedule:    "",
+				AutomatedBackup:     false,
+				CronSchedule:        "",
+				DBMaxOpenConnection: 10,
+				DBMaxIdleConnection: 5,
+				DBMaxLifetime:       2,
 			}
 			config.Save()
 
@@ -122,7 +128,7 @@ func (c *Config) Set(key string, value interface{}) error {
 	return fmt.Errorf("no field found with json tag %s", key)
 }
 
-func (c *Config) WatchChanges(callback func()) {
+func (c *Config) WatchCronChanges(callback func()) {
 	go func() {
 		originalConfig := *c
 		for {
@@ -133,6 +139,7 @@ func (c *Config) WatchChanges(callback func()) {
 				callback()
 				originalConfig = *c
 			}
+
 		}
 	}()
 }

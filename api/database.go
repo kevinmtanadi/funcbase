@@ -460,6 +460,8 @@ func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// TODO
+// Allow use of application/json
 func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
@@ -541,6 +543,8 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	})
 }
 
+// TODO
+// Allow use of application/json
 func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
@@ -892,7 +896,6 @@ func (d *DatabaseAPIImpl) DeleteBackup(c echo.Context) error {
 	filename := c.Param("filename")
 
 	err := d.service.Backup.Delete(filename)
-	fmt.Println("error is: ", err)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),

@@ -1,10 +1,12 @@
 package pkg_sqlite
 
 import (
-	"funcbase/constants"
+	"fmt"
+	"funcbase/config"
 	"funcbase/model"
 	"log"
 	"os"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -54,10 +56,13 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	db.Exec("PRAGMA journal_size_limit=16777216")
 	db.Exec("PRAGMA cache_size=10000")
 
-	db.SetMaxOpenConns(constants.DB_MAX_OPEN_CONNECTION)
-	db.SetMaxIdleConns(constants.DB_MAX_IDLE_CONNECTION)
-	db.SetConnMaxLifetime(constants.DB_MAX_LIFETIME)
-	db.SetConnMaxIdleTime(constants.DB_MAX_IDLE_TIME)
+	configs := config.GetInstance()
+	db.SetMaxOpenConns(configs.DBMaxOpenConnection)
+	db.SetMaxIdleConns(configs.DBMaxIdleConnection)
+	db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
+
+	maxOC := db.Stats().MaxOpenConnections
+	fmt.Println("Max Open Connections:", maxOC)
 
 	if option.Migrate {
 		model.Migrate(conn)

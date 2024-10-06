@@ -19,7 +19,6 @@ func UseMiddleware(app *echo.Echo) {
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
 
-	app.Use(middleware.Logger())
 	app.Use(middleware.Recover())
 	app.Use(middleware.Secure())
 	app.Use(middleware.RemoveTrailingSlash())
