@@ -920,7 +920,7 @@ func (d *DatabaseAPIImpl) Restore(c echo.Context) error {
 }
 
 func (d *DatabaseAPIImpl) FetchBackups(c echo.Context) error {
-	backupPath := os.Getenv("BACKUP_PATH")
+	backupPath := fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.BACKUP_PATH)
 
 	datas, err := os.ReadDir(backupPath)
 	if err != nil {

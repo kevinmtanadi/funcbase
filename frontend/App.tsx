@@ -68,23 +68,7 @@ function App() {
 
   const isAuth = useIsAuthenticated();
   if (!isAuth) {
-    if (admin?.rows.length > 0) {
-      const maxAttempts = 10;
-      let attempts = 0;
-
-      const checkAuthentication = () => {
-        attempts++;
-        if (!isAuth && attempts < maxAttempts) {
-          setTimeout(checkAuthentication, 100);
-        } else {
-          if (!isAuth) {
-            return <Navigate to="/signin" />;
-          }
-        }
-      };
-
-      checkAuthentication();
-    }
+    return <Navigate to="/signin" />;
   }
 
   return (

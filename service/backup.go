@@ -26,8 +26,11 @@ func NewBackupService(ioc di.Container) BackupService {
 	}
 }
 
+var dbPath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.DB_PATH)
+var backupPath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.BACKUP_PATH)
+
 func (s *BackupServiceImpl) Backup() error {
-	err := pkg_backup.Backup(os.Getenv("DB_PATH"), os.Getenv("BACKUP_PATH"))
+	err := pkg_backup.Backup(dbPath, backupPath)
 	if err != nil {
 		return err
 	}
@@ -35,7 +38,7 @@ func (s *BackupServiceImpl) Backup() error {
 }
 
 func (s *BackupServiceImpl) Restore(filename string) error {
-	err := pkg_backup.Restore(filename, os.Getenv("DB_PATH"))
+	err := pkg_backup.Restore(filename, dbPath)
 	if err != nil {
 		return err
 	}
@@ -43,7 +46,7 @@ func (s *BackupServiceImpl) Restore(filename string) error {
 }
 
 func (s *BackupServiceImpl) Delete(filename string) error {
-	fileDirectory := fmt.Sprintf("%s/%s", os.Getenv("BACKUP_PATH"), filename)
+	fileDirectory := fmt.Sprintf("%s/%s", backupPath, filename)
 
 	err := os.Remove(fileDirectory)
 	if err != nil {

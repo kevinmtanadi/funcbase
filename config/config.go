@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"funcbase/constants"
 	"os"
 	"reflect"
 	"sync"
@@ -32,9 +33,9 @@ func GetInstance() *Config {
 	return instance
 }
 
-func (c *Config) Load() error {
-	configPath := os.Getenv("CONFIG_PATH")
+var configPath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.CONFIG_PATH)
 
+func (c *Config) Load() error {
 	file, err := os.Open(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -67,8 +68,6 @@ func (c *Config) Load() error {
 }
 
 func (c *Config) Save() error {
-	configPath := os.Getenv("CONFIG_PATH")
-
 	file, err := os.Create(configPath)
 	if err != nil {
 		return err

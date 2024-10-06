@@ -3,8 +3,8 @@ package middleware
 import (
 	"fmt"
 	"funcbase/config"
+	"funcbase/constants"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -21,6 +21,8 @@ func UseMiddleware(app *echo.Echo) {
 
 	app.Use(middleware.Logger())
 	app.Use(middleware.Recover())
+	app.Use(middleware.Secure())
+	app.Use(middleware.RemoveTrailingSlash())
 }
 
 func RequireAuth(required bool) echo.MiddlewareFunc {
@@ -78,7 +80,7 @@ func parseJWT(tokenStr string) (jwt.MapClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("invalid signing method")
 		}
-		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+		return []byte(constants.JWT_SECRET_KEY), nil
 	})
 
 	if err != nil {
@@ -104,7 +106,7 @@ func ValidateAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
-		if key != config.GetInstance().APIKey && key != os.Getenv("MAIN_APP_API_KEY") {
+		if key != config.GetInstance().APIKey && key != constants.MAIN_APP_API_KEY {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 				"code":   "401",
 				"status": "error",
@@ -127,7 +129,7 @@ func ValidateMainAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
-		if key != os.Getenv("MAIN_APP_API_KEY") {
+		if key != constants.MAIN_APP_API_KEY {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 				"code":   "401",
 				"status": "error",

@@ -1,13 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"funcbase/api"
 	"funcbase/constants"
 	"funcbase/middleware"
 	"funcbase/pkg/cache"
 	pkg_sqlite "funcbase/pkg/sqlite"
 	"funcbase/service"
-	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sarulabs/di"
@@ -38,7 +38,8 @@ func (m *Module) IOC(app *echo.Echo) di.Container {
 		di.Def{
 			Name: constants.CONTAINER_DB_NAME,
 			Build: func(ctn di.Container) (interface{}, error) {
-				db, err := pkg_sqlite.NewSQLiteClient(os.Getenv("DB_PATH"), pkg_sqlite.SQLiteOption{
+				dbPath := fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.DB_PATH)
+				db, err := pkg_sqlite.NewSQLiteClient(dbPath, pkg_sqlite.SQLiteOption{
 					Migrate: true,
 				})
 				return db, err

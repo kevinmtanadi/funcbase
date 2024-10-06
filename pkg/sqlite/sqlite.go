@@ -1,11 +1,10 @@
 package pkg_sqlite
 
 import (
+	"funcbase/constants"
 	"funcbase/model"
 	"log"
 	"os"
-	"strconv"
-	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -53,31 +52,12 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	db.Exec("PRAGMA journal_mode=WAL")
 	db.Exec("PRAGMA synchronous=NORMAL")
 	db.Exec("PRAGMA journal_size_limit=16777216")
-	db.Exec("PRAGMA cache_size=10000");
+	db.Exec("PRAGMA cache_size=10000")
 
-	if _, found := os.LookupEnv("DB_MAX_OPEN_CONNECTION"); found {
-		if maxOpenConnection, err := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNECTION")); err == nil {
-			db.SetMaxOpenConns(maxOpenConnection)
-		}
-	}
-
-	if _, found := os.LookupEnv("DB_MAX_IDLE_CONNECTION"); found {
-		if maxIdleConnection, err := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNECTION")); err == nil {
-			db.SetMaxIdleConns(maxIdleConnection)
-		}
-	}
-
-	if _, found := os.LookupEnv("DB_MAX_LIFETIME"); found {
-		if maxLifetime, err := strconv.Atoi(os.Getenv("DB_MAX_LIFETIME")); err == nil {
-			db.SetConnMaxLifetime(time.Duration(maxLifetime) * time.Minute)
-		}
-	}
-
-	if _, found := os.LookupEnv("DB_MAX_IDLE_TIME"); found {
-		if maxIdleTime, err := strconv.Atoi(os.Getenv("DB_MAX_IDLE_TIME")); err == nil {
-			db.SetConnMaxIdleTime(time.Duration(maxIdleTime) * time.Minute)
-		}
-	}
+	db.SetMaxOpenConns(constants.DB_MAX_OPEN_CONNECTION)
+	db.SetMaxIdleConns(constants.DB_MAX_IDLE_CONNECTION)
+	db.SetConnMaxLifetime(constants.DB_MAX_LIFETIME)
+	db.SetConnMaxIdleTime(constants.DB_MAX_IDLE_TIME)
 
 	if option.Migrate {
 		model.Migrate(conn)

@@ -3,7 +3,7 @@ package auth_libraries
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"os"
+	"funcbase/constants"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -50,7 +50,7 @@ func GenerateJWT(payload map[string]interface{}) (string, error) {
 		claims[k] = v
 	}
 
-	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	tokenStr, err := token.SignedString([]byte(constants.JWT_SECRET_KEY))
 	if err != nil {
 		return "", err
 	}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"funcbase/constants"
 	"funcbase/service"
 	"net/http"
@@ -48,6 +49,8 @@ type fetchStorageDataRes struct {
 	TotalFiles int    `json:"total_files"`
 }
 
+var storagePath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.STORAGE_PATH)
+
 func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 	var params *fetchStorageDataReq = new(fetchStorageDataReq)
 	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
@@ -69,7 +72,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 
 	var result []file
 
-	datas, err := os.ReadDir("storage")
+	datas, err := os.ReadDir(storagePath)
 	totalFiles := len(datas)
 	start := offset
 	end := offset + limit
@@ -92,7 +95,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 			continue
 		}
 
-		fi, _ := os.Stat(filepath.Join("storage", data.Name()))
+		fi, _ := os.Stat(filepath.Join(storagePath, data.Name()))
 
 		file := file{
 			Filename: data.Name(),
@@ -114,7 +117,7 @@ func (s *StorageAPIImpl) FetchStorageData(c echo.Context) error {
 func (s *StorageAPIImpl) Retrieve(c echo.Context) error {
 	filename := c.Param("filename")
 
-	dir := filepath.Join("storage", filename)
+	dir := filepath.Join(storagePath, filename)
 	err := s.service.Storage.Get(dir, c.Response().Writer)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -126,7 +129,7 @@ func (s *StorageAPIImpl) Retrieve(c echo.Context) error {
 		"message": "success",
 	})
 }
-  
+
 func (s *StorageAPIImpl) Upload(c echo.Context) error {
 	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
 	if err != nil {
@@ -147,7 +150,7 @@ func (s *StorageAPIImpl) Upload(c echo.Context) error {
 
 		defer file.Close()
 
-		storageDir := filepath.Join("..", "storage", files[0].Filename)
+		storageDir := filepath.Join(storagePath, files[0].Filename)
 		err = s.service.Storage.Save(file, storageDir)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -163,7 +166,7 @@ func (s *StorageAPIImpl) Upload(c echo.Context) error {
 
 func (s *StorageAPIImpl) Delete(c echo.Context) error {
 	filename := c.Param("filename")
-	directory := filepath.Join("..", "storage", filename)
+	directory := filepath.Join(storagePath, filename)
 
 	err := s.service.Storage.Delete(directory)
 	if err != nil {

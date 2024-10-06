@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"funcbase/constants"
 	"time"
 
 	"github.com/mattn/go-sqlite3"
@@ -12,12 +12,16 @@ import (
 
 func Backup(srcPath, backupPath string) error {
 	sourceDB, _ := sql.Open("sqlite3", srcPath)
+	defer sourceDB.Close()
 
-	backupFilename := fmt.Sprintf("%s/backup-%s.db", backupPath, time.Now().Format("2006-01-02_15-04-05"))
+	backupFilename := fmt.Sprintf("%s/backup-%s.sqlite", backupPath, time.Now().Format("2006-01-02_15-04-05"))
 	destDB, _ := sql.Open("sqlite3", backupFilename)
+	defer destDB.Close()
 
 	sourceConn, _ := sourceDB.Conn(context.Background())
 	destConn, _ := destDB.Conn(context.Background())
+	defer sourceConn.Close()
+	defer destConn.Close()
 
 	err := sourceConn.Raw(func(sourceRawConnection any) error {
 		return destConn.Raw(func(destinationRawConnection any) error {
@@ -36,16 +40,19 @@ func Backup(srcPath, backupPath string) error {
 	})
 
 	return err
-
 }
 
 func Restore(backupPath, targetPath string) error {
-	backupFilename := fmt.Sprintf("%s/%s", os.Getenv("BACKUP_PATH"), backupPath)
+	backupFilename := fmt.Sprintf("%s/%s/%s", constants.DATA_PATH, constants.BACKUP_PATH, backupPath)
 	backupDB, _ := sql.Open("sqlite3", backupFilename)
+	defer backupDB.Close()
 	targetDB, _ := sql.Open("sqlite3", targetPath)
+	defer targetDB.Close()
 
 	sourceConn, _ := backupDB.Conn(context.Background())
+	defer sourceConn.Close()
 	destConn, _ := targetDB.Conn(context.Background())
+	defer destConn.Close()
 
 	err := sourceConn.Raw(func(sourceRawConnection any) error {
 		return destConn.Raw(func(destinationRawConnection any) error {
