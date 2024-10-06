@@ -105,7 +105,7 @@ func ValidateAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
-		if key != config.GetInstance().APIKey && key != constants.MAIN_APP_API_KEY {
+		if key != config.GetInstance().GetAPIKey() && key != constants.MAIN_APP_API_KEY {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 				"code":   "401",
 				"status": "error",

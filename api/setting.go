@@ -62,12 +62,17 @@ func (s *SettingAPIImpl) Update(c echo.Context) error {
 		})
 	}
 
+	errs := []string{}
 	for k, v := range params.Data {
-		s.config.Set(k, v)
+		err := s.config.Set(k, v)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
 	s.config.Save()
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success",
+		"errors":  errs,
 	})
 }

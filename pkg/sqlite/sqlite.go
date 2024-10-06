@@ -57,8 +57,8 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	db.Exec("PRAGMA cache_size=10000")
 
 	configs := config.GetInstance()
-	db.SetMaxOpenConns(configs.DBMaxOpenConnection)
-	db.SetMaxIdleConns(configs.DBMaxIdleConnection)
+	db.SetMaxOpenConns(int(configs.DBMaxOpenConnection))
+	db.SetMaxIdleConns(int(configs.DBMaxIdleConnection))
 	db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
 
 	maxOC := db.Stats().MaxOpenConnections

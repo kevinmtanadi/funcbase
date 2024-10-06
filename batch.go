@@ -15,20 +15,22 @@ type Batch struct {
 	cron     *cron.Cron
 }
 
+var BatchRunner *Batch
+
 func RunBatch(ioc di.Container) {
-	batch := &Batch{
+	BatchRunner = &Batch{
 		services: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 		configs:  config.GetInstance(),
 		cron:     cron.New(),
 	}
 
-	batch.configs.WatchCronChanges(batch.restartCron)
-	batch.startCron()
+	config.SetRestartCronCallback(RestartCronCallback)
+	BatchRunner.startCron()
 }
 
 func (b *Batch) startCron() {
 	if b.configs.AutomatedBackup {
-		b.cron.AddFunc(b.configs.CronSchedule, func() {
+		b.cron.AddFunc(b.configs.GetCronSchedule(), func() {
 			b.services.Backup.Backup()
 		})
 	}
@@ -40,8 +42,8 @@ func (b *Batch) startCron() {
 	}()
 }
 
-func (b *Batch) restartCron() {
-	b.cron.Stop()
-	b.cron = cron.New()
-	b.startCron()
+func RestartCronCallback() {
+	BatchRunner.cron.Stop()
+	BatchRunner.cron = cron.New()
+	BatchRunner.startCron()
 }
