@@ -14,6 +14,8 @@ import { useQuery } from "@tanstack/react-query";
 import { LuSettings } from "react-icons/lu";
 import axiosInstance from "../../pkg/axiosInstance";
 import FunctionSettingModal from "./FunctionSettingModal";
+import { FaCode } from "react-icons/fa6";
+import FunctionAPIPreview from "./APIPreview";
 
 interface Props {
   funcName: string;
@@ -34,9 +36,24 @@ const FunctionDetail = ({ funcName }: Props) => {
     onOpen: onSettingOpen,
     onClose: onSettingClose,
   } = useDisclosure();
+  const {
+    isOpen: isPreviewOpen,
+    onOpen: onPreviewOpen,
+    onClose: onPreviewClose,
+  } = useDisclosure();
 
   if (!func) {
     return <></>;
+  }
+
+  if (funcName === "") {
+    return (
+      <div className="flex h-full w-full mt-[50px] justify-center">
+        <p className="text-slate-500 font-semibold text-lg">
+          No function found
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -64,6 +81,16 @@ const FunctionDetail = ({ funcName }: Props) => {
             </Button>
           </div>
         </div>
+        <div className="">
+          <Button
+            onClick={onPreviewOpen}
+            startContent={<FaCode />}
+            variant="bordered"
+            className="rounded-md w-full md:w-[150px] bg-default-100 border-slate-950 text-slate-950 font-semibold"
+          >
+            API Preview
+          </Button>
+        </div>
       </div>
       <div className="flex flex-col">
         <Accordion defaultExpandedKeys={["0"]} variant="splitted">
@@ -82,6 +109,11 @@ const FunctionDetail = ({ funcName }: Props) => {
         functionName={func.name}
         isOpen={isSettingOpen}
         onClose={onSettingClose}
+      />
+      <FunctionAPIPreview
+        isOpen={isPreviewOpen}
+        onClose={onPreviewClose}
+        funcName={func.name}
       />
     </div>
   );

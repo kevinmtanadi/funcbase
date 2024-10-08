@@ -23,7 +23,7 @@ const InitialRegister = () => {
     queryKey: ["admin"],
     queryFn: async () => {
       const res = await axiosInstance.get("/api/admin");
-      return res.data;
+      return res.data.data;
     },
   });
 
@@ -39,7 +39,7 @@ const InitialRegister = () => {
           returns_token: true,
         })
         .then((res) => {
-          const res_data = res.data;
+          const res_data = res.data.data;
           if (res_data.token) {
             signIn({
               auth: {

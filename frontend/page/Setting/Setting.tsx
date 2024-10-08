@@ -267,6 +267,177 @@ const SecuritySetting = () => {
   );
 };
 
+const DatabaseSetting = () => {
+  const settingList = [
+    "db_max_open_connection",
+    "db_max_idle_connection",
+    "db_max_lifetime",
+  ];
+
+  const [setting, setSetting] = useState<any>({});
+  const {
+    data: defaultSetting,
+    isLoading,
+    isFetching,
+    isPending,
+  } = useQuery<any>({
+    queryKey: ["settings", "database"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/api/settings", {
+        params: {
+          keys: settingList.join(","),
+        },
+      });
+      setSetting(res.data);
+      return res.data;
+    },
+  });
+
+  const queryClient = useQueryClient();
+
+  const { mutateAsync } = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await axiosInstance.put("/api/settings", {
+        data: {
+          db_max_open_connection: parseInt(data.db_max_open_connection),
+          db_max_idle_connection: parseInt(data.db_max_idle_connection),
+          db_max_lifetime: parseInt(data.db_max_lifetime),
+        },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "database"] });
+    },
+  });
+
+  const saveSetting = async () => {
+    toast.promise(mutateAsync(setting), {
+      pending: "Saving setting...",
+      success: "Setting saved successfully",
+      error: "Error when saving setting",
+    });
+  };
+
+  return (
+    <>
+      <h1 className="text-xl font-bold mb-5">Database</h1>
+      <SettingLayout isLoading={isLoading || isFetching || isPending}>
+        <div className="flex flex-col gap-3 mt-10">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
+              <p className="font-semibold text-medium">
+                Database Max Open Connection
+              </p>
+              <p className="text-sm">
+                Sets the max number of open connections. Increasing this value
+                will increase the database's performance at the cost of high
+                resource usage
+              </p>
+            </div>
+            <Input
+              type="number"
+              radius="sm"
+              isDisabled={isLoading || isPending || isFetching}
+              className="w-32"
+              value={setting.db_max_open_connection}
+              onChange={(e) =>
+                setSetting({
+                  ...setting,
+                  db_max_open_connection: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
+              <p className="font-semibold text-medium">
+                Database Max Idle Connection
+              </p>
+              <p className="text-sm">
+                Sets the max number of idle connections kept in the pool.
+                Increasing this value reduces the cost of opening new
+                connections at the cost of increased memory usage.
+              </p>
+            </div>
+            <Input
+              type="number"
+              radius="sm"
+              isDisabled={isLoading || isPending || isFetching}
+              className="w-32"
+              value={setting.db_max_idle_connection}
+              onChange={(e) =>
+                setSetting({
+                  ...setting,
+                  db_max_idle_connection: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
+              <p className="font-semibold text-medium">
+                Database Connection Max Lifetime
+              </p>
+              <p className="text-sm">
+                Sets how long a connection can remain open (in minutes).
+                Increasing this keeps connection to the database alive longer,
+                reducing the need to reconnect at the cost of higher memory
+                usage
+              </p>
+            </div>
+            <Input
+              type="number"
+              radius="sm"
+              isDisabled={isLoading || isPending || isFetching}
+              className="w-32"
+              value={setting.db_max_lifetime}
+              onChange={(e) =>
+                setSetting({
+                  ...setting,
+                  db_max_lifetime: e.target.value,
+                })
+              }
+            />
+          </div>
+        </div>
+        <FloatingBox
+          isOpen={
+            !deepEqual(setting, defaultSetting) &&
+            !isLoading &&
+            !isPending &&
+            !isFetching
+          }
+        >
+          <Card>
+            <CardBody className="pl-6 pr-2 py-2">
+              <div className="flex gap-10 items-center">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm">Setting changed</p>
+                  <Button
+                    className="p-0 min-w-0 w-[80px] h-8 bg-transparent hover:bg-slate-200"
+                    radius="sm"
+                    onClick={() => setSetting(defaultSetting)}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    className="p-0 min-w-0 w-[80px] h-8 rounded-md  bg-slate-950 text-white"
+                    radius="sm"
+                    onClick={saveSetting}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </FloatingBox>
+      </SettingLayout>
+    </>
+  );
+};
+
 const settingTabList = [
   {
     name: "General",
@@ -275,6 +446,10 @@ const settingTabList = [
   {
     name: "Security",
     content: <SecuritySetting />,
+  },
+  {
+    name: "Database",
+    content: <DatabaseSetting />,
   },
 ];
 

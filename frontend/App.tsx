@@ -54,11 +54,11 @@ function App() {
     queryKey: ["admin"],
     queryFn: async () => {
       const res = await axiosInstance.get("/api/admin");
-      return res.data;
+      return res.data.data;
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !admin) {
     return <>Loading...</>;
   }
 

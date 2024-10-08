@@ -21,7 +21,7 @@ interface APIPreviewProps {
   isAuth: boolean;
 }
 
-function syntaxHighlight(json: any) {
+export function syntaxHighlight(json: any) {
   if (typeof json != "string") {
     json = JSON.stringify(json, undefined, 2);
   }
@@ -51,6 +51,24 @@ function syntaxHighlight(json: any) {
   );
 }
 
+export const generateDummyResult = (dtype: string) => {
+  switch (dtype.toLowerCase()) {
+    case "TEXT":
+    case "RELATION":
+    case "string":
+      return "example_string"; // For string and relation types
+    case "DATETIME":
+    case "TIMESTAMP":
+      return "2024-01-01 13:47:29"; // For datetime or timestamp types
+    case "INTEGER":
+    case "REAL":
+    case "number":
+      return 17; // For other numbers
+    default:
+      return "example_string"; // Default to string if type is unknown
+  }
+};
+
 const generateDummyJson = (columns: any[], single?: boolean) => {
   const dummyDataTemplate = {
     data: [] as { [key: string]: string | number }[],
@@ -63,27 +81,7 @@ const generateDummyJson = (columns: any[], single?: boolean) => {
 
   for (let i = 1; i <= 2; i++) {
     columns.forEach((column: { name: string; type: string }) => {
-      switch (column.type) {
-        case "TEXT":
-        case "RELATION":
-          dummyRow[column.name] = "example_string"; // For string and relation types
-          break;
-        case "DATETIME":
-        case "TIMESTAMP":
-          dummyRow[column.name] = "2024-01-01 13:47:29"; // For datetime or timestamp types
-          break;
-        case "INTEGER":
-        case "REAL":
-          if (column.name === "id") {
-            dummyRow[column.name] = i; // For id
-          } else {
-            dummyRow[column.name] = 17; // For other numbers
-          }
-          break;
-        default:
-          dummyRow[column.name] = "example_string"; // Default to string if type is unknown
-          break;
-      }
+      dummyRow[column.name] = generateDummyResult(column.type);
     });
 
     if (single) return dummyRow;
