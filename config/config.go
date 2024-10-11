@@ -22,6 +22,8 @@ type (
 	DBMaxOpenConnection int
 	DBMaxIdleConnection int
 	DBMaxLifetime       int
+
+	LogLifetime int
 )
 type CallbackConfig interface {
 	OnUpdate()
@@ -37,6 +39,7 @@ type Config struct {
 	DBMaxOpenConnection `json:"db_max_open_connection"`
 	DBMaxIdleConnection `json:"db_max_idle_connection"`
 	DBMaxLifetime       `json:"db_max_lifetime"`
+	LogLifetime         `json:"log_lifetime"`
 }
 
 func (c *Config) GetAppName() string {
@@ -107,6 +110,7 @@ func (c *Config) Load() error {
 			DBMaxOpenConnection: 10,
 			DBMaxIdleConnection: 5,
 			DBMaxLifetime:       2,
+			LogLifetime:         2,
 		}
 		config.Save()
 

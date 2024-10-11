@@ -49,7 +49,7 @@ type DatabaseAPIImpl struct {
 
 func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 	return &DatabaseAPIImpl{
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 		cache:   ioc.Get(constants.CONTAINER_CACHE).(*cache.Cache),
 	}

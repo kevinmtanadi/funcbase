@@ -13,6 +13,7 @@ type API struct {
 	Backup   BackupAPI
 	Database DatabaseAPI
 	Function FunctionAPI
+	Log      LogAPI
 	Setting  SettingAPI
 	Storage  StorageAPI
 }
@@ -29,6 +30,7 @@ func NewAPI(app *echo.Echo, ioc di.Container) *API {
 		Auth:     NewAuthAPI(ioc),
 		Backup:   NewBackupAPI(ioc),
 		Database: NewDatabaseAPI(ioc),
+		Log:      NewLogAPI(ioc),
 		Function: NewFunctionAPI(ioc),
 		Setting:  NewSettingAPI(ioc),
 		Storage:  NewStorageAPI(ioc),
@@ -43,4 +45,5 @@ func (api *API) Serve() {
 	api.StorageAPI()
 	api.BackupAPI()
 	api.FunctionAPI()
+	api.LogAPI()
 }

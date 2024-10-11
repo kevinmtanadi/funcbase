@@ -14,8 +14,10 @@ import (
 )
 
 type SQLiteOption struct {
-	DryRun  bool
-	Migrate bool
+	DryRun   bool
+	Migrate  bool
+	LogMode  logger.LogLevel
+	Optimize bool
 }
 
 var (
@@ -26,15 +28,17 @@ var (
 func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 
 	option := SQLiteOption{
-		DryRun:  false,
-		Migrate: false,
+		DryRun:   false,
+		Migrate:  false,
+		LogMode:  logger.Silent,
+		Optimize: false,
 	}
 	if len(options) > 0 {
 		option = options[0]
 	}
 
 	conn, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(option.LogMode),
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
@@ -56,10 +60,12 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	db.Exec("PRAGMA journal_size_limit=16777216")
 	db.Exec("PRAGMA cache_size=10000")
 
-	configs := config.GetInstance()
-	db.SetMaxOpenConns(int(configs.DBMaxOpenConnection))
-	db.SetMaxIdleConns(int(configs.DBMaxIdleConnection))
-	db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
+	if option.Optimize {
+		configs := config.GetInstance()
+		db.SetMaxOpenConns(int(configs.DBMaxOpenConnection))
+		db.SetMaxIdleConns(int(configs.DBMaxIdleConnection))
+		db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
+	}
 
 	config.SetDBConfigCallback(SetDBConfig)
 

@@ -1,16 +1,17 @@
 package constants
 
 const (
-	CONTAINER_API_NAME    = "api"
-	CONTAINER_CACHE       = "cache"
-	CONTAINER_CONFIG_NAME = "config"
-	CONTAINER_DB_NAME     = "db"
-	CONTAINER_SERVICE     = "service"
+	CONTAINER_API     = "api"
+	CONTAINER_CACHE   = "cache"
+	CONTAINER_CONFIG  = "config"
+	CONTAINER_DB      = "db"
+	CONTAINER_SERVICE = "service"
 
 	DATA_PATH    = "fb_data"
 	BACKUP_PATH  = "backup"
 	CONFIG_PATH  = "config.json"
 	DB_PATH      = "database.sqlite"
+	LOG_DB_PATH  = "log.db"
 	STORAGE_PATH = "storage"
 
 	MAIN_APP_API_KEY = "019039ff-f5be-7520-8ab8-bbcf248a6585"

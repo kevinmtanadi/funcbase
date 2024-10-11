@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"funcbase/config"
 	"funcbase/constants"
+	"funcbase/model"
 	"funcbase/pkg/responses"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gorm.io/gorm"
 )
 
-func UseMiddleware(app *echo.Echo) {
+func UseMiddleware(app *echo.Echo, loggerDb *gorm.DB) {
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: config.GetInstance().AllowedOrigins,
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization, "X-API-KEY"},
@@ -24,6 +27,18 @@ func UseMiddleware(app *echo.Echo) {
 	app.Use(middleware.Recover())
 	app.Use(middleware.Secure())
 	app.Use(middleware.RemoveTrailingSlash())
+
+	jobChan := make(chan model.Log, 100)
+	app.Use(LogRequest(jobChan))
+
+	go logToDb(loggerDb, jobChan)
+
+}
+
+func logToDb(loggerDb *gorm.DB, jobChan <-chan model.Log) {
+	for job := range jobChan {
+		loggerDb.Create(&job)
+	}
 }
 
 func RequireAuth(required bool) echo.MiddlewareFunc {
@@ -132,4 +147,69 @@ func ValidateMainAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return next(c)
 	}
+}
+
+func LogRequest(jobChan chan model.Log) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !isAPICall(c.Request().URL.RequestURI()) {
+				return next(c)
+			}
+
+			start := time.Now()
+
+			if err := next(c); err != nil {
+				return err
+			}
+
+			execTime := float32(time.Since(start) / time.Millisecond)
+			httpReq := c.Request()
+			httpRes := c.Response()
+
+			go func() {
+				jobChan <- model.Log{
+					Method:     c.Request().Method,
+					Endpoint:   c.Request().URL.RequestURI(),
+					StatusCode: httpRes.Status,
+					CallerIP:   getCallerIP(httpReq, c.RealIP()),
+					UserAgent:  httpReq.UserAgent(),
+					ExecTime:   execTime,
+				}
+			}()
+
+			return nil
+		}
+	}
+
+}
+
+func isAPICall(uri string) bool {
+	return strings.HasPrefix(uri, "/api")
+}
+
+func getCallerIP(r *http.Request, fallbackIp string) string {
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
+
+	if ip := r.Header.Get("Fly-Client-IP"); ip != "" {
+		return ip
+	}
+
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+
+	if ipsList := r.Header.Get("X-Forwarded-For"); ipsList != "" {
+		// extract the first non-empty leftmost-ish ip
+		ips := strings.Split(ipsList, ",")
+		for _, ip := range ips {
+			ip = strings.TrimSpace(ip)
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+
+	return fallbackIp
 }

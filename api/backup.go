@@ -27,7 +27,7 @@ type BackupAPIImpl struct {
 
 func NewBackupAPI(ioc di.Container) BackupAPI {
 	return &BackupAPIImpl{
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }

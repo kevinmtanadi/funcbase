@@ -34,7 +34,7 @@ type FunctionAPIImpl struct {
 
 func NewFunctionAPI(ioc di.Container) FunctionAPI {
 	return &FunctionAPIImpl{
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }

@@ -29,7 +29,7 @@ type TableServiceImpl struct {
 func NewTableService(ioc di.Container) TableService {
 	return &TableServiceImpl{
 		service: NewBaseService(ioc),
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		cache:   ioc.Get(constants.CONTAINER_CACHE).(*cache.Cache),
 	}
 }

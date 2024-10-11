@@ -22,7 +22,7 @@ type BackupServiceImpl struct {
 
 func NewBackupService(ioc di.Container) BackupService {
 	return &BackupServiceImpl{
-		db: ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db: ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 	}
 }
 

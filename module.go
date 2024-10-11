@@ -5,6 +5,7 @@ import (
 	"funcbase/api"
 	"funcbase/constants"
 	"funcbase/middleware"
+	"funcbase/model"
 	"funcbase/pkg/cache"
 	pkg_sqlite "funcbase/pkg/sqlite"
 	"funcbase/service"
@@ -21,8 +22,15 @@ func (m *Module) New(app *echo.Echo) {
 
 	go RunBatch(ioc)
 
-	middleware.UseMiddleware(app)
-	api := ioc.Get(constants.CONTAINER_API_NAME).(*api.API)
+	dbPath := fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.LOG_DB_PATH)
+	loggerDb, err := pkg_sqlite.NewSQLiteClient(dbPath)
+	if err != nil {
+		panic(err)
+	}
+	loggerDb.Migrator().AutoMigrate(&model.Log{})
+
+	middleware.UseMiddleware(app, loggerDb)
+	api := ioc.Get(constants.CONTAINER_API).(*api.API)
 	api.Serve()
 }
 
@@ -30,17 +38,18 @@ func (m *Module) IOC(app *echo.Echo) di.Container {
 	builder, _ := di.NewBuilder()
 	_ = builder.Add(
 		di.Def{
-			Name: constants.CONTAINER_API_NAME,
+			Name: constants.CONTAINER_API,
 			Build: func(ctn di.Container) (interface{}, error) {
 				return api.NewAPI(app, builder.Build()), nil
 			},
 		},
 		di.Def{
-			Name: constants.CONTAINER_DB_NAME,
+			Name: constants.CONTAINER_DB,
 			Build: func(ctn di.Container) (interface{}, error) {
 				dbPath := fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.DB_PATH)
 				db, err := pkg_sqlite.NewSQLiteClient(dbPath, pkg_sqlite.SQLiteOption{
-					Migrate: true,
+					Migrate:  true,
+					Optimize: true,
 				})
 				return db, err
 			},

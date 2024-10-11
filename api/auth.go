@@ -27,7 +27,7 @@ type AuthAPIImpl struct {
 
 func NewAuthAPI(ioc di.Container) AuthAPI {
 	return &AuthAPIImpl{
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
 }
@@ -135,9 +135,6 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 			"user": newUser,
 		},
 		Message: "success",
-	})
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
 	})
 }
 

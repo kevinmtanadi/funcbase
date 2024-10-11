@@ -23,7 +23,7 @@ type StorageServiceImpl struct {
 func NewStorageService(ioc di.Container) StorageService {
 	return &StorageServiceImpl{
 		service: NewBaseService(ioc),
-		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:      ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 	}
 }
 

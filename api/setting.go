@@ -24,7 +24,7 @@ type SettingAPIImpl struct {
 
 func NewSettingAPI(ioc di.Container) SettingAPI {
 	return &SettingAPIImpl{
-		db:     ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
+		db:     ioc.Get(constants.CONTAINER_DB).(*gorm.DB),
 		config: config.GetInstance(),
 	}
 }
