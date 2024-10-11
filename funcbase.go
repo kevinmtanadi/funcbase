@@ -6,6 +6,8 @@ import (
 	"funcbase/config"
 	"funcbase/constants"
 	"os"
+	"runtime"
+	"runtime/debug"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -42,6 +44,12 @@ func generateRequiredPaths() {
 }
 
 func main() {
+	// for testing purposes, limit the cores to only 3
+	// also limit memory usage by GOMEMLIMIT=3GB
+	runtime.GOMAXPROCS(3)
+	debug.SetGCPercent(50)
+	debug.SetMemoryLimit(3 * 1024 * 1024 * 1024)
+
 	godotenv.Load(".env")
 	generateRequiredPaths()
 

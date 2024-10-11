@@ -3,6 +3,7 @@ package api
 import (
 	"funcbase/config"
 	"funcbase/constants"
+	"funcbase/middleware"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,13 @@ func NewSettingAPI(ioc di.Container) SettingAPI {
 		db:     ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 		config: config.GetInstance(),
 	}
+}
+
+func (api *API) SettingAPI() {
+	settingRouter := api.router.Group("/settings", middleware.ValidateMainAPIKey)
+
+	settingRouter.GET("", api.Setting.Get)
+	settingRouter.PUT("", api.Setting.Update)
 }
 
 type getSettingReq struct {

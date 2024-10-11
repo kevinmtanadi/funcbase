@@ -1,7 +1,6 @@
 package pkg_sqlite
 
 import (
-	"fmt"
 	"funcbase/config"
 	"funcbase/model"
 	"log"
@@ -19,11 +18,12 @@ type SQLiteOption struct {
 	Migrate bool
 }
 
+var (
+	conn *gorm.DB
+	err  error
+)
+
 func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
-	var (
-		conn *gorm.DB
-		err  error
-	)
 
 	option := SQLiteOption{
 		DryRun:  false,
@@ -61,8 +61,7 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	db.SetMaxIdleConns(int(configs.DBMaxIdleConnection))
 	db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
 
-	maxOC := db.Stats().MaxOpenConnections
-	fmt.Println("Max Open Connections:", maxOC)
+	config.SetDBConfigCallback(SetDBConfig)
 
 	if option.Migrate {
 		model.Migrate(conn)
@@ -70,4 +69,17 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 
 	log.Printf("Connected to database: %s\n", os.Getenv("DB_PATH"))
 	return conn, nil
+}
+
+func SetDBConfig() {
+	configs := config.GetInstance()
+
+	db, err := conn.DB()
+	if err != nil {
+		return
+	}
+
+	db.SetMaxOpenConns(int(configs.DBMaxOpenConnection))
+	db.SetMaxIdleConns(int(configs.DBMaxIdleConnection))
+	db.SetConnMaxLifetime(time.Duration(configs.DBMaxLifetime) * time.Minute)
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"funcbase/constants"
+	"funcbase/middleware"
 	"funcbase/service"
 	"net/http"
 	"os"
@@ -28,6 +29,15 @@ func NewStorageAPI(ioc di.Container) StorageAPI {
 	return &StorageAPIImpl{
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
+}
+
+func (api *API) StorageAPI() {
+	storageRouter := api.router.Group("/storage")
+
+	storageRouter.GET("", api.Storage.FetchStorageData, middleware.ValidateMainAPIKey)
+	storageRouter.GET("/:filename", api.Storage.Retrieve)
+	storageRouter.POST("/upload", api.Storage.Upload, middleware.ValidateAPIKey)
+	storageRouter.DELETE("/:filename", api.Storage.Delete, middleware.ValidateMainAPIKey)
 }
 
 type fetchStorageDataReq struct {

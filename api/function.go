@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"funcbase/constants"
+	"funcbase/middleware"
 	"funcbase/model"
 	"funcbase/service"
 	"net/http"
@@ -32,10 +33,18 @@ type FunctionAPIImpl struct {
 }
 
 func NewFunctionAPI(ioc di.Container) FunctionAPI {
-	return FunctionAPIImpl{
+	return &FunctionAPIImpl{
 		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
+}
+
+func (api *API) FunctionAPI() {
+	api.router.POST("/:func_name", api.Function.RunFunction, middleware.RequireAuth(false), middleware.ValidateAPIKey)
+	api.router.GET("/function", api.Function.FetchFunctionList, middleware.ValidateMainAPIKey)
+	api.router.GET("/function/:func_name", api.Function.FetchFunctionDetail, middleware.ValidateMainAPIKey)
+	api.router.DELETE("/function/:func_name", api.Function.DeleteFunction, middleware.ValidateMainAPIKey)
+	api.router.POST("/function/create", api.Function.CreateFunction, middleware.ValidateMainAPIKey)
 }
 
 type Caller struct {
@@ -170,7 +179,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 			case "insert":
 				if data, ok := caller.Data[fun.Name].([]interface{}); ok {
 					bindedInput := BindMultipleInput(fun.Values, data, savedData, userID)
-					
+
 					err := db.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
@@ -190,7 +199,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 
 					savedData[fun.Name] = bindedInput["id"]
 				}
-				
+
 			case "update":
 				if data, ok := caller.Data[fun.Name].([]map[string]interface{}); ok {
 					for _, input := range data {

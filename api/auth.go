@@ -3,6 +3,8 @@ package api
 import (
 	"funcbase/constants"
 	auth_libraries "funcbase/library/auth"
+	"funcbase/middleware"
+	"funcbase/pkg/responses"
 	"funcbase/service"
 	"net/http"
 
@@ -28,6 +30,14 @@ func NewAuthAPI(ioc di.Container) AuthAPI {
 		db:      ioc.Get(constants.CONTAINER_DB_NAME).(*gorm.DB),
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 	}
+}
+
+func (api *API) AuthAPI() {
+	authRouter := api.router.Group("/auth", middleware.ValidateAPIKey)
+
+	authRouter.POST("/:table_name/register", api.Auth.Register)
+	authRouter.POST("/:table_name/login", api.Auth.Login)
+	authRouter.GET("/me", api.Auth.GetMyUserID, middleware.RequireAuth(true))
 }
 
 type registerReq struct {
@@ -99,6 +109,9 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
+	newUser["password"] = ""
+	newUser["salt"] = ""
+
 	if body.ReturnsToken {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 			"sub":   newUser["id"].(int64),
@@ -108,12 +121,21 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 		}
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"message": "success",
-			"token":   token,
+		return c.JSON(http.StatusOK, responses.APIResponse{
+			Data: map[string]interface{}{
+				"user":  newUser,
+				"token": token,
+			},
+			Message: "success",
 		})
 	}
 
+	return c.JSON(http.StatusOK, responses.APIResponse{
+		Data: map[string]interface{}{
+			"user": newUser,
+		},
+		Message: "success",
+	})
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success",
 	})

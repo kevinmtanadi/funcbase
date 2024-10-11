@@ -2,13 +2,15 @@ package api
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"funcbase/constants"
+	"funcbase/middleware"
 	"funcbase/model"
+	"funcbase/pkg/responses"
 	"funcbase/service"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,11 +39,6 @@ type DatabaseAPI interface {
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
-
-	Backup(c echo.Context) error
-	DeleteBackup(c echo.Context) error
-	Restore(c echo.Context) error
-	FetchBackups(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -56,6 +53,26 @@ func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 		service: ioc.Get(constants.CONTAINER_SERVICE).(*service.Service),
 		cache:   ioc.Get(constants.CONTAINER_CACHE).(*cache.Cache),
 	}
+}
+
+func (api *API) MainAPI() {
+	mainRouter := api.router.Group("/main")
+
+	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/query", api.Database.RunQuery, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/rows", api.Database.FetchRows, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.PUT("/:table_name/alter", api.Database.AlterColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.PUT("/:table_name/add_column", api.Database.AddColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.DELETE("/:table_name/delete_column", api.Database.DeleteColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+
 }
 
 type DBResult []map[string]interface{}
@@ -149,9 +166,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 
 	table, err := d.service.Table.Info(tableName)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
+		return c.JSON(http.StatusInternalServerError, responses.NewResponse(nil, "Error fetching table data", err.Error()))
 	}
 
 	var params *fetchRowsParam = new(fetchRowsParam)
@@ -464,14 +479,6 @@ func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
 // Allow use of application/json
 func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	tableName := c.Param("table_name")
-
-	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"error": "Failed to parse multipart form",
-		})
-	}
-
 	table, err := d.service.Table.Info(tableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -484,63 +491,118 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 		})
 	}
 
-	filteredData := make(map[string]interface{})
+	contentType := c.Request().Header.Get("Content-Type")
 
-	form := c.Request().MultipartForm
+	switch {
+	case strings.HasPrefix(contentType, "multipart/form-data"):
+		err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"error": "Failed to parse multipart form",
+			})
+		}
+		defer c.Request().MultipartForm.RemoveAll()
 
-	for k, v := range form.Value {
-		if len(v) == 0 || k == "id" || k == "created_at" || k == "updated_at" {
-			continue
+		filteredData := make(map[string]interface{})
+
+		form := c.Request().MultipartForm
+
+		for k, v := range form.Value {
+			if len(v) == 0 || k == "id" || k == "created_at" || k == "updated_at" {
+				continue
+			}
+			if v[0] == "" {
+				continue
+			}
+			if v[0] == "$user.id" {
+				if c.Get("user_id") == nil {
+					return c.JSON(http.StatusBadRequest, map[string]interface{}{
+						"error": "User not authorized",
+					})
+				}
+				filteredData[k] = c.Get("user_id")
+			}
+			filteredData[k] = v[0]
 		}
-		if v[0] == "" {
-			continue
+
+		err = d.service.Table.Insert(tableName, filteredData)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Data:    nil,
+				Message: "failed to insert data",
+				Error:   err.Error(),
+			})
 		}
-		if v[0] == "$user.id" {
-			if c.Get("user_id") == nil {
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"error": "User not authorized",
+
+		for k, files := range form.File {
+			file, err := files[0].Open()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"error": "Failed to open file",
 				})
 			}
-			filteredData[k] = c.Get("user_id")
-		}
-		filteredData[k] = v[0]
-	}
 
-	id, err := d.service.Table.Insert(tableName, filteredData)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
+			defer file.Close()
+
+			newFileName := base64.StdEncoding.EncodeToString([]byte(string(filteredData["id"].(int64)) + k))
+			fileExtension := filepath.Ext(files[0].Filename)
+
+			storageDir := filepath.Join(storagePath, newFileName+fileExtension)
+			err = d.service.Storage.Save(file, storageDir)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"error": err.Error(),
+				})
+			}
+
+			filteredData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
+			continue
+		}
+
+		err = d.service.Table.Update(tableName, filteredData)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Data:    nil,
+				Message: "failed to update data",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, responses.APIResponse{
+			Data:    filteredData,
+			Message: "success",
+			Error:   nil,
+		})
+	case contentType == "application/json":
+		param := map[string]interface{}{}
+		if err := json.NewDecoder(c.Request().Body).Decode(&param); err != nil {
+			return c.JSON(http.StatusBadRequest, responses.APIResponse{
+				Data:    nil,
+				Message: "failed to decode JSON data",
+				Error:   err.Error(),
+			})
+		}
+
+		err = d.service.Table.Insert(tableName, param)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Data:    param,
+				Message: "failed to insert data",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusCreated, responses.APIResponse{
+			Data:    param,
+			Message: "success",
+		})
+	default:
+		return c.JSON(http.StatusBadRequest, responses.APIResponse{
+			Data:    nil,
+			Message: "Invalid content type",
+			Error:   "invalid content type" + contentType,
 		})
 	}
-
-	for k, files := range form.File {
-		file, err := files[0].Open()
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to open file",
-			})
-		}
-
-		defer file.Close()
-
-		newFileName := base64.StdEncoding.EncodeToString([]byte(id.(string) + k))
-		fileExtension := filepath.Ext(files[0].Filename)
-
-		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
-		err = d.service.Storage.Save(file, storageDir)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
-
-		filteredData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
-		continue
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
-	})
 }
 
 // TODO
@@ -548,64 +610,100 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
-	err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": "Failed to parse multipart form",
-		})
-	}
-
-	updatedData := make(map[string]interface{})
-	form := c.Request().MultipartForm
-
-	for k, v := range form.Value {
-		if len(v) == 0 || k == "created_at" || k == "updated_at" {
-			continue
-		}
-		if v[0] == "" {
-			continue
-		}
-		updatedData[k] = v[0]
-	}
-
-	updatedData["updated_at"] = time.Now()
-	id := updatedData["id"].(string)
-
-	for k, files := range form.File {
-		file, err := files[0].Open()
+	contentType := c.Request().Header.Get("Content-Type")
+	switch {
+	case strings.HasPrefix(contentType, "multipart/form-data"):
+		err := c.Request().ParseMultipartForm(32 << 20) // 32 MB max
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error": "Failed to open file",
+				"error": "Failed to parse multipart form",
 			})
 		}
 
-		defer file.Close()
+		updatedData := make(map[string]interface{})
+		form := c.Request().MultipartForm
 
-		newFileName := base64.StdEncoding.EncodeToString([]byte(id + k))
-		fileExtension := filepath.Ext(files[0].Filename)
-		storageDir := filepath.Join("..", "public", newFileName+fileExtension)
+		for k, v := range form.Value {
+			if len(v) == 0 || k == "created_at" || k == "updated_at" {
+				continue
+			}
+			if v[0] == "" {
+				continue
+			}
+			updatedData[k] = v[0]
+		}
 
-		err = d.service.Storage.Save(file, storageDir)
+		updatedData["updated_at"] = time.Now()
+		id := updatedData["id"].(string)
+
+		for k, files := range form.File {
+			file, err := files[0].Open()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"error": "Failed to open file",
+				})
+			}
+
+			defer file.Close()
+
+			newFileName := base64.StdEncoding.EncodeToString([]byte(string(id) + k))
+			fileExtension := filepath.Ext(files[0].Filename)
+			storageDir := filepath.Join(storagePath, newFileName+fileExtension)
+
+			err = d.service.Storage.Save(file, storageDir)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"error": err.Error(),
+				})
+			}
+
+			updatedData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
+			continue
+		}
+
+		err = d.service.Table.Update(tableName, updatedData)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
 			})
 		}
 
-		updatedData[k] = fmt.Sprintf("%s%s", newFileName, fileExtension)
-		continue
-	}
+		return c.JSON(http.StatusOK, responses.APIResponse{
+			Data:    updatedData,
+			Message: "success",
+			Error:   nil,
+		})
+	case contentType == "application/json":
+		param := map[string]interface{}{}
+		if err := json.NewDecoder(c.Request().Body).Decode(&param); err != nil {
+			return c.JSON(http.StatusBadRequest, responses.APIResponse{
+				Data:    nil,
+				Message: "failed to decode JSON data",
+				Error:   err.Error(),
+			})
+		}
 
-	err = d.service.Table.Update(tableName, updatedData)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
+		err := d.service.Table.Update(tableName, param)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Data:    param,
+				Message: "failed to insert data",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusCreated, responses.APIResponse{
+			Data:    param,
+			Message: "success",
+		})
+	default:
+		return c.JSON(http.StatusBadRequest, responses.APIResponse{
+			Data:    nil,
+			Message: "Invalid content type",
+			Error:   "invalid content type" + contentType,
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
-	})
 }
 
 type deleteDataReq struct {
@@ -877,65 +975,4 @@ func (d *DatabaseAPIImpl) DeleteColumn(c echo.Context) error {
 	d.cache.Delete(cacheKey)
 
 	return c.JSON(http.StatusOK, nil)
-}
-
-func (d *DatabaseAPIImpl) Backup(c echo.Context) error {
-	err := d.service.Backup.Backup()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
-	})
-}
-
-func (d *DatabaseAPIImpl) DeleteBackup(c echo.Context) error {
-	filename := c.Param("filename")
-
-	err := d.service.Backup.Delete(filename)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
-	})
-}
-
-func (d *DatabaseAPIImpl) Restore(c echo.Context) error {
-	filename := c.Param("filename")
-
-	err := d.service.Backup.Restore(filename)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "success",
-	})
-}
-
-func (d *DatabaseAPIImpl) FetchBackups(c echo.Context) error {
-	backupPath := fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.BACKUP_PATH)
-
-	datas, err := os.ReadDir(backupPath)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	filenames := []string{}
-	for _, data := range datas {
-		filenames = append(filenames, data.Name())
-	}
-
-	return c.JSON(http.StatusOK, filenames)
 }

@@ -1,21 +1,10 @@
 import http from 'k6/http';
-import { FormData } from 'https://jslib.k6.io/formdata/0.0.2/index.js';
 
 export let options = {
     insecureSkipTLSVerify: true,
     noConnectionReuse: false,
-    stages: [
-        { duration: '1m', target: 100},
-        { duration: '2m', target: 100},
-        { duration: '1m', target: 200},
-        { duration: '2m', target: 200},
-        { duration: '1m', target: 300},
-        { duration: '2m', target: 300},
-        { duration: '1m', target: 500},
-        { duration: '2m', target: 500},
-        { duration: '3m', target: 0},
-        
-    ]
+    vus: 100,
+    iterations: 10000
 };
 
 const url = "http://localhost:8080/api";
@@ -35,17 +24,42 @@ const randomAddress = () => {
 }
 
 export default () => {
-    const form = new FormData();
-    form.append("user_id", Math.floor(Math.random() * 2000));
-    form.append("product_id", Math.floor(Math.random() * 2000));
-    form.append("amount", Math.floor(Math.random() * 50) * 100);
-    form.append("status", statusList[Math.floor(Math.random() * statusList.length)]);
-    form.append("payment_method", paymentMethodList[Math.floor(Math.random() * paymentMethodList.length)]);
-    form.append("shipping_address", randomAddress());
-    form.append("notes", notes[Math.floor(Math.random() * notes.length)]);
+    const data = {
+        user_id: parseInt(Math.floor(Math.random() * 2000)),
+        product_id: parseInt(Math.floor(Math.random() * 2000)),
+        amount: (Math.floor(Math.random() * 50) + 50) * 100,
+        status: statusList[Math.floor(Math.random() * statusList.length)],
+        payment_method: paymentMethodList[Math.floor(Math.random() * paymentMethodList.length)],
+        shipping_address: randomAddress(),
+        notes: notes[Math.floor(Math.random() * notes.length)],
+    }
     
-    const response = http.post(`${url}/main/transactions/insert`, form.body(), { headers: {
-        'Content-Type': `multipart/form-data; boundary=${form.boundary}`,
+    const response = http.post(`${url}/main/transactions/insert`, JSON.stringify(data), { headers: {
+        'Content-Type': `application/json`,
         'X-API-KEY': '019039ff-f5be-7520-8ab8-bbcf248a6585',
     } })
 }
+
+/*
+
+<----- TEST ----->
+Insert 10,000 rows with 7 columns
+
+<----- RESULT ----->
+
+response time
+=============
+avg=19.02 ms
+min=0 µs
+max=954.96 ms
+
+data exchange
+=============
+receive=2.1MB/s
+sent=1.8MB/s
+
+=============
+throughput=4952.722549 requests/s
+
+
+*/

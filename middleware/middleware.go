@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"funcbase/config"
 	"funcbase/constants"
+	"funcbase/pkg/responses"
 	"net/http"
 	"time"
 
@@ -98,19 +100,11 @@ func ValidateAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		key := c.Request().Header.Get("X-API-KEY")
 		if key == "" {
-			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-				"code":   "401",
-				"status": "error",
-				"error":  "missing API key",
-			})
+			return c.JSON(http.StatusUnauthorized, responses.NewResponse(nil, "Missing API Key", errors.New("missing API Key")))
 		}
 
 		if key != config.GetInstance().GetAPIKey() && key != constants.MAIN_APP_API_KEY {
-			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-				"code":   "401",
-				"status": "error",
-				"error":  "api key invalid",
-			})
+			return c.JSON(http.StatusUnauthorized, responses.NewResponse(nil, "Missing API Key", errors.New("missing API Key")))
 		}
 
 		return next(c)

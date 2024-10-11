@@ -8,12 +8,13 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type TableService interface {
 	Info(tableName string) (model.Tables, error)
 	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
-	Insert(tableName string, data map[string]interface{}) (interface{}, error)
+	Insert(tableName string, data map[string]interface{}) error
 	Update(tableName string, data map[string]interface{}) error
 	Delete(tableName string, data map[string]interface{}) error
 	BatchDelete(tableName string, data []string) error
@@ -125,11 +126,12 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 	return result, err
 }
 
-func (s *TableServiceImpl) Insert(tableName string, data map[string]interface{}) (interface{}, error) {
-	err := s.db.Table(tableName).
-		Create(&data).Error
+func (s *TableServiceImpl) Insert(tableName string, data map[string]interface{}) error {
+	err := s.db.Table(tableName).Clauses(
+		clause.Returning{Columns: []clause.Column{{Name: "id"}}},
+	).Create(&data).Error
 
-	return data["id"], err
+	return err
 }
 
 func (s *TableServiceImpl) Update(tableName string, data map[string]interface{}) error {

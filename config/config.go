@@ -1,145 +1,199 @@
 package config
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"funcbase/constants"
-// 	"os"
-// 	"reflect"
-// 	"sync"
-// 	"time"
-// )
+import (
+	"encoding/json"
+	"fmt"
+	"funcbase/constants"
+	"os"
+	"reflect"
+	"sync"
+)
 
-// type Config struct {
-// 	AppName             string   `json:"app_name"`
-// 	AppURL              string   `json:"app_url"`
-// 	APIKey              string   `json:"api_key"`
-// 	AllowedOrigins      []string `json:"allowed_origins"`
-// 	AutomatedBackup     bool     `json:"automated_backup"`
-// 	CronSchedule        string   `json:"cron_schedule"`
-// 	DBMaxOpenConnection int      `json:"db_max_open_connection"`
-// 	DBMaxIdleConnection int      `json:"db_max_idle_connection"`
-// 	DBMaxLifetime       int      `json:"db_max_lifetime"`
-// }
+type (
+	AppName string
+	AppURL  string
+	APIKey  string
 
-// var (
-// 	instance *Config
-// 	once     sync.Once
-// )
+	AllowedOrigins  []string
+	AutomatedBackup bool
 
-// func GetInstance() *Config {
-// 	once.Do(func() {
-// 		instance = &Config{}
-// 		instance.Load()
-// 	})
+	CronSchedule string
 
-// 	return instance
-// }
+	DBMaxOpenConnection int
+	DBMaxIdleConnection int
+	DBMaxLifetime       int
+)
+type CallbackConfig interface {
+	OnUpdate()
+}
 
-// var configPath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.CONFIG_PATH)
+type Config struct {
+	AppName             `json:"app_name"`
+	AppURL              `json:"app_url"`
+	APIKey              `json:"api_key"`
+	AllowedOrigins      `json:"allowed_origins"`
+	AutomatedBackup     `json:"automated_backup"`
+	CronSchedule        `json:"cron_schedule"`
+	DBMaxOpenConnection `json:"db_max_open_connection"`
+	DBMaxIdleConnection `json:"db_max_idle_connection"`
+	DBMaxLifetime       `json:"db_max_lifetime"`
+}
 
-// func (c *Config) Load() error {
-// 	file, err := os.Open(configPath)
-// 	if err != nil {
-// 		if os.IsNotExist(err) {
-// 			config := Config{
-// 				AppName: "Funcbase",
-// 				AppURL:  "https://funcbase.com",
-// 				APIKey:  "default-api-key",
-// 				AllowedOrigins: []string{
-// 					"http://localhost:8080",
-// 					"http://localhost:3000",
-// 				},
-// 				AutomatedBackup:     false,
-// 				CronSchedule:        "",
-// 				DBMaxOpenConnection: 10,
-// 				DBMaxIdleConnection: 5,
-// 				DBMaxLifetime:       2,
-// 			}
-// 			config.Save()
+func (c *Config) GetAppName() string {
+	return string(c.AppName)
+}
 
-// 			c = &config
-// 		}
+func (c *Config) GetAppURL() string {
+	return string(c.AppURL)
+}
 
-// 		return err
-// 	}
-// 	defer file.Close()
+func (c *Config) GetAPIKey() string {
+	return string(c.APIKey)
+}
 
-// 	decoder := json.NewDecoder(file)
-// 	if err := decoder.Decode(&c); err != nil {
-// 		return err
-// 	}
+func (c *Config) GetAllowedOrigins() []string {
+	return c.AllowedOrigins
+}
 
-// 	return nil
-// }
+func (c *Config) GetAutomatedBackup() bool {
+	return bool(c.AutomatedBackup)
+}
 
-// func (c *Config) Save() error {
-// 	file, err := os.Create(configPath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
+func (c *Config) GetCronSchedule() string {
+	return string(c.CronSchedule)
+}
 
-// 	encoder := json.NewEncoder(file)
-// 	if err := encoder.Encode(c); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+func (c *Config) GetDBMaxOpenConnection() int {
+	return int(c.DBMaxOpenConnection)
+}
 
-// func (c *Config) Get(key string) interface{} {
-// 	val := reflect.ValueOf(c).Elem()
-// 	typ := val.Type()
+func (c *Config) GetDBMaxIdleConnection() int {
+	return int(c.DBMaxIdleConnection)
+}
 
-// 	for i := 0; i < val.NumField(); i++ {
-// 		field := typ.Field(i)
-// 		tag := field.Tag.Get("json")
+func (c *Config) GetDBMaxLifetime() int {
+	return int(c.DBMaxLifetime)
+}
 
-// 		if tag == key {
-// 			return val.Field(i).Interface()
-// 		}
-// 	}
-// 	return nil
-// }
+var (
+	config *Config
+	syncer sync.Once
+)
 
-// func (c *Config) Set(key string, value interface{}) error {
-// 	val := reflect.ValueOf(c).Elem()
-// 	typ := val.Type()
+func GetInstance() *Config {
+	syncer.Do(func() {
+		config = &Config{}
+		config.Load()
+	})
 
-// 	for i := 0; i < val.NumField(); i++ {
-// 		field := typ.Field(i)
-// 		tag := field.Tag.Get("json")
+	return config
+}
 
-// 		if tag == key {
-// 			fieldValue := val.Field(i)
-// 			if fieldValue.CanSet() {
-// 				newValue := reflect.ValueOf(value)
-// 				if newValue.Type().AssignableTo(fieldValue.Type()) {
-// 					fieldValue.Set(newValue)
-// 					return nil
-// 				} else {
-// 					return fmt.Errorf("cannot assign value of type %s to field of type %s", newValue.Type(), fieldValue.Type())
-// 				}
-// 			} else {
-// 				return fmt.Errorf("cannot set value to field %s", field.Name)
-// 			}
-// 		}
-// 	}
-// 	return fmt.Errorf("no field found with json tag %s", key)
-// }
+var configPath string = fmt.Sprintf("%s/%s", constants.DATA_PATH, constants.CONFIG_PATH)
 
-// func (c *Config) WatchCronChanges(callback func()) {
-// 	go func() {
-// 		originalConfig := *c
-// 		for {
-// 			time.Sleep(1 * time.Minute) // Adjust the duration as needed
-// 			c.Load()
-// 			if originalConfig.CronSchedule != c.CronSchedule ||
-// 				originalConfig.AutomatedBackup != c.AutomatedBackup {
-// 				callback()
-// 				originalConfig = *c
-// 			}
+func (c *Config) Load() error {
+	fileStat, _ := os.Stat(configPath)
+	if fileStat.Size() == 0 {
+		config := Config{
+			AppName: "Funcbase",
+			AppURL:  "https://funcbase.com",
+			APIKey:  "default-api-key",
+			AllowedOrigins: []string{
+				"http://localhost:8080",
+				"http://localhost:3000",
+			},
+			AutomatedBackup:     false,
+			CronSchedule:        "",
+			DBMaxOpenConnection: 10,
+			DBMaxIdleConnection: 5,
+			DBMaxLifetime:       2,
+		}
+		config.Save()
 
-// 		}
-// 	}()
-// }
+		c = &config
+
+		return nil
+	}
+	file, _ := os.Open(configPath)
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) Save() error {
+	file, err := os.Create(configPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Config) Set(key string, value interface{}) error {
+	val := reflect.ValueOf(c).Elem()
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+
+		if tag != key {
+			continue
+		}
+
+		fieldValue := val.Field(i)
+		if !fieldValue.CanSet() {
+			return fmt.Errorf("cannot set value to field %s", field.Name)
+		}
+
+		newValue := reflect.ValueOf(value)
+		if newValue.Type().ConvertibleTo(fieldValue.Type()) {
+			fieldValue.Set(newValue.Convert(fieldValue.Type()))
+		} else if fieldValue.Type().Kind() == reflect.String && newValue.Kind() == reflect.String {
+			fieldValue.SetString(newValue.String())
+		} else if fieldValue.Type().Kind() == reflect.Int && newValue.Kind() == reflect.Int {
+			fieldValue.SetInt(newValue.Int())
+		} else if fieldValue.Type().Kind() == reflect.Bool && newValue.Kind() == reflect.Bool {
+			fieldValue.SetBool(newValue.Bool())
+		} else if fieldValue.Type().Kind() == reflect.Slice && newValue.Kind() == reflect.Slice {
+			// Handle slices like AllowedOrigins
+			fieldValue.Set(newValue)
+		} else {
+			return fmt.Errorf("cannot assign value of type %s to field of type %s", newValue.Type(), fieldValue.Type())
+		}
+
+		callbackField, ok := fieldValue.Addr().Interface().(CallbackConfig)
+		if ok {
+			callbackField.OnUpdate()
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("no field found with json tag %s", key)
+}
+
+func (c *Config) Get(key string) interface{} {
+	val := reflect.ValueOf(c).Elem()
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+
+		if tag == key {
+			return val.Field(i).Interface()
+		}
+	}
+	return nil
+}
