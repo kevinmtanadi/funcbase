@@ -80,11 +80,11 @@ func (c *Config) GetDBMaxLifetime() int {
 
 var (
 	config *Config
-	syncer sync.Once
+	once sync.Once
 )
 
 func GetInstance() *Config {
-	syncer.Do(func() {
+	once.Do(func() {
 		config = &Config{}
 		config.Load()
 	})

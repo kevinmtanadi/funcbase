@@ -78,18 +78,3 @@ type Column struct {
 	Type      string `json:"type"`
 	Reference string `json:"reference,omitempty"`
 }
-
-type Log struct {
-	ID         uint      `json:"id" gorm:"primaryKey"`
-	Method     string    `json:"method"`
-	Endpoint   string    `json:"endpoint"`
-	CallerIP   string    `json:"caller_ip"`
-	StatusCode int       `json:"status"`
-	ExecTime   float32   `json:"exec_time"`
-	CreatedAt  time.Time `json:"created_at"`
-	UserAgent  string    `json:"user_agent"`
-}
-
-func (l *Log) TableName() string {
-	return "_log"
-}

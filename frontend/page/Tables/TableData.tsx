@@ -17,6 +17,7 @@ import {
   CardBody,
   Spinner,
   Input,
+  SortDescriptor,
 } from "@nextui-org/react";
 import {
   useInfiniteQuery,
@@ -40,7 +41,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import FloatingBox from "../../components/FloatingBox";
 import { TbCirclesRelation } from "react-icons/tb";
 import { toast } from "react-toastify";
-import { FaCode, FaRegFile } from "react-icons/fa6";
+import { FaChevronDown, FaChevronUp, FaCode, FaRegFile } from "react-icons/fa6";
 import { useInView } from "react-intersection-observer";
 import APIPreview from "./APIPreview";
 
@@ -140,21 +141,6 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     });
   };
 
-  const TooltipContainer = ({ column, children, className }: any) => {
-    const content = (
-      <div className="flex flex-col text-xs">
-        <p>{column.pk === 1 ? "PRIMARY KEY" : ""}</p>
-        <p>{column.name}</p>
-        <p>{column.type}</p>
-      </div>
-    );
-    return (
-      <Tooltip className={className} placement="bottom-start" content={content}>
-        {children}
-      </Tooltip>
-    );
-  };
-
   const renderHeader = (column: any) => {
     if (column.pk === 1) {
       return (
@@ -162,6 +148,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
           <div className="flex items-center gap-2">
             <CgKey size={16} />
             <p>{column.name}</p>
+            <Sortable column={column.name} />
           </div>
         </TooltipContainer>
       );
@@ -174,6 +161,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <RiText size={16} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -183,6 +171,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <TbCirclesRelation size={16} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -192,6 +181,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <FaRegCalendar size={14} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -201,6 +191,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <FaRegCalendar size={14} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -210,6 +201,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <HiOutlineHashtag size={14} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -219,6 +211,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <FaHashtag size={12} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -228,6 +221,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <RxComponentBoolean size={12} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -237,6 +231,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
             <div className="flex items-center gap-2">
               <FaRegFile size={12} />
               <p>{column.name}</p>
+              <Sortable column={column.name} />
             </div>
           </TooltipContainer>
         );
@@ -381,6 +376,72 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
       fetchNextPage();
     }
   }, [inView]);
+
+  const [sortDescriptor, setSortDescriptor] = useState<{
+    column: string;
+    direction: "ASC" | "DESC";
+  }>({
+    column: "id",
+    direction: "ASC",
+  });
+
+  useEffect(() => {
+    if (sortDescriptor.column && sortDescriptor.direction) {
+      console.log(sortDescriptor);
+      setParams({
+        ...params,
+        sort: `${sortDescriptor.column} ${sortDescriptor.direction}`,
+      });
+    }
+  }, [sortDescriptor]);
+
+  const TooltipContainer = ({ column, children, className }: any) => {
+    const content = (
+      <div className="flex flex-col text-xs">
+        <p>{column.pk === 1 ? "PRIMARY KEY" : ""}</p>
+        <p>{column.name}</p>
+        <p>{column.type}</p>
+      </div>
+    );
+    return (
+      <Tooltip className={className} placement="bottom-start" content={content}>
+        {children}
+      </Tooltip>
+    );
+  };
+
+  const handleSortChange = (column: string) => {
+    setSortDescriptor((prevSortDescriptor) => {
+      if (column === prevSortDescriptor.column) {
+        return {
+          ...prevSortDescriptor,
+          direction: prevSortDescriptor.direction === "ASC" ? "DESC" : "ASC",
+        };
+      } else {
+        return {
+          column: column,
+          direction: "ASC",
+        };
+      }
+    });
+  };
+
+  const Sortable = ({ column }: any) => {
+    return (
+      <div
+        className="cursor-pointer self-end opacity-50 hover:opacity-100 transition-opacity duration-300"
+        onClick={() => {
+          handleSortChange(column);
+        }}
+      >
+        {sortDescriptor.direction === "ASC" ? (
+          <FaChevronDown />
+        ) : (
+          <FaChevronUp />
+        )}
+      </div>
+    );
+  };
 
   if (columns?.length === 0) {
     return (

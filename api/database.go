@@ -12,7 +12,6 @@ import (
 	"funcbase/service"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -164,40 +163,11 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
 	var res fetchRowsRes
 
-	table, err := d.service.Table.Info(tableName)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, responses.NewResponse(nil, "Error fetching table data", err.Error()))
-	}
-
 	var params *fetchRowsParam = new(fetchRowsParam)
 	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
 		})
-	}
-
-	columns := "*"
-	if table.IsAuth {
-		columnsArr, err := d.service.Table.Columns(tableName, false)
-
-		if err != nil {
-			return err
-		}
-
-		columns = ""
-
-		for _, column := range columnsArr {
-			col := column["name"].(*interface{})
-			if *col == "password" || *col == "salt" {
-				continue
-			}
-
-			if columns != "" {
-				columns = fmt.Sprintf("%s, %s", columns, *col)
-				continue
-			}
-			columns = fmt.Sprintf("%s", *col)
-		}
 	}
 
 	paramUser := c.Get("user_id")
@@ -206,69 +176,38 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 		userID = paramUser.(int)
 	}
 
-	rawQuery := `
-	SELECT %s FROM %s
-	`
-	query := fmt.Sprintf(rawQuery, columns, tableName)
-
-	filters := []string{}
-	if params.Filter != "" {
-		if strings.Contains(params.Filter, "$user.id") {
-			params.Filter = strings.ReplaceAll(params.Filter, "$user.id", string(userID))
-		}
-
-		if isSQLTerm(params.Filter) {
-			filters = append(filters, params.Filter)
-			query = query + `WHERE ` + params.Filter
-		} else {
-			columns, err := d.service.Table.Columns(tableName, false)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": "failed to get columns",
-					"error":   err.Error(),
-				})
-			}
-
-			for _, column := range columns {
-				cName := column["name"].(*interface{})
-				filters = append(filters, fmt.Sprintf("%s LIKE ('%%%s%%')", *cName, params.Filter))
-			}
-			query = query + `WHERE ` + strings.Join(filters, " OR ")
-		}
+	if strings.Contains(params.Filter, "$user.id") {
+		params.Filter = strings.ReplaceAll(params.Filter, "$user.id", string(userID))
 	}
-	if params.Sort != "" {
-		query = query + ` ORDER BY ` + params.Sort
-	}
-	if params.Page == 0 {
-		params.Page = 1
-	}
-	if params.PageSize == 0 {
-		params.PageSize = 20
-	}
-	query = query + ` LIMIT ` + strconv.Itoa(params.PageSize) + ` OFFSET ` + strconv.Itoa((params.Page-1)*params.PageSize)
 
-	res.Data = make([]map[string]interface{}, 0)
-	if err := d.db.Raw(query).
-		Find(&res.Data).
-		Error; err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"error": err.Error(),
+	data, err := d.service.DB.Fetch(d.db, &service.FetchOption{
+		Table:  tableName,
+		Filter: params.Filter,
+		Order:  params.Sort,
+		Limit:  params.PageSize,
+		Offset: (params.Page - 1) * params.PageSize,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+			Message: "Error fetching data",
+			Error:   err.Error(),
 		})
 	}
+	res.Data = data
 
 	if params.GetCount {
-		rawCountQuery := `
-		SELECT COUNT(*) FROM %s
-		`
-		query = fmt.Sprintf(rawCountQuery, tableName)
-		if params.Filter != "" {
-			query = query + `WHERE ` + strings.Join(filters, " OR ")
-		}
-		if err := d.db.Raw(query).First(&res.TotalData).Error; err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error": err.Error(),
+		count, err := d.service.DB.Count(d.db, &service.FetchOption{
+			Table:  tableName,
+			Filter: params.Filter,
+		})
+
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Message: "Error fetching data",
+				Error:   err.Error(),
 			})
 		}
+		res.TotalData = count
 	}
 
 	res.Page = params.Page
@@ -321,15 +260,6 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 	}
 
 	id := "id INTEGER PRIMARY KEY"
-
-	// switch params.IDType {
-	// case "string":
-	// 	id = fmt.Sprintf(id, "TEXT PRIMARY KEY DEFAULT (hex(randomblob(8)))")
-	// case "manual":
-	// 	id = fmt.Sprintf(id, "TEXT PRIMARY KEY")
-	// default:
-	// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid id type")
-	// }
 
 	fields := []string{
 		id,
@@ -525,7 +455,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 			filteredData[k] = v[0]
 		}
 
-		err = d.service.Table.Insert(tableName, filteredData)
+		err = d.service.DB.Insert(d.db, tableName, filteredData)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Data:    nil,
@@ -559,7 +489,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 			continue
 		}
 
-		err = d.service.Table.Update(tableName, filteredData)
+		err = d.service.DB.Update(d.db, tableName, filteredData)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Data:    nil,
@@ -583,7 +513,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 			})
 		}
 
-		err = d.service.Table.Insert(tableName, param)
+		err = d.service.DB.Insert(d.db, tableName, param)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Data:    param,
@@ -605,8 +535,6 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	}
 }
 
-// TODO
-// Allow use of application/json
 func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 	tableName := c.Param("table_name")
 
@@ -661,7 +589,7 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 			continue
 		}
 
-		err = d.service.Table.Update(tableName, updatedData)
+		err = d.service.DB.Update(d.db, tableName, updatedData)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
@@ -683,7 +611,7 @@ func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
 			})
 		}
 
-		err := d.service.Table.Update(tableName, param)
+		err := d.service.DB.Update(d.db, tableName, param)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Data:    param,
@@ -720,7 +648,7 @@ func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
 		})
 	}
 
-	err := d.service.Table.BatchDelete(tableName, params.ID)
+	err := d.service.DB.BatchDelete(d.db, tableName, params.ID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),

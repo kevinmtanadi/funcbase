@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"funcbase/config"
 	"funcbase/constants"
-	"funcbase/model"
+	"funcbase/pkg/logger"
 	"funcbase/pkg/responses"
 	"net/http"
 	"strings"
@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func UseMiddleware(app *echo.Echo, loggerDb *gorm.DB) {
+func UseMiddleware(app *echo.Echo) {
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: config.GetInstance().AllowedOrigins,
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization, "X-API-KEY"},
@@ -28,17 +28,10 @@ func UseMiddleware(app *echo.Echo, loggerDb *gorm.DB) {
 	app.Use(middleware.Secure())
 	app.Use(middleware.RemoveTrailingSlash())
 
-	jobChan := make(chan model.Log, 100)
+	loggerDb := logger.GetInstance()
+	jobChan := make(chan logger.Log, 100)
 	app.Use(LogRequest(jobChan))
-
 	go logToDb(loggerDb, jobChan)
-
-}
-
-func logToDb(loggerDb *gorm.DB, jobChan <-chan model.Log) {
-	for job := range jobChan {
-		loggerDb.Create(&job)
-	}
 }
 
 func RequireAuth(required bool) echo.MiddlewareFunc {
@@ -149,7 +142,13 @@ func ValidateMainAPIKey(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func LogRequest(jobChan chan model.Log) echo.MiddlewareFunc {
+func logToDb(loggerDb *gorm.DB, jobChan <-chan logger.Log) {
+	for job := range jobChan {
+		loggerDb.Create(&job)
+	}
+}
+
+func LogRequest(jobChan chan logger.Log) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if !isAPICall(c.Request().URL.RequestURI()) {
@@ -167,7 +166,7 @@ func LogRequest(jobChan chan model.Log) echo.MiddlewareFunc {
 			httpRes := c.Response()
 
 			go func() {
-				jobChan <- model.Log{
+				jobChan <- logger.Log{
 					Method:     c.Request().Method,
 					Endpoint:   c.Request().URL.RequestURI(),
 					StatusCode: httpRes.Status,
@@ -184,7 +183,7 @@ func LogRequest(jobChan chan model.Log) echo.MiddlewareFunc {
 }
 
 func isAPICall(uri string) bool {
-	return strings.HasPrefix(uri, "/api")
+	return strings.HasPrefix(uri, "/api") && !strings.HasPrefix(uri, "/api/log")
 }
 
 func getCallerIP(r *http.Request, fallbackIp string) string {

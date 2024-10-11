@@ -22,6 +22,7 @@ func (s *BaseService) WithService() *Service {
 }
 
 type Service struct {
+	DB      DBService
 	Table   TableService
 	Storage StorageService
 	Backup  BackupService
@@ -29,6 +30,7 @@ type Service struct {
 
 func NewService(ioc di.Container) *Service {
 	return &Service{
+		DB:      NewDBService(ioc),
 		Table:   NewTableService(ioc),
 		Storage: NewStorageService(ioc),
 		Backup:  NewBackupService(ioc),

@@ -8,16 +8,11 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sarulabs/di"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type TableService interface {
 	Info(tableName string) (model.Tables, error)
 	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
-	Insert(tableName string, data map[string]interface{}) error
-	Update(tableName string, data map[string]interface{}) error
-	Delete(tableName string, data map[string]interface{}) error
-	BatchDelete(tableName string, data []string) error
 }
 
 type TableServiceImpl struct {
@@ -124,36 +119,4 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 	s.cache.Set(cacheKey, result, cache.DefaultExpiration)
 
 	return result, err
-}
-
-func (s *TableServiceImpl) Insert(tableName string, data map[string]interface{}) error {
-	err := s.db.Table(tableName).Clauses(
-		clause.Returning{Columns: []clause.Column{{Name: "id"}}},
-	).Create(&data).Error
-
-	return err
-}
-
-func (s *TableServiceImpl) Update(tableName string, data map[string]interface{}) error {
-	err := s.db.Table(tableName).
-		Where("id = ?", data["id"]).
-		Updates(&data).Error
-
-	return err
-}
-
-func (s *TableServiceImpl) Delete(tableName string, data map[string]interface{}) error {
-	err := s.db.Table(tableName).
-		Where("id = ?", data["id"]).
-		Delete(&data).Error
-
-	return err
-}
-
-func (s *TableServiceImpl) BatchDelete(tableName string, data []string) error {
-	err := s.db.Table(tableName).
-		Where("id IN ?", data).
-		Delete(&data).Error
-
-	return err
 }

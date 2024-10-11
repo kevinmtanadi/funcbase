@@ -26,7 +26,6 @@ var (
 )
 
 func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
-
 	option := SQLiteOption{
 		DryRun:   false,
 		Migrate:  false,
