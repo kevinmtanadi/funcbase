@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import Drawer from "react-modern-drawer";
 import "react-modern-drawer/dist/index.css";
 import axiosInstance from "../../pkg/axiosInstance";
+import APIMethod from "../../components/APIMethod";
 
 interface APIPreviewProps {
   isOpen: boolean;
@@ -176,15 +177,18 @@ const FetchSinglePreview = ({ table }: PreviewProps) => {
       <p className="text-sm">Fetching single data by ID.</p>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-primary-50 w-full flex items-center p-1.5 border-1 border-primary-300 rounded-md gap-2">
-          <div className="bg-primary-300 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            GET
-          </div>
-          <p>
-            /api/main/<span className="font-semibold">{table}</span>/
-            <span className="font-semibold">[id]</span>
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="GET"
+          endpoint={
+            <>
+              <p>
+                /api/main/<span className="font-semibold">{table}</span>/
+                <span className="font-semibold">[id]</span>
+              </p>
+            </>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Path Parameters</p>
@@ -272,14 +276,15 @@ const FetchPreview = ({ table }: PreviewProps) => {
       </p>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-primary-50 w-full flex items-center p-1.5 border-1 border-primary-300 rounded-md gap-2">
-          <div className="bg-primary-300 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            GET
-          </div>
-          <p>
-            /api/main/<span className="font-semibold">{table}</span>/rows
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="GET"
+          endpoint={
+            <p>
+              /api/main/<span className="font-semibold">{table}</span>/rows
+            </p>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Query Parameters</p>
@@ -475,14 +480,15 @@ const InsertPreview = ({ table }: PreviewProps) => {
       </div>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-green-100 w-full flex items-center p-1.5 border-1 border-green-400 rounded-md gap-2">
-          <div className="bg-green-400 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            POST
-          </div>
-          <p>
-            /api/main/<span className="font-semibold">{table}</span>/insert
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="POST"
+          endpoint={
+            <p>
+              /api/main/<span className="font-semibold">{table}</span>/insert
+            </p>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Body Parameters</p>
@@ -615,14 +621,15 @@ const UpdatePreview = ({ table }: PreviewProps) => {
       </div>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-orange-100 w-full flex items-center p-1.5 border-1 border-orange-400 rounded-md gap-2">
-          <div className="bg-orange-400 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            PUT
-          </div>
-          <p>
-            /api/main/<span className="font-semibold">{table}</span>/update
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="PUT"
+          endpoint={
+            <p>
+              /api/main/<span className="font-semibold">{table}</span>/update
+            </p>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Body Parameters</p>
@@ -727,14 +734,15 @@ const DeletePreview = ({ table }: PreviewProps) => {
       </div>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-red-100 w-full flex items-center p-1.5 border-1 border-red-400 rounded-md gap-2">
-          <div className="bg-red-400 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            DELETE
-          </div>
-          <p>
-            /api/main/<span className="font-semibold">{table}</span>/rows
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="DELETE"
+          endpoint={
+            <p>
+              /api/main/<span className="font-semibold">{table}</span>/rows
+            </p>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Body Parameters</p>
@@ -910,14 +918,15 @@ const RegisterPreview = ({ table }: PreviewProps) => {
       </div>
       <div className="gap-2 flex flex-col">
         <p>API Details</p>
-        <div className="bg-green-100 w-full flex items-center p-1.5 border-1 border-green-400 rounded-md gap-2">
-          <div className="bg-green-400 text-white font-semibold w-[100px] h-[30px] flex items-center justify-center rounded-md">
-            POST
-          </div>
-          <p>
-            /api/auth/<span className="font-semibold">{table}</span>/register
-          </p>
-        </div>
+        <APIMethod
+          className="w-full"
+          method="POST"
+          endpoint={
+            <p>
+              /api/auth/<span className="font-semibold">{table}</span>/register
+            </p>
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p>Body Parameters</p>

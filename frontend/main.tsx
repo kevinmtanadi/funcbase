@@ -19,6 +19,7 @@ import CreateFunction from "./page/Function/CreateFunction.tsx";
 import Storage from "./page/Storage/Storage.tsx";
 import Test from "./page/Test.tsx";
 import Backup from "./page/Backup/Backup.tsx";
+import Logger from "./page/Logger/Logger.tsx";
 
 const router = createBrowserRouter([
   {
@@ -30,6 +31,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Tables />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/logs",
+        element: (
+          <ProtectedRoute>
+            <Logger />
           </ProtectedRoute>
         ),
       },
@@ -91,7 +100,6 @@ const router = createBrowserRouter([
       },
     ],
   },
-
   {
     path: "/signin",
     element: <SignIn />,

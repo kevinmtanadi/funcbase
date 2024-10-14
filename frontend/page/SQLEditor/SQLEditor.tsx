@@ -93,7 +93,7 @@ const SQLEditor = () => {
   return (
     <div className="flex flex-col h-screen">
       <div className="min-h-[45px] h-[45px] px-5 flex items-center justify-between border-b-1">
-        <h1 className="text-xl font-bold my-auto">SQL Editor</h1>
+        <h1 className="text-xl font-semibold my-auto">SQL Editor</h1>
         <Button
           onClick={() => mutate(query)}
           className="rounded-md h-[35px]  bg-slate-950 text-white font-semibold"

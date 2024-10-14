@@ -9,7 +9,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 
 export interface Table {
   name: string;
-  is_auth: boolean;
+  auth: boolean;
 }
 
 const Tables = () => {
@@ -29,11 +29,11 @@ const Tables = () => {
 
   const [selectedTable, setSelectedTable] = useState<Table>({
     name: "",
-    is_auth: false,
+    auth: false,
   });
   useEffect(() => {
     if (!tables) {
-      setSelectedTable({ name: "", is_auth: false });
+      setSelectedTable({ name: "", auth: false });
     }
   }, [tables]);
 
@@ -49,7 +49,7 @@ const Tables = () => {
     if (tables && tables.length > 0) {
       setSelectedTable(tables[0]);
     } else {
-      setSelectedTable({ name: "", is_auth: false });
+      setSelectedTable({ name: "", auth: false });
     }
   };
 
@@ -62,7 +62,7 @@ const Tables = () => {
   return (
     <div className="flex flex-col w-full h-screen">
       <div className="w-full h-[45px] min-h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Table List</h1>
+        <h1 className="text-xl font-semibold my-auto ml-5">Table List</h1>
       </div>
       <div className="flex grow">
         <div className="flex flex-col items-center bg-slate-100 px-[20px] min-w-[250px] w-[250px]">
@@ -88,7 +88,7 @@ const Tables = () => {
                 })}
                 key={table.name}
               >
-                <div>{table.is_auth ? <FaRegUser /> : <FaTable />}</div>
+                <div>{table.auth ? <FaRegUser /> : <FaTable />}</div>
                 <p>{table.name}</p>
               </div>
             ))}

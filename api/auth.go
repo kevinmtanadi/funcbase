@@ -62,7 +62,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
-	if !table.IsAuth {
+	if !table.Auth {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "table is not user type"})
 	}
 
@@ -116,7 +116,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 			"sub":   newUser["id"].(int64),
 			"email": newUser["email"].(string),
-			"roles": []string{"user", "admin"},
+			"roles": "USER",
 		})
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
@@ -159,7 +159,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
 
-	if !table.IsAuth {
+	if !table.Auth {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "table is not user type"})
 	}
 
@@ -188,7 +188,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 		"sub":   user["id"].(int),
 		"email": user["email"].(string),
-		"role":  tableName,
+		"roles": "USER",
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{

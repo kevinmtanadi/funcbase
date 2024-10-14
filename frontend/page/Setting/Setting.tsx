@@ -80,7 +80,7 @@ const GeneralSetting = () => {
 
   return (
     <>
-      <h1 className="text-xl font-bold mb-5">General</h1>
+      <h1 className="text-xl font-semibold mb-5">General</h1>
       <SettingLayout isLoading={isLoading || isPending || isFetching}>
         <div className="flex flex-col gap-5">
           <Input
@@ -187,7 +187,7 @@ const SecuritySetting = () => {
 
   return (
     <>
-      <h1 className="text-xl font-bold mb-5">Security</h1>
+      <h1 className="text-xl font-semibold mb-5">Security</h1>
       <SettingLayout isLoading={isLoading || isFetching || isPending}>
         <div className="flex flex-col gap-5">
           <div className="flex gap-3">
@@ -209,7 +209,7 @@ const SecuritySetting = () => {
                   </PopoverTrigger>
                   <PopoverContent>
                     <div className="px-1 py-2">
-                      <div className="text-sm font-bold">Copied</div>
+                      <div className="text-sm font-semibold">Copied</div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -321,7 +321,7 @@ const DatabaseSetting = () => {
 
   return (
     <>
-      <h1 className="text-xl font-bold mb-5">Database</h1>
+      <h1 className="text-xl font-semibold mb-5">Database</h1>
       <SettingLayout isLoading={isLoading || isFetching || isPending}>
         <div className="flex flex-col gap-3 mt-10">
           <div className="flex flex-col gap-2">
@@ -461,8 +461,8 @@ const Setting = () => {
   const [tab, setTab] = useState("General");
   return (
     <div className="flex flex-col w-full h-screen">
-      <div className="w-full h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Settings</h1>
+      <div className="w-full h-[45px] min-h-[45px] flex border-b-1">
+        <h1 className="text-xl font-semibold my-auto ml-5">Settings</h1>
       </div>
       <div className="flex grow">
         <div className="flex flex-col items-center bg-slate-100 px-[20px] min-w-[250px] w-[250px]">

@@ -88,7 +88,7 @@ func (h *AdminAPIImpl) Register(c echo.Context) error {
 		token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 			"sub":   newAdmin.ID,
 			"email": newAdmin.Email,
-			"roles": []string{"user", "admin"},
+			"roles": "ADMIN",
 		})
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.NewResponse(nil, "Error generating JWT Token", err.Error()))
@@ -127,7 +127,7 @@ func (h *AdminAPIImpl) Login(c echo.Context) error {
 	token, err := auth_libraries.GenerateJWT(map[string]interface{}{
 		"sub":   admin.ID,
 		"email": admin.Email,
-		"roles": []string{"user", "admin"},
+		"roles": "ADMIN",
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, responses.NewResponse(nil, "Error generating JWT Token", err.Error()))

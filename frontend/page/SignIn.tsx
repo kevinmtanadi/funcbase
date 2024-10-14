@@ -25,7 +25,7 @@ const SignIn = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: LoginData) => {
       await axiosInstance.post("/api/admin/login", data).then((res) => {
-        const res_data = res.data;
+        const res_data = res.data.data;
         if (res_data.token) {
           signIn({
             auth: {
@@ -33,9 +33,11 @@ const SignIn = () => {
               type: "Bearer",
             },
           });
-          navigate("/");
         }
       });
+    },
+    onSuccess: () => {
+      navigate("/");
     },
   });
 

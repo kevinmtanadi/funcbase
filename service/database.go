@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type FetchOption struct {
+type FetchParams struct {
 	Table  string
 	Filter string
 	Order  string
@@ -20,8 +20,8 @@ type FetchOption struct {
 }
 
 type DBService interface {
-	Fetch(db *gorm.DB, option *FetchOption) ([]map[string]interface{}, error)
-	Count(db *gorm.DB, option *FetchOption) (int64, error)
+	Fetch(db *gorm.DB, option *FetchParams) ([]map[string]interface{}, error)
+	Count(db *gorm.DB, option *FetchParams) (int64, error)
 	Insert(db *gorm.DB, tableName string, data map[string]interface{}) error
 	Update(db *gorm.DB, tableName string, data map[string]interface{}) error
 	Delete(db *gorm.DB, tableName string, data map[string]interface{}) error
@@ -40,37 +40,43 @@ func NewDBService(ioc di.Container) DBService {
 	}
 }
 
-func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchOption) ([]map[string]interface{}, error) {
-	tableName := option.Table
+func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]interface{}, error) {
+	var (
+		columns   string
+		query     *gorm.DB
+		tableName = option.Table
+	)
 
-	table, err := s.service.WithService().Table.Info(tableName)
-	if err != nil {
-		return nil, err
-	}
+	query = db.Table(tableName)
+	columns = "*"
 
-	query := db.Table(tableName)
-
-	columns := "*"
-	if table.IsAuth {
-		columnsArr, err := s.service.WithService().Table.Columns(tableName, false)
-
+	if tableName != "_log" {
+		table, err := s.service.WithService().Table.Info(tableName)
 		if err != nil {
 			return nil, err
 		}
 
-		columns = ""
+		if table.Auth {
+			columnsArr, err := s.service.WithService().Table.Columns(tableName, false)
 
-		for _, column := range columnsArr {
-			col := column["name"].(*interface{})
-			if *col == "password" || *col == "salt" {
-				continue
+			if err != nil {
+				return nil, err
 			}
 
-			if columns != "" {
-				columns = fmt.Sprintf("%s, %s", columns, *col)
-				continue
+			columns = ""
+
+			for _, column := range columnsArr {
+				col := column["name"].(*interface{})
+				if *col == "password" || *col == "salt" {
+					continue
+				}
+
+				if columns != "" {
+					columns = fmt.Sprintf("%s, %s", columns, *col)
+					continue
+				}
+				columns = fmt.Sprintf("%s", *col)
 			}
-			columns = fmt.Sprintf("%s", *col)
 		}
 	}
 
@@ -110,12 +116,12 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchOption) ([]map[string]in
 	}
 
 	var data []map[string]interface{}
-	err = query.Find(&data).Error
+	err := query.Find(&data).Error
 
 	return data, err
 }
 
-func (s *DBServiceImpl) Count(db *gorm.DB, option *FetchOption) (int64, error) {
+func (s *DBServiceImpl) Count(db *gorm.DB, option *FetchParams) (int64, error) {
 	tableName := option.Table
 	cacheKey := "count_" + tableName
 	if storedCache, ok := s.cache.Get(cacheKey); ok {
@@ -172,6 +178,9 @@ func (s *DBServiceImpl) Insert(db *gorm.DB, tableName string, data map[string]in
 		clause.Returning{Columns: []clause.Column{{Name: "id"}}},
 	).Create(&data).Error
 
+	cacheKey := "count_" + tableName
+	s.cache.Delete(cacheKey)
+
 	return err
 }
 
@@ -187,6 +196,9 @@ func (s *DBServiceImpl) Delete(db *gorm.DB, tableName string, data map[string]in
 	err := db.Table(tableName).
 		Where("id = ?", data["id"]).
 		Delete(&data).Error
+
+	cacheKey := "count_" + tableName
+	s.cache.Delete(cacheKey)
 
 	return err
 }

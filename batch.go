@@ -3,6 +3,7 @@ package main
 import (
 	"funcbase/config"
 	"funcbase/constants"
+	"funcbase/pkg/logger"
 	"funcbase/service"
 
 	"github.com/robfig/cron/v3"
@@ -34,6 +35,10 @@ func (b *Batch) startCron() {
 			b.services.Backup.Backup()
 		})
 	}
+
+	b.cron.AddFunc("0 */4 * * *", func() {
+		logger.DeleteOldLog()
+	})
 
 	go func() {
 		b.cron.Start()

@@ -49,8 +49,8 @@ const Backup = () => {
 
   return (
     <div className="flex flex-col w-full h-screen">
-      <div className="w-full h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Backup</h1>
+      <div className="w-full h-[45px] min-h-[45px] flex border-b-1">
+        <h1 className="text-xl font-semibold my-auto ml-5">Backup</h1>
       </div>
       <div className="flex flex-col items-center p-5 w-full">
         <Card className="max-w-2xl w-4/5" radius="sm">

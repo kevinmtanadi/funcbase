@@ -1,9 +1,11 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"funcbase/constants"
 	"funcbase/model"
+	"strings"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/sarulabs/di"
@@ -11,7 +13,7 @@ import (
 )
 
 type TableService interface {
-	Info(tableName string) (model.Tables, error)
+	Info(tableName string, params ...InfoParams) (model.Tables, error)
 	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
 }
 
@@ -29,19 +31,44 @@ func NewTableService(ioc di.Container) TableService {
 	}
 }
 
-func (s *TableServiceImpl) Info(tableName string) (model.Tables, error) {
-	cacheKey := "table_" + tableName
+type InfoParams struct {
+	Columns []string
+}
+
+func (s *TableServiceImpl) Info(tableName string, params ...InfoParams) (model.Tables, error) {
+
+	param := InfoParams{Columns: []string{"name", "auth", "system"}}
+	if len(params) > 0 {
+		param = params[0]
+	}
+
+	cacheKey := "table_" + strings.Join(param.Columns, ";") + tableName
 	if storedCache, ok := s.cache.Get(cacheKey); ok {
 		return storedCache.(model.Tables), nil
 	}
 
 	var table model.Tables
 	err := s.db.Model(&model.Tables{}).
-		Where("is_system = ?", false).
+		Select(param.Columns).
+		Where("system = ?", false).
 		Where("name = ?", tableName).
 		First(&table).Error
 	if err != nil {
 		return table, err
+	}
+
+	for _, col := range param.Columns {
+		if col == "indexes" {
+			index := []model.Index{}
+
+			fmt.Println(table.Indexes)
+			err = json.Unmarshal([]byte(table.Indexes), &index)
+			if err != nil {
+				return table, err
+			}
+
+			table.SystemIndex = index
+		}
 	}
 
 	s.cache.Set(cacheKey, table, cache.DefaultExpiration)
@@ -95,7 +122,7 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 	}
 
 	// If table is user type, prevent displaying authentication fields
-	if table.IsAuth {
+	if table.Auth {
 		var cleanedResult []map[string]interface{}
 		if fetchAuthColumn {
 			for _, row := range result {

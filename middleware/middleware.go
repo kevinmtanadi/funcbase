@@ -62,8 +62,10 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 
 					// valueType := reflect.TypeOf(claims["sub"])
 					userID, ok := claims["sub"].(float64)
-					if ok {
+					userRole, ok2 := claims["roles"].(string)
+					if ok && ok2 {
 						c.Set("user_id", int(userID))
+						c.Set("roles", userRole)
 						return next(c)
 					}
 
@@ -152,6 +154,10 @@ func LogRequest(jobChan chan logger.Log) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if !isAPICall(c.Request().URL.RequestURI()) {
+				return next(c)
+			}
+
+			if c.Request().Header.Get("X-MAIN-APP") == "true" {
 				return next(c)
 			}
 

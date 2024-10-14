@@ -80,7 +80,7 @@ func (c *Config) GetDBMaxLifetime() int {
 
 var (
 	config *Config
-	once sync.Once
+	once   sync.Once
 )
 
 func GetInstance() *Config {
@@ -110,7 +110,7 @@ func (c *Config) Load() error {
 			DBMaxOpenConnection: 10,
 			DBMaxIdleConnection: 5,
 			DBMaxLifetime:       2,
-			LogLifetime:         2,
+			LogLifetime:         168, // hours
 		}
 		config.Save()
 

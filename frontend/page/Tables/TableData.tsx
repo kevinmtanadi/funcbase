@@ -17,7 +17,6 @@ import {
   CardBody,
   Spinner,
   Input,
-  SortDescriptor,
 } from "@nextui-org/react";
 import {
   useInfiniteQuery,
@@ -48,7 +47,7 @@ import APIPreview from "./APIPreview";
 interface TableDataProps {
   table: {
     name: string;
-    is_auth: boolean;
+    auth: boolean;
   };
   resetTable: () => void;
 }
@@ -87,7 +86,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
       ) {
         const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
           params: {
-            fetch_auth_column: table.is_auth,
+            fetch_auth_column: table.auth,
           },
         });
         return res.data;
@@ -120,6 +119,8 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
     getNextPageParam: (lastPage) => {
       const pageSize = lastPage.page_size;
       const currentPage = lastPage.page;
+      if (!lastPage.data) return undefined;
+
       return lastPage.data.length === pageSize ? currentPage + 1 : undefined;
     },
   });
@@ -675,7 +676,7 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
       />
       <APIPreview
         table={table.name}
-        isAuth={table.is_auth}
+        isAuth={table.auth}
         isOpen={isPreviewOpen}
         onClose={onPreviewClose}
       />

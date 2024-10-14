@@ -39,7 +39,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
       ) {
         const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
           params: {
-            fetch_auth_column: table.is_auth,
+            fetch_auth_column: table.auth,
           },
         });
         return res.data;
@@ -181,7 +181,7 @@ const InsertDataModal = ({ isOpen, onClose, table }: InsertDataModalProps) => {
 
   const { mutateAsync } = useMutation({
     mutationFn: async (data: any) => {
-      if (table.is_auth) {
+      if (table.auth) {
         const cleanedData: any = {};
         Object.keys(data).forEach((key) => {
           if (

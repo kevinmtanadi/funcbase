@@ -26,7 +26,7 @@ const Function = () => {
   return (
     <div className="flex flex-col w-full h-screen">
       <div className="w-full h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Functions</h1>
+        <h1 className="text-xl font-semibold my-auto ml-5">Functions</h1>
       </div>
       <div className="flex grow">
         <div className="flex flex-col items-center bg-slate-100 px-[20px] min-w-[250px] w-[250px]">

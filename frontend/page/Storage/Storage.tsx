@@ -97,7 +97,7 @@ const Storage = () => {
   return (
     <div className="flex flex-col w-full h-screen">
       <div className="w-full min-h-[45px] h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Storage</h1>
+        <h1 className="text-xl font-semibold my-auto ml-5">Storage</h1>
       </div>
       <div className="px-5 grow py-5 overflow-y-scroll">
         <Input

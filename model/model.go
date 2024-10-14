@@ -20,10 +20,21 @@ func (a *Admin) TableName() string {
 	return "_admin"
 }
 
+type Index struct {
+	Name    string   `json:"name"`
+	Indexes []string `json:"indexes"`
+}
+
 type Tables struct {
-	Name     string `json:"name" gorm:"primaryKey"`
-	IsAuth   bool   `json:"is_auth" gorm:"column:is_auth"`
-	IsSystem bool   `json:"is_system" gorm:"column:is_system"`
+	Name        string  `json:"name" gorm:"primaryKey"`
+	Auth        bool    `json:"auth" gorm:"column:auth"`
+	System      bool    `json:"system" gorm:"column:system"`
+	Indexes     string  `json:"indexes" gorm:"column:indexes"`
+	SystemIndex []Index `json:"index" gorm:"-"`
+	// 0 = admin only 1 = user only 2 = public
+	// view | list | insert | update | delete
+	// default 00000
+	Access string `json:"access" gorm:"column:access;default:00000"`
 }
 
 func (t *Tables) TableName() string {
@@ -56,8 +67,8 @@ func Migrate(db *gorm.DB) error {
 	}
 
 	databases := []Tables{
-		{Name: "admin", IsAuth: true, IsSystem: true},
-		{Name: "query_history", IsAuth: false, IsSystem: true},
+		{Name: "admin", Auth: true, System: true},
+		{Name: "query_history", Auth: false, System: true},
 	}
 	err = db.Model(&Tables{}).Create(databases).Error
 	if err != nil {

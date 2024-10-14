@@ -29,7 +29,7 @@ func NewSQLiteClient(dbPath string, options ...SQLiteOption) (*gorm.DB, error) {
 	option := SQLiteOption{
 		DryRun:   false,
 		Migrate:  false,
-		LogMode:  logger.Silent,
+		LogMode:  logger.Info,
 		Optimize: false,
 	}
 	if len(options) > 0 {

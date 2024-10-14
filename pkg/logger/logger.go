@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"funcbase/config"
 	"funcbase/constants"
 	"sync"
 	"time"
@@ -49,6 +50,13 @@ func ConnectDB() *gorm.DB {
 	db.Exec("PRAGMA cache_size=2048")
 
 	return conn
+}
+
+func DeleteOldLog() {
+	db := GetInstance()
+	configs := config.GetInstance()
+
+	db.Delete(&Log{}, "created_at < ?", time.Now().Add(-time.Hour*time.Duration(configs.LogLifetime)))
 }
 
 type Log struct {

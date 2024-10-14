@@ -1,10 +1,11 @@
 import http from 'k6/http';
+import { sleep } from 'k6';
 
 export let options = {
     insecureSkipTLSVerify: true,
     noConnectionReuse: false,
-    vus: 100,
-    iterations: 10000
+    vus: 10,
+    iterations: 100
 };
 
 const url = "http://localhost:8080/api";
@@ -38,6 +39,8 @@ export default () => {
         'Content-Type': `application/json`,
         'X-API-KEY': '019039ff-f5be-7520-8ab8-bbcf248a6585',
     } })
+    
+    sleep(1);
 }
 
 /*

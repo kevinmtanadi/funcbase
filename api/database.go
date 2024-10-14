@@ -38,6 +38,8 @@ type DatabaseAPI interface {
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
+
+	Test(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -72,6 +74,19 @@ func (api *API) MainAPI() {
 	mainRouter.DELETE("/:table_name/delete_column", api.Database.DeleteColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 
+	mainRouter.GET("/test", api.Database.Test)
+
+}
+
+func (d *DatabaseAPIImpl) Test(c echo.Context) error {
+	info, err := d.service.Table.Info("asdasdsd", service.InfoParams{
+		Columns: []string{"indexes", "name"},
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, info)
 }
 
 type DBResult []map[string]interface{}
@@ -87,8 +102,8 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 	}
 
 	query := d.db.Model(&model.Tables{}).
-		Select("name, is_auth").
-		Where("is_system = ?", false).
+		Select("name", "auth").
+		Where("system = ?", false).
 		Order("name ASC")
 
 	if params.Search != "" {
@@ -144,21 +159,6 @@ type fetchRowsRes struct {
 	TotalData int64                    `json:"total_data"`
 }
 
-var sqlTerms = []string{"LIKE", "=", ">=", "<=", ">", "<", "!=", "AND", "OR", "NOT"}
-
-func isSQLTerm(term string) bool {
-	if strings.Contains(term, "(") || strings.Contains(term, ")") {
-		return true
-	}
-
-	for _, sqlTerm := range sqlTerms {
-		if strings.Contains(term, sqlTerm) {
-			return true
-		}
-	}
-	return false
-}
-
 func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	tableName := c.Param("table_name")
 	var res fetchRowsRes
@@ -180,7 +180,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 		params.Filter = strings.ReplaceAll(params.Filter, "$user.id", string(userID))
 	}
 
-	data, err := d.service.DB.Fetch(d.db, &service.FetchOption{
+	data, err := d.service.DB.Fetch(d.db, &service.FetchParams{
 		Table:  tableName,
 		Filter: params.Filter,
 		Order:  params.Sort,
@@ -196,7 +196,7 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	res.Data = data
 
 	if params.GetCount {
-		count, err := d.service.DB.Count(d.db, &service.FetchOption{
+		count, err := d.service.DB.Count(d.db, &service.FetchParams{
 			Table:  tableName,
 			Filter: params.Filter,
 		})
@@ -221,7 +221,6 @@ type field struct {
 	Name         string `json:"field_name"`
 	Nullable     bool   `json:"nullable"`
 	RelatedTable string `json:"related_table,omitempty"`
-	Indexed      bool   `json:"indexed"`
 	Unique       bool   `json:"unique"`
 }
 
@@ -245,10 +244,11 @@ func (f *field) convertTypeToSQLiteType() string {
 }
 
 type createTableReq struct {
-	TableName string  `json:"table_name"`
-	IDType    string  `json:"id_type"`
-	Fields    []field `json:"fields"`
-	Type      string  `json:"table_type"`
+	TableName string        `json:"table_name"`
+	IDType    string        `json:"id_type"`
+	Fields    []field       `json:"fields"`
+	Indexes   []model.Index `json:"indexes"`
+	Type      string        `json:"table_type"`
 }
 
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
@@ -280,7 +280,6 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 	foreignKeys := []string{}
 	uniques := []string{}
-	indexes := []string{}
 
 	for i := 0; i < len(params.Fields); i++ {
 		dtype := params.Fields[i].convertTypeToSQLiteType()
@@ -299,10 +298,6 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 
 		if !params.Fields[i].Nullable {
 			field += " NOT NULL"
-		}
-
-		if params.Fields[i].Indexed {
-			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].Name, params.TableName, params.Fields[i].Name))
 		}
 
 		if params.Fields[i].Unique {
@@ -334,8 +329,8 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		}
 
 		// add index
-		for _, index := range indexes {
-			err = d.db.Exec(index).Error
+		for _, index := range params.Indexes {
+			err = d.db.Exec(fmt.Sprintf("CREATE INDEX %s ON %s (%s)", index.Name, params.TableName, strings.Join(index.Indexes, ","))).Error
 			if err != nil {
 				return err
 			}
@@ -366,11 +361,18 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 				return err
 			}
 		}
+
+		indexJson, err := json.Marshal(params.Indexes)
+		if err != nil {
+			return err
+		}
+
 		err = d.db.Create(
 			&model.Tables{
-				Name:     params.TableName,
-				IsAuth:   isAuth,
-				IsSystem: false,
+				Name:    params.TableName,
+				Auth:    isAuth,
+				System:  false,
+				Indexes: string(indexJson),
 			}).
 			Error
 		if err != nil {
@@ -380,6 +382,7 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 		return nil
 	})
 	if err != nil {
+		d.db.Exec(fmt.Sprintf("DROP TABLE %s", params.TableName))
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -415,7 +418,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
-	if table.IsAuth {
+	if table.Auth {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": "Insertion to user type table can only be done through auth API",
 		})
@@ -823,10 +826,6 @@ func (d *DatabaseAPIImpl) AddColumn(c echo.Context) error {
 
 		if !params.Fields[i].Nullable {
 			field += " NOT NULL"
-		}
-
-		if params.Fields[i].Indexed {
-			indexes = append(indexes, fmt.Sprintf("CREATE INDEX idx_%s ON %s (%s)", params.Fields[i].Name, tableName, params.Fields[i].Name))
 		}
 
 		if params.Fields[i].Unique {

@@ -77,6 +77,7 @@ func ServeStaticUI(app *echo.Echo) {
 	app.FileFS("/", "index.html", distIndexHtml)
 	app.FileFS("/signup", "index.html", distIndexHtml)
 	app.FileFS("/signin", "index.html", distIndexHtml)
+	app.FileFS("/logs", "index.html", distIndexHtml)
 	app.FileFS("/sql", "index.html", distIndexHtml)
 	app.FileFS("/setting", "index.html", distIndexHtml)
 	app.FileFS("/admin", "index.html", distIndexHtml)

@@ -10,12 +10,18 @@ import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "./pkg/axiosInstance";
 import { BiWrench } from "react-icons/bi";
 import { AiOutlineTable } from "react-icons/ai";
+import { GoGraph } from "react-icons/go";
 
 const tabs = [
   {
     name: "Database",
     path: "/",
     icon: AiOutlineTable,
+  },
+  {
+    name: "Logs",
+    path: "/logs",
+    icon: GoGraph,
   },
   {
     name: "SQL Editor",
@@ -58,6 +64,7 @@ function App() {
     },
   });
 
+  const isAuth = useIsAuthenticated();
   if (isLoading || !admin) {
     return <>Loading...</>;
   }
@@ -66,7 +73,6 @@ function App() {
     return <Navigate to="/signup" />;
   }
 
-  const isAuth = useIsAuthenticated();
   if (!isAuth) {
     return <Navigate to="/signin" />;
   }

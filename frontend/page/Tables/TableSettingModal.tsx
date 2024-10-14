@@ -40,6 +40,7 @@ import GeneralField from "../../components/Fields/GeneralField";
 import RelationField from "../../components/Fields/RelationField";
 import { CgKey } from "react-icons/cg";
 import DeleteTableConfirmModal from "./DeleteTableConfirmModal";
+import { generateRandomString } from "../../utils/utils";
 
 interface TableSettingModalProps {
   isOpen: boolean;
@@ -230,9 +231,9 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
     setFields([
       ...fields,
       {
+        id: generateRandomString(32),
         field_type: type,
         field_name: "",
-        indexed: false,
         nullable: true,
         unique: false,
       },
@@ -373,7 +374,6 @@ const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
             field_type: field.field_type,
             nullable: field.nullable,
             related_table: field.related_table,
-            indexed: field.indexed,
             unique: field.unique,
           };
         }),

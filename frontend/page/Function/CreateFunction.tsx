@@ -109,7 +109,7 @@ const CreateFunction = () => {
   return (
     <div className="flex flex-col items-center w-full overflow-y-scroll max-h-screen">
       <div className="w-full min-h-[45px] h-[45px] flex border-b-1">
-        <h1 className="text-xl font-bold my-auto ml-5">Functions</h1>
+        <h1 className="text-xl font-semibold my-auto ml-5">Functions</h1>
       </div>
       <div className="flex flex-col w-full max-w-2xl">
         <div className="mx-5 mt-5 flex flex-col grow">

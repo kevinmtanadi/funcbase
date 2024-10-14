@@ -95,7 +95,7 @@ const SelectRelationModal = ({
       if (table !== undefined && table.name !== "" && table !== undefined) {
         const res = await axiosInstance.get(`/api/main/${table.name}/columns`, {
           params: {
-            fetch_auth_column: table.is_auth,
+            fetch_auth_column: table.auth,
           },
         });
         return res.data;
