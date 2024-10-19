@@ -20,7 +20,6 @@ const DatetimeInput = ({
   isRequired,
   isDisabled,
 }: DateInputProps) => {
-  console.log(value);
   const [date, setDate] = useState<DateValue | undefined>(
     value || value === "" ? parseDateTime(value) : undefined
   );

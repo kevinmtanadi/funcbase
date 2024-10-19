@@ -163,7 +163,7 @@ const FetchSinglePreview = ({ table }: PreviewProps) => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !columns) {
     return (
       <div className="flex flex-col items-center justify-center">
         <Spinner size="lg" />
@@ -260,7 +260,7 @@ const FetchPreview = ({ table }: PreviewProps) => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !columns) {
     return (
       <div className="flex flex-col items-center justify-center">
         <Spinner size="lg" />
@@ -398,13 +398,13 @@ const FetchPreview = ({ table }: PreviewProps) => {
                     You can also use stored JWT token to filter for logged user
                     by using the value{" "}
                     <span className="bg-slate-200 font-semibold px-1 py-0.5 rounded-md">
-                      $user.id
+                      @user.id
                     </span>
                     . It will be automatically converted to the user's{" "}
                     <span className="font-semibold">id</span>
                   </p>
                   <div className="w-full bg-slate-200 px-3 py-2 rounded-md">
-                    ?filter=users="$user.id"
+                    ?filter=users="@user.id"
                   </div>
                 </div>
               </TableCell>
@@ -456,7 +456,7 @@ const InsertPreview = ({ table }: PreviewProps) => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !columns) {
     return (
       <div className="flex flex-col items-center justify-center">
         <Spinner size="lg" />
@@ -595,7 +595,7 @@ const UpdatePreview = ({ table }: PreviewProps) => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !columns) {
     return (
       <div className="flex flex-col items-center justify-center">
         <Spinner size="lg" />
@@ -894,7 +894,7 @@ const RegisterPreview = ({ table }: PreviewProps) => {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || !columns) {
     return (
       <div className="flex flex-col items-center justify-center">
         <Spinner size="lg" />

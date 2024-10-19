@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -26,15 +27,16 @@ type Index struct {
 }
 
 type Tables struct {
-	Name        string  `json:"name" gorm:"primaryKey"`
-	Auth        bool    `json:"auth" gorm:"column:auth"`
-	System      bool    `json:"system" gorm:"column:system"`
-	Indexes     string  `json:"indexes" gorm:"column:indexes"`
-	SystemIndex []Index `json:"index" gorm:"-"`
-	// 0 = admin only 1 = user only 2 = public
-	// view | list | insert | update | delete
-	// default 00000
-	Access string `json:"access" gorm:"column:access;default:00000"`
+	Name        string  `json:"name,omitempty" gorm:"primaryKey"`
+	Auth        bool    `json:"auth,omitempty" gorm:"column:auth"`
+	System      bool    `json:"system,omitempty" gorm:"column:system"`
+	Indexes     string  `json:"indexes,omitempty" gorm:"column:indexes"`
+	SystemIndex []Index `json:"index,omitempty" gorm:"-"`
+	ViewRule    string  `json:"view_rule,omitempty" gorm:"column:view_rule;default:ADMIN_ONLY"`
+	ReadRule    string  `json:"read_rule,omitempty" gorm:"column:read_rule;default:ADMIN_ONLY"`
+	InsertRule  string  `json:"insert_rule,omitempty" gorm:"column:insert_rule;default:ADMIN_ONLY"`
+	UpdateRule  string  `json:"update_rule,omitempty" gorm:"column:update_rule;default:ADMIN_ONLY"`
+	DeleteRule  string  `json:"delete_rule,omitempty" gorm:"column:delete_rule;default:ADMIN_ONLY"`
 }
 
 func (t *Tables) TableName() string {
@@ -67,8 +69,9 @@ func Migrate(db *gorm.DB) error {
 	}
 
 	databases := []Tables{
-		{Name: "admin", Auth: true, System: true},
-		{Name: "query_history", Auth: false, System: true},
+		{Name: "_admin", Auth: true, System: true},
+		{Name: "_queryHistory", Auth: false, System: true},
+		{Name: "_function", Auth: false, System: true},
 	}
 	err = db.Model(&Tables{}).Create(databases).Error
 	if err != nil {
@@ -88,4 +91,38 @@ type Column struct {
 	PK        int    `json:"pk"`
 	Type      string `json:"type"`
 	Reference string `json:"reference,omitempty"`
+}
+
+type Field struct {
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Nullable  bool   `json:"nullable"`
+	Reference string `json:"reference,omitempty"`
+	Unique    bool   `json:"unique"`
+}
+
+func (f *Field) ConvertTypeToSQLiteType() string {
+	switch strings.ToLower(f.Type) {
+	case "text", "string":
+		return "TEXT"
+	case "number", "real":
+		return "REAL"
+	case "boolean":
+		return "BOOLEAN"
+	case "datetime", "timestamp":
+		return "DATETIME"
+	case "file", "blob":
+		return "BLOB"
+	case "relation":
+		return "RELATION"
+	default:
+		return ""
+	}
+}
+
+type CreateTable struct {
+	Name    string  `json:"table_name"`
+	Fields  []Field `json:"fields"`
+	Indexes []Index `json:"indexes"`
+	Type    string  `json:"table_type"`
 }

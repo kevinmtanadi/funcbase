@@ -17,7 +17,6 @@ import Setting from "./page/Setting/Setting.tsx";
 import Function from "./page/Function/Function.tsx";
 import CreateFunction from "./page/Function/CreateFunction.tsx";
 import Storage from "./page/Storage/Storage.tsx";
-import Test from "./page/Test.tsx";
 import Backup from "./page/Backup/Backup.tsx";
 import Logger from "./page/Logger/Logger.tsx";
 
@@ -107,10 +106,6 @@ const router = createBrowserRouter([
   {
     path: "/signup",
     element: <InitialRegister />,
-  },
-  {
-    path: "/test",
-    element: <Test />,
   },
 ]);
 const queryClient = new QueryClient({

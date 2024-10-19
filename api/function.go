@@ -173,20 +173,20 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 	}
 
 	savedData := map[string]interface{}{}
-	err = f.db.Transaction(func(db *gorm.DB) error {
+	err = f.db.Transaction(func(tx *gorm.DB) error {
 		for _, fun := range functions {
 			switch fun.Action {
 			case "insert":
 				if data, ok := caller.Data[fun.Name].([]interface{}); ok {
 					bindedInput := BindMultipleInput(fun.Values, data, savedData, userID)
 
-					err := db.Table(fun.Table).Create(bindedInput).Error
+					err := tx.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
 				} else if data, ok := caller.Data[fun.Name].(map[string]interface{}); ok {
 					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
-					err := db.Table(fun.Table).Clauses(clause.Returning{
+					err := tx.Table(fun.Table).Clauses(clause.Returning{
 						Columns: []clause.Column{
 							{
 								Name: "id",
@@ -208,7 +208,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 						}
 
 						bindedInput := BindSingularInput(fun.Values, input, savedData, userID)
-						table := db.Table(fun.Table)
+						table := tx.Table(fun.Table)
 						for k, v := range filter {
 							table = table.Where(k, v)
 						}
@@ -223,7 +223,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 					}
 
 					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
-					table := db.Table(fun.Table)
+					table := tx.Table(fun.Table)
 					for k, v := range filter {
 						table = table.Where(k, v)
 					}
@@ -249,7 +249,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 					WHERE %s
 				`
 
-				err := db.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
+				err := tx.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
 				if err != nil {
 					return err
 				}
@@ -274,7 +274,7 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 					query = query + fmt.Sprintf("WHERE %s", filter)
 				}
 
-				err := db.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
+				err := tx.Exec(fmt.Sprintf(query, fun.Table, filter)).Error
 				if err != nil {
 					return err
 				}
@@ -291,14 +291,6 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, savedData)
-}
-
-func Where(query *gorm.DB, key string, value interface{}) *gorm.DB {
-	return query.Where(fmt.Sprintf("%s = ?", key), value)
-}
-
-func Or(query *gorm.DB, key string, value interface{}) *gorm.DB {
-	return query.Or(fmt.Sprintf("%s = ?", key), value)
 }
 
 // parseCalculation

@@ -32,7 +32,6 @@ const FunctionAPIPreview = ({ isOpen, onClose, funcName }: APIPreviewProps) => {
       const temp: functionTemplate = {};
       Object.keys(func.functions[i].values).forEach((key) => {
         const dtype = func.functions[i].values[key];
-        console.log(dtype);
         temp[key] = generateDummyResult(dtype);
       });
       result[func.functions[i].name] = temp;

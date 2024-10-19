@@ -8,7 +8,8 @@ import {
   ModalHeader,
 } from "@nextui-org/react";
 import { Field } from "./CreateTableModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { generateRandomString } from "../../utils/utils";
 
 interface Props {
   isOpen: boolean;
@@ -19,31 +20,34 @@ interface Props {
 
 export interface Index {
   name: string;
-  fields: string[];
+  indexes: string[];
 }
 
 const CreateIndexModal = ({ isOpen, onClose, fields, onAdd }: Props) => {
   const [index, setIndex] = useState<Index>({
-    name: "",
-    fields: [],
+    name: "idx_" + generateRandomString(12),
+    indexes: [],
   });
 
+  useEffect(() => {
+    setIndex({
+      name: "idx_" + generateRandomString(12),
+      indexes: [],
+    });
+  }, [isOpen]);
+
   const addOrRemoveIndex = (field: Field) => {
-    if (index.fields.includes(field.id)) {
+    if (index.indexes.includes(field.id)) {
       setIndex({
         ...index,
-        fields: index.fields.filter((f) => f !== field.id),
+        indexes: index.indexes.filter((f) => f !== field.id),
       });
     } else {
-      setIndex({ ...index, fields: [...index.fields, field.id] });
+      setIndex({ ...index, indexes: [...index.indexes, field.id] });
     }
   };
 
   const handleClose = () => {
-    setIndex({
-      name: "",
-      fields: [],
-    });
     onClose();
   };
 
@@ -68,11 +72,11 @@ const CreateIndexModal = ({ isOpen, onClose, fields, onAdd }: Props) => {
                 key={i}
                 variant="bordered"
                 endContent={
-                  index.fields.includes(field.id) ? <span>✓</span> : ""
+                  index.indexes.includes(field.id) ? <span>✓</span> : ""
                 }
                 onClick={() => addOrRemoveIndex(field)}
               >
-                {field.field_name}
+                {field.name}
               </Button>
             ))}
           </div>
@@ -84,7 +88,7 @@ const CreateIndexModal = ({ isOpen, onClose, fields, onAdd }: Props) => {
               onAdd(index);
               handleClose();
             }}
-            isDisabled={index.name === "" || index.fields.length === 0}
+            isDisabled={index.name === "" || index.indexes.length === 0}
           >
             Create
           </Button>

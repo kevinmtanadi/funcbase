@@ -10,13 +10,10 @@ import {
   SelectItem,
   Button,
   ModalFooter,
-  Accordion,
-  AccordionItem,
   useDisclosure,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { datatypes } from "../../data/datatypes";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import GeneralField from "../../components/Fields/GeneralField";
 import { RiText } from "react-icons/ri";
@@ -29,6 +26,7 @@ import axiosInstance from "../../pkg/axiosInstance";
 import CreateIndexModal, { Index } from "./CreateIndexModal";
 import { generateRandomString } from "../../utils/utils";
 import UpdateIndexModal from "./UpdateIndexModal";
+import NewFieldButton from "../../components/Fields/NewFieldButton";
 
 interface CreateTableModalProps {
   isOpen: boolean;
@@ -37,11 +35,11 @@ interface CreateTableModalProps {
 
 export interface Field {
   id: string;
-  field_type: string;
-  field_name: string;
+  type: string;
+  name: string;
   nullable: boolean;
   unique: boolean;
-  related_table?: string;
+  reference?: string;
 }
 
 export interface Relation {
@@ -57,6 +55,100 @@ export interface CreateTable {
   relations: Relation[];
 }
 
+export const renderField = (
+  field: Field,
+  index: number,
+  onChange: (field: Field) => void,
+  onDelete: (idx: number) => void,
+  isDisabled?: boolean
+) => {
+  if (!field) return null;
+  if (
+    field.name === "id" ||
+    field.name === "created_at" ||
+    field.name === "updated_at"
+  )
+    return null;
+  switch (field.type.toLowerCase()) {
+    case "text":
+    case "string":
+      return (
+        <GeneralField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<RiText />}
+          isDisabled={isDisabled}
+        />
+      );
+    case "number":
+    case "integer":
+    case "real":
+      return (
+        <GeneralField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<HiOutlineHashtag />}
+          isDisabled={isDisabled}
+        />
+      );
+    case "datetime":
+    case "timestamp":
+      return (
+        <GeneralField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<FaRegCalendar />}
+          isDisabled={isDisabled}
+        />
+      );
+    case "boolean":
+      return (
+        <GeneralField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<RxComponentBoolean />}
+          isDisabled={isDisabled}
+        />
+      );
+    case "relation":
+      return (
+        <RelationField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<TbCirclesRelation />}
+        />
+      );
+    case "file":
+      return (
+        <GeneralField
+          key={index}
+          onDelete={onDelete}
+          onChange={onChange}
+          field={field}
+          idx={index}
+          icon={<FaRegFile />}
+          isDisabled={isDisabled}
+        />
+      );
+    default:
+  }
+};
+
 const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
   const [table, setTable] = useState<CreateTable>({
     table_name: "",
@@ -64,15 +156,15 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     fields: [
       {
         id: "created_at",
-        field_type: "timestamp",
-        field_name: "created_at",
+        type: "timestamp",
+        name: "created_at",
         nullable: false,
         unique: false,
       },
       {
         id: "updated_at",
-        field_type: "timestamp",
-        field_name: "updated_at",
+        type: "timestamp",
+        name: "updated_at",
         nullable: false,
         unique: false,
       },
@@ -88,8 +180,8 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
         ...table.fields,
         {
           id: generateRandomString(32),
-          field_type: type,
-          field_name: "",
+          type: type,
+          name: "",
           nullable: true,
           unique: false,
         },
@@ -105,15 +197,15 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
       fields: [
         {
           id: "created_at",
-          field_type: "timestamp",
-          field_name: "created_at",
+          type: "temp",
+          name: "created_at",
           nullable: false,
           unique: false,
         },
         {
           id: "updated_at",
-          field_type: "timestamp",
-          field_name: "updated_at",
+          type: "temp",
+          name: "updated_at",
           nullable: false,
           unique: false,
         },
@@ -131,16 +223,15 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
       return axiosInstance.post("/api/main/table/create", {
         table_name: table.table_name,
         fields: table.fields.map((field) => {
-          if (field.field_type === "relation" && !field.related_table) return;
-          if (field.field_name === "") return;
-          if (["id", "created_at", "updated_at"].includes(field.field_name))
-            return;
+          if (field.type === "relation" && !field.reference) return;
+          if (field.name === "") return;
+          if (["id", "created_at", "updated_at"].includes(field.name)) return;
 
           return {
-            field_name: field.field_name,
-            field_type: field.field_type,
+            name: field.name,
+            type: field.type,
             nullable: field.nullable,
-            related_table: field.related_table,
+            reference: field.reference,
             unique: field.unique,
           };
         }),
@@ -148,13 +239,11 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
           if (index.name === "")
             return toast.error("Index name cannot be empty");
           let indexesField = [];
-          for (const field of index.fields) {
+          for (const field of index.indexes) {
             if (field === "created_at" || field === "updated_at") {
               indexesField.push(field);
             } else {
-              indexesField.push(
-                table.fields.find((f) => f.id === field)?.field_name
-              );
+              indexesField.push(table.fields.find((f) => f.id === field)?.name);
             }
           }
 
@@ -190,132 +279,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     }));
   };
 
-  const renderField = (field: Field, index: number) => {
-    switch (field.field_type) {
-      case "text":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<RiText />}
-          />
-        );
-      case "number":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<HiOutlineHashtag />}
-          />
-        );
-      case "datetime":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<FaRegCalendar />}
-          />
-        );
-      case "boolean":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<RxComponentBoolean />}
-          />
-        );
-      case "relation":
-        return (
-          <RelationField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<TbCirclesRelation />}
-          />
-        );
-      case "file":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setTable({
-                ...table,
-                fields: [
-                  ...table.fields.slice(0, index),
-                  field,
-                  ...table.fields.slice(index + 1),
-                ],
-              })
-            }
-            field={field}
-            idx={index}
-            icon={<FaRegFile />}
-          />
-        );
-      default:
-    }
-  };
-
   const { data: tables, isLoading } = useQuery<{ name: string }[]>({
     queryKey: ["tables"],
     queryFn: async () => {
@@ -340,135 +303,38 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     onUpIndexOpen();
   };
 
-  const renderTableInput = () => {
-    switch (table.table_type) {
-      case "general":
-        return (
-          <div className="flex flex-col gap-4">
-            <Input
-              value={table.table_name}
-              onValueChange={(value) =>
-                setTable({ ...table, table_name: value })
-              }
-              variant="bordered"
-              classNames={{
-                inputWrapper: "rounded-md",
-                label: "text-md font-semibold",
-              }}
-              size="md"
-              placeholder='eg. "products"'
-              fullWidth
-              labelPlacement="inside"
-              label="Table name"
-              type="text"
-            />
-            <Divider />
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold">Fields</p>
-              <p className="text-sm">
-                Automatically created fields:{" "}
+  const TableInput = ({ type }: any) => {
+    return (
+      <div className="flex flex-col gap-4">
+        <Input
+          value={table.table_name}
+          onValueChange={(value) => setTable({ ...table, table_name: value })}
+          variant="bordered"
+          classNames={{
+            inputWrapper: "rounded-md",
+            label: "text-md font-semibold",
+          }}
+          size="md"
+          placeholder='eg. "products"'
+          fullWidth
+          labelPlacement="inside"
+          label="Table name"
+          type="text"
+        />
+        <Divider />
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">Fields</p>
+          <p className="text-sm">
+            <span>Automatically created fields: </span>
+            {type === "general" ? (
+              <>
                 <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">created_at</Code>
                 ,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
-              </p>
-            </div>
-
-            <Accordion className="rounded-md" variant="bordered">
-              <AccordionItem
-                classNames={{
-                  title: "w-full text-center text-md font-semibold",
-                  trigger: "py-3 rounded-none",
-                }}
-                className="text-center font-semibold rounded-none"
-                key="1"
-                title="Add new field"
-              >
-                <Divider className="" />
-                <div className="grid grid-cols-3 w-full gap-2 mt-3">
-                  {datatypes.map((dtype, idx) =>
-                    dtype.dtype === "RELATION" ? (
-                      <Button
-                        key={idx}
-                        isDisabled={!tables || tables.length === 0}
-                        isLoading={isLoading}
-                        startContent={dtype.icon}
-                        onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-md"
-                      >
-                        {dtype.label}
-                      </Button>
-                    ) : (
-                      <Button
-                        key={idx}
-                        startContent={dtype.icon}
-                        onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-md"
-                      >
-                        {dtype.label}
-                      </Button>
-                    )
-                  )}
-                </div>
-              </AccordionItem>
-            </Accordion>
-            <div className="flex flex-col gap-4">
-              {table.fields.map((field, index) => renderField(field, index))}
-            </div>
-            <Divider />
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold">Indexes</p>
-            </div>
-            <div className="flex gap-2">
-              {table.indexes.map((index, idx) => (
-                <Button
-                  className="rounded-md border-slate-950"
-                  variant="bordered"
-                  key={idx}
-                  onClick={() => openUpdateModal(idx)}
-                >
-                  {index.fields
-                    .map((field) => {
-                      return table.fields.find((f) => f.id === field)
-                        ?.field_name;
-                    })
-                    .join(", ")}
-                </Button>
-              ))}
-              <Button
-                className="bg-slate-950 text-white rounded-md"
-                onClick={onIndexOpen}
-              >
-                Create Index
-              </Button>
-            </div>
-          </div>
-        );
-      case "users":
-        return (
-          <div className="flex flex-col gap-4">
-            <Input
-              value={table.table_name}
-              onValueChange={(value) =>
-                setTable({ ...table, table_name: value })
-              }
-              variant="bordered"
-              classNames={{
-                inputWrapper: "rounded-md",
-                label: "text-md font-semibold",
-              }}
-              size="md"
-              placeholder='eg. "users"'
-              fullWidth
-              labelPlacement="inside"
-              label="Table name"
-              type="text"
-            />
-            <Divider />
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold">Fields</p>
-              <p className="text-sm">
-                Automatically created fields:{" "}
+              </>
+            ) : (
+              <>
                 <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">email</Code>,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">password</Code>,{" "}
@@ -476,52 +342,73 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                 <Code className="px-2 py-0 text-xs rounded-md">created_at</Code>
                 ,{" "}
                 <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
-              </p>
-            </div>
-
-            <Divider />
-            <Accordion className="rounded-md" variant="bordered">
-              <AccordionItem
-                classNames={{
-                  title: "w-full text-center text-md font-semibold",
-                  trigger: "py-3 rounded-none",
-                }}
-                className="text-center font-semibold rounded-none"
-                key="1"
-                title="Add new field"
-              >
-                <Divider className="" />
-                <div className="grid grid-cols-3 w-full gap-2 mt-3">
-                  {datatypes.map((dtype) =>
-                    dtype.dtype === "RELATION" ? (
-                      <Button
-                        isDisabled={!tables || tables.length === 0}
-                        isLoading={isLoading}
-                        startContent={dtype.icon}
-                        onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-tl-md"
-                      >
-                        {dtype.label}
-                      </Button>
-                    ) : (
-                      <Button
-                        startContent={dtype.icon}
-                        onClick={() => addNewField(dtype.value)}
-                        className="hover:bg-slate-200 bg-transparent rounded-tl-md"
-                      >
-                        {dtype.label}
-                      </Button>
-                    )
-                  )}
-                </div>
-              </AccordionItem>
-            </Accordion>
-            <div className="flex flex-col gap-4">
-              {table.fields.map((field, index) => renderField(field, index))}
-            </div>
-          </div>
-        );
-    }
+              </>
+            )}
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
+          {table.fields.map((field, index) =>
+            renderField(
+              field,
+              index,
+              (field) => {
+                setTable({
+                  ...table,
+                  fields: [
+                    ...table.fields.slice(0, index),
+                    field,
+                    ...table.fields.slice(index + 1),
+                  ],
+                });
+              },
+              () => deleteField(index)
+            )
+          )}
+        </div>
+        <NewFieldButton
+          onAdd={addNewField}
+          isDisabled={!tables || tables.length === 0}
+          isLoading={isLoading}
+        />
+        <Divider />
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">Indexes</p>
+          <p className="text-sm text-blue-700">
+            Index significantly improves read performance, but increases storage
+            overhead and reduce the efficiency of write operations. It's
+            recommended to only use index on fields that are frequently used to
+            filter data.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {table.indexes.map((index, idx) => (
+            <Button
+              className="rounded-md border-slate-950 h-[45px]"
+              variant="bordered"
+              key={idx}
+              onClick={() => openUpdateModal(idx)}
+            >
+              <div className="text-xs flex flex-col text-start">
+                <p className="font-semibold">{index.name}</p>
+                <p>
+                  {index.indexes
+                    ?.map((i: string) => {
+                      return table.fields.find((c: any) => c.id === i)?.name;
+                    })
+                    .join(", ")}
+                </p>
+              </div>
+            </Button>
+          ))}
+          <Button
+            className="bg-slate-950 text-white rounded-md h-[45px]"
+            onClick={onIndexOpen}
+          >
+            Create Index
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -568,7 +455,7 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                     </SelectItem>
                   </Select>
                 </div>
-                {renderTableInput()}
+                <TableInput type={table.table_type} />
               </ModalBody>
               <Divider />
               <ModalFooter>
@@ -611,6 +498,15 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
             indexes: [
               ...table.indexes.slice(0, idx),
               index,
+              ...table.indexes.slice(idx + 1),
+            ],
+          });
+        }}
+        onDelete={(idx: number) => {
+          setTable({
+            ...table,
+            indexes: [
+              ...table.indexes.slice(0, idx),
               ...table.indexes.slice(idx + 1),
             ],
           });

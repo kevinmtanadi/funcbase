@@ -165,7 +165,7 @@ const FunctionInsert = ({ func }: FunctionInsertProps) => {
       <p>Required Columns</p>
       <div className="flex gap-1 items-center">
         {Object.entries(func.values)
-          .filter((key) => key[1] !== "$user.id")
+          .filter((key) => key[1] !== "@user.id")
           .map((key) => (
             <Chip color="primary" className="px-2" key={key[0]}>
               {key[0]}

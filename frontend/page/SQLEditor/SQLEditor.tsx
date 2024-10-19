@@ -78,7 +78,6 @@ const SQLEditor = () => {
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key === "Enter") {
-        console.log(query);
         mutate(query);
       }
     };

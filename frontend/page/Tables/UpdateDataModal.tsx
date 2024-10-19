@@ -129,18 +129,6 @@ const UpdateDataModal = ({
               formik.setFieldValue(column.name, value.toString());
             }}
           />
-          // <DatetimeInputV2
-          //   id={column.name}
-          //   name={column.name}
-          //   key={column.name}
-          //   label={column.name}
-          //   value={formik.values[column.name]}
-          //   onChange={(value: Date | null) => {
-          //     if (value !== null) {
-          //       formik.setFieldValue(column.name, value);
-          //     }
-          //   }}
-          // />
         );
       case "RELATION":
         return (

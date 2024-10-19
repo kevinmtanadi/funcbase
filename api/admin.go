@@ -147,7 +147,7 @@ func (h *AdminAPIImpl) FetchAdminList(c echo.Context) error {
 	}
 
 	columns := []model.Column{}
-	err = h.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", "admin")).
+	err = h.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", (&model.Admin{}).TableName())).
 		Scan(&columns).
 		Error
 	if err != nil {
@@ -164,7 +164,25 @@ func (h *AdminAPIImpl) FetchAdminList(c echo.Context) error {
 			cleanedColumns = append(cleanedColumns, column)
 		}
 	}
+	for _, column := range columns {
+		if column.Name != "password" && column.Name != "salt" {
+			cleanedColumns = append(cleanedColumns, column)
+		}
+	}
 
+	// columns, err := h.service.Table.Columns((&model.Admin{}).TableName(), false)
+	// if err != nil {
+	// 	if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 		return c.JSON(http.StatusOK, responses.APIResponse{
+	// 			Data: map[string]interface{}{
+	// 				"rows":    admins,
+	// 				"columns": columns,
+	// 			},
+	// 			Message: "success",
+	// 		})
+	// 	}
+	// 	return c.JSON(http.StatusInternalServerError, responses.NewResponse(nil, "Error when fetching admin list", err.Error()))
+	// }
 	return c.JSON(http.StatusOK, responses.APIResponse{
 		Data: map[string]interface{}{
 			"rows":    admins,

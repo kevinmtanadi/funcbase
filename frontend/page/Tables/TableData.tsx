@@ -388,7 +388,6 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
 
   useEffect(() => {
     if (sortDescriptor.column && sortDescriptor.direction) {
-      console.log(sortDescriptor);
       setParams({
         ...params,
         sort: `${sortDescriptor.column} ${sortDescriptor.direction}`,

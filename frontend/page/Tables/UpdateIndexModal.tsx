@@ -9,6 +9,7 @@ import {
 } from "@nextui-org/react";
 import { Field } from "./CreateTableModal";
 import { useState } from "react";
+import { Index } from "./CreateIndexModal";
 
 interface Props {
   isOpen: boolean;
@@ -17,11 +18,7 @@ interface Props {
   idx: number;
   index: Index;
   onUpdate: (idx: number, index: Index) => void;
-}
-
-export interface Index {
-  name: string;
-  fields: string[];
+  onDelete: (idx: number) => void;
 }
 
 const UpdateIndexModal = ({
@@ -31,25 +28,26 @@ const UpdateIndexModal = ({
   idx,
   index,
   onUpdate,
+  onDelete,
 }: Props) => {
   if (!index) return;
 
   const [tempIndex, setTempIndex] = useState<Index>(index);
   const addOrRemoveIndex = (field: Field) => {
-    if (tempIndex.fields.includes(field.id)) {
+    if (tempIndex.indexes.includes(field.id)) {
       setTempIndex({
         ...tempIndex,
-        fields: tempIndex.fields.filter((f) => f !== field.id),
+        indexes: tempIndex.indexes.filter((f) => f !== field.id),
       });
     } else {
-      setTempIndex({ ...tempIndex, fields: [...tempIndex.fields, field.id] });
+      setTempIndex({ ...tempIndex, indexes: [...tempIndex.indexes, field.id] });
     }
   };
 
   return (
     <Modal id="create-idx" size="md" isOpen={isOpen} onClose={onClose}>
       <ModalContent>
-        <ModalHeader>Add Index</ModalHeader>
+        <ModalHeader>Update Index</ModalHeader>
         <ModalBody>
           <Input
             label="Index Name"
@@ -62,25 +60,36 @@ const UpdateIndexModal = ({
                 key={i}
                 variant="bordered"
                 endContent={
-                  tempIndex.fields.includes(field.id) ? <span>✓</span> : ""
+                  tempIndex.indexes.includes(field.id) ? <span>✓</span> : ""
                 }
                 onClick={() => addOrRemoveIndex(field)}
               >
-                {field.field_name}
+                {field.name}
               </Button>
             ))}
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button
-            className="rounded-md bg-slate-950 text-white"
-            onClick={() => {
-              onUpdate(idx, tempIndex);
-              onClose();
-            }}
-          >
-            {idx > 0 ? "Update" : "Create"}
-          </Button>
+          <div className="w-full flex justify-between">
+            <Button
+              className="rounded-md bg-red-500 text-white"
+              onClick={() => {
+                onDelete(idx);
+                onClose();
+              }}
+            >
+              Delete
+            </Button>
+            <Button
+              className="rounded-md bg-slate-950 text-white"
+              onClick={() => {
+                onUpdate(idx, tempIndex);
+                onClose();
+              }}
+            >
+              Update
+            </Button>
+          </div>
         </ModalFooter>
       </ModalContent>
     </Modal>

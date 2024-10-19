@@ -49,6 +49,8 @@ func ConnectDB() *gorm.DB {
 	db.Exec("PRAGMA journal_size_limit=4194304")
 	db.Exec("PRAGMA cache_size=2048")
 
+	conn.AutoMigrate(&Log{})
+
 	return conn
 }
 

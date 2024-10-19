@@ -158,7 +158,6 @@ const SelectRelationModal = ({
           const date = new Date(cellValue);
           const dateString = formatDate(date.toISOString(), "dd-mm-yyyy");
           const timeString = formatDate(date.toISOString(), "HH:MM:SS");
-          console.log(cellValue);
           return (
             <div className="flex flex-col">
               <p>{dateString}</p>

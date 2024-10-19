@@ -22,24 +22,21 @@ import (
 )
 
 type DatabaseAPI interface {
-	FetchAllTables(c echo.Context) error
-	FetchTableColumns(c echo.Context) error
-	FetchRows(c echo.Context) error
-
 	CreateTable(c echo.Context) error
-	FetchDataByID(c echo.Context) error
-	InsertData(c echo.Context) error
-	UpdateData(c echo.Context) error
-	DeleteData(c echo.Context) error
+	FetchAllTables(c echo.Context) error
+	FetchTableInfo(c echo.Context) error
+	FetchTableColumns(c echo.Context) error
+	UpdateTable(c echo.Context) error
 	DeleteTable(c echo.Context) error
-	AlterColumn(c echo.Context) error
-	AddColumn(c echo.Context) error
-	DeleteColumn(c echo.Context) error
+
+	View(c echo.Context) error
+	List(c echo.Context) error
+	Insert(c echo.Context) error
+	Update(c echo.Context) error
+	Delete(c echo.Context) error
 
 	RunQuery(c echo.Context) error
 	FetchQueryHistory(c echo.Context) error
-
-	Test(c echo.Context) error
 }
 
 type DatabaseAPIImpl struct {
@@ -59,34 +56,21 @@ func NewDatabaseAPI(ioc di.Container) DatabaseAPI {
 func (api *API) MainAPI() {
 	mainRouter := api.router.Group("/main")
 
-	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.POST("/query", api.Database.RunQuery, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.GET("/:table_name/rows", api.Database.FetchRows, middleware.ValidateAPIKey, middleware.RequireAuth(false))
-	mainRouter.GET("/:table_name/:id", api.Database.FetchDataByID, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.POST("/table/create", api.Database.CreateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.POST("/:table_name/insert", api.Database.InsertData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
-	mainRouter.PUT("/:table_name/update", api.Database.UpdateData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
-	mainRouter.DELETE("/:table_name/rows", api.Database.DeleteData, middleware.ValidateAPIKey, middleware.RequireAuth(false))
-	mainRouter.PUT("/:table_name/alter", api.Database.AlterColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.PUT("/:table_name/add_column", api.Database.AddColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
-	mainRouter.DELETE("/:table_name/delete_column", api.Database.DeleteColumn, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/tables", api.Database.FetchAllTables, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/table/:table_name", api.Database.FetchTableInfo, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.PUT("/table/update", api.Database.UpdateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 
-	mainRouter.GET("/test", api.Database.Test)
+	mainRouter.GET("/:table_name/:id", api.Database.View, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.GET("/:table_name/rows", api.Database.List, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.POST("/:table_name/insert", api.Database.Insert, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.PUT("/:table_name/update", api.Database.Update, middleware.ValidateAPIKey, middleware.RequireAuth(false))
+	mainRouter.DELETE("/:table_name/rows", api.Database.Delete, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 
-}
-
-func (d *DatabaseAPIImpl) Test(c echo.Context) error {
-	info, err := d.service.Table.Info("asdasdsd", service.InfoParams{
-		Columns: []string{"indexes", "name"},
-	})
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, info)
+	mainRouter.POST("/query", api.Database.RunQuery, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/query", api.Database.FetchQueryHistory, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 }
 
 type DBResult []map[string]interface{}
@@ -118,6 +102,50 @@ func (d *DatabaseAPIImpl) FetchAllTables(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, result)
+}
+
+type fetchTableInfo struct {
+	Data string `json:"data" query:"data"`
+}
+
+func (d *DatabaseAPIImpl) FetchTableInfo(c echo.Context) error {
+	tableName := c.Param("table_name")
+
+	var params *fetchTableInfo = new(fetchTableInfo)
+	var response map[string]interface{} = make(map[string]interface{})
+
+	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	table, err := d.service.Table.Info(tableName, service.TABLE_INFO_INDEXES)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+			Message: "Error fetching table info",
+			Error:   err.Error(),
+		})
+	}
+	response["index"] = table.SystemIndex
+
+	datas := strings.Split(params.Data, ",")
+	fmt.Println(datas)
+	for _, data := range datas {
+		if data == "columns" {
+			response["columns"], err = d.service.Table.Columns(tableName, false)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+					Message: "Error fetching table info",
+					Error:   err.Error(),
+				})
+			}
+		}
+	}
+
+	return c.JSON(http.StatusOK, responses.APIResponse{
+		Data: response,
+	})
 }
 
 type fetchColumn struct {
@@ -159,7 +187,7 @@ type fetchRowsRes struct {
 	TotalData int64                    `json:"total_data"`
 }
 
-func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
+func (d *DatabaseAPIImpl) List(c echo.Context) error {
 	tableName := c.Param("table_name")
 	var res fetchRowsRes
 
@@ -216,173 +244,24 @@ func (d *DatabaseAPIImpl) FetchRows(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-type field struct {
-	Type         string `json:"field_type"`
-	Name         string `json:"field_name"`
-	Nullable     bool   `json:"nullable"`
-	RelatedTable string `json:"related_table,omitempty"`
-	Unique       bool   `json:"unique"`
-}
-
-func (f *field) convertTypeToSQLiteType() string {
-	switch f.Type {
-	case "text":
-		return "TEXT"
-	case "number":
-		return "REAL"
-	case "boolean":
-		return "BOOLEAN"
-	case "datetime":
-		return "DATETIME"
-	case "file":
-		return "BLOB"
-	case "relation":
-		return "RELATION"
-	default:
-		return ""
-	}
-}
-
-type createTableReq struct {
-	TableName string        `json:"table_name"`
-	IDType    string        `json:"id_type"`
-	Fields    []field       `json:"fields"`
-	Indexes   []model.Index `json:"indexes"`
-	Type      string        `json:"table_type"`
-}
-
 func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
-	var params *createTableReq = new(createTableReq)
+	var params *model.CreateTable = new(model.CreateTable)
 	if err := c.Bind(&params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
 
-	id := "id INTEGER PRIMARY KEY"
-
-	fields := []string{
-		id,
-	}
-
-	isAuth := false
-
-	if params.Type == "users" {
-		authFields := []string{
-			"email TEXT NOT NULL",
-			"password TEXT NOT NULL",
-			"salt TEXT NOT NULL",
-		}
-		isAuth = true
-
-		fields = append(fields, authFields...)
-	}
-
-	foreignKeys := []string{}
-	uniques := []string{}
-
-	for i := 0; i < len(params.Fields); i++ {
-		dtype := params.Fields[i].convertTypeToSQLiteType()
-		// IGNORE UNSUPPORTED DATATYPES FOR NOW
-		if dtype == "" {
-			continue
-		}
-
-		var field string
-		if dtype == "RELATION" {
-			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "TEXT")
-			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].Name, params.Fields[i].RelatedTable))
-		} else {
-			field = fmt.Sprintf("%s %s", params.Fields[i].Name, dtype)
-		}
-
-		if !params.Fields[i].Nullable {
-			field += " NOT NULL"
-		}
-
-		if params.Fields[i].Unique {
-			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].Name))
-		}
-
-		fields = append(fields, field)
-	}
-
-	fields = append(fields, []string{
-		"created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-		"updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-	}...)
-
-	fields = append(append(fields, uniques...), foreignKeys...)
-
-	query := `
-		CREATE TABLE %s (
-			%s
-		)
-	`
-
-	query = fmt.Sprintf(query, params.TableName, strings.Join(fields, ","))
-
 	err := d.db.Transaction(func(tx *gorm.DB) error {
-		err := d.db.Exec(query).Error
-		if err != nil {
-			return err
-		}
-
-		// add index
-		for _, index := range params.Indexes {
-			err = d.db.Exec(fmt.Sprintf("CREATE INDEX %s ON %s (%s)", index.Name, params.TableName, strings.Join(index.Indexes, ","))).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		// check if trigger already exist
-		var triggerHolder int64
-		err = d.db.Table("sqlite_master").
-			Select("*").
-			Where("type = ?", "trigger").
-			Where("name = ?", fmt.Sprintf("updated_timestamp_%s", params.TableName)).
-			Count(&triggerHolder).Error
-		if err != nil {
-			return err
-		}
-
-		// add trigger to update updated_at value on update
-		if triggerHolder == 0 {
-			err = d.db.Exec(fmt.Sprintf(`
-			CREATE TRIGGER updated_timestamp_%s
-			AFTER UPDATE ON %s
-			FOR EACH ROW
-			BEGIN
-				UPDATE %s SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
-			END
-			`, params.TableName, params.TableName, params.TableName)).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		indexJson, err := json.Marshal(params.Indexes)
-		if err != nil {
-			return err
-		}
-
-		err = d.db.Create(
-			&model.Tables{
-				Name:    params.TableName,
-				Auth:    isAuth,
-				System:  false,
-				Indexes: string(indexJson),
-			}).
-			Error
+		err := d.service.Table.Create(tx, *params)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	})
+
 	if err != nil {
-		d.db.Exec(fmt.Sprintf("DROP TABLE %s", params.TableName))
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
@@ -391,10 +270,34 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
+func (d *DatabaseAPIImpl) View(c echo.Context) error {
 	tableName := c.Param("table_name")
 	id := c.Param("id")
 	var result map[string]interface{} = make(map[string]interface{}, 0)
+
+	roles := c.Get("roles")
+	if roles != "ADMIN" {
+		fmt.Println(roles)
+		info, err := d.service.Table.Info(tableName, service.TABLE_INFO_VIEW_RULE)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+				Message: "Error fetching data",
+				Error:   err.Error(),
+			})
+		}
+
+		if info.ViewRule != "" {
+			fmt.Println(info.ViewRule)
+
+			// @user.id = users
+
+			// @user.id != null
+
+			// stock >= 0
+
+		}
+
+	}
 
 	if err := d.db.Table(tableName).
 		Select("*").
@@ -408,9 +311,7 @@ func (d *DatabaseAPIImpl) FetchDataByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-// TODO
-// Allow use of application/json
-func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
+func (d *DatabaseAPIImpl) Insert(c echo.Context) error {
 	tableName := c.Param("table_name")
 	table, err := d.service.Table.Info(tableName)
 	if err != nil {
@@ -538,7 +439,7 @@ func (d *DatabaseAPIImpl) InsertData(c echo.Context) error {
 	}
 }
 
-func (d *DatabaseAPIImpl) UpdateData(c echo.Context) error {
+func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 	tableName := c.Param("table_name")
 
 	contentType := c.Request().Header.Get("Content-Type")
@@ -641,7 +542,7 @@ type deleteDataReq struct {
 	ID []string `json:"id"`
 }
 
-func (d *DatabaseAPIImpl) DeleteData(c echo.Context) error {
+func (d *DatabaseAPIImpl) Delete(c echo.Context) error {
 	tableName := c.Param("table_name")
 
 	var params *deleteDataReq = new(deleteDataReq)
@@ -733,12 +634,12 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 	tableName := c.Param("table_name")
 
 	err := d.db.Transaction(func(tx *gorm.DB) error {
-		err := d.db.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
+		err := tx.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
 		if err != nil {
 			return err
 		}
 
-		err = d.db.
+		err = tx.
 			Where("lower(name) = ?", strings.ToLower(tableName)).
 			Delete(&model.Tables{}).
 			Error
@@ -756,150 +657,129 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-type alterColumns struct {
-	Original string `json:"original"`
-	Altered  string `json:"altered"`
-}
-type alterColumnReq struct {
-	Columns []alterColumns `json:"columns"`
-}
-
-func (d *DatabaseAPIImpl) AlterColumn(c echo.Context) error {
-	alterColumns := new(alterColumnReq)
-
-	tableName := c.Param("table_name")
-
-	if err := c.Bind(&alterColumns); err != nil {
-		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
-	}
-
-	query := fmt.Sprintf("ALTER TABLE %s", tableName)
-	for _, column := range alterColumns.Columns {
-		query = fmt.Sprintf("%s RENAME %s TO %s", query, column.Original, column.Altered)
-	}
-
-	err := d.db.Exec(query).Error
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
-
-	cacheKey := "columns_" + tableName
-	d.cache.Delete(cacheKey)
-
-	return c.JSON(http.StatusOK, nil)
+type updateTableReq struct {
+	TableName        string `json:"table_name"`
+	UpdatedTableName string `json:"updated_table_name"`
+	// fields
+	Fields []model.Field `json:"fields"`
+	// indexes
+	Indexes []model.Index `json:"indexes"`
 }
 
-type addColumnReq struct {
-	Fields []field `json:"fields"`
-}
-
-func (d *DatabaseAPIImpl) AddColumn(c echo.Context) error {
-	tableName := c.Param("table_name")
-	params := new(addColumnReq)
+func (d *DatabaseAPIImpl) UpdateTable(c echo.Context) error {
+	params := new(updateTableReq)
 
 	if err := c.Bind(&params); err != nil {
 		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
 	}
 
-	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN ", tableName)
-	fields := []string{}
-	foreignKeys := []string{}
-	uniques := []string{}
-	indexes := []string{}
+	tableInfo, err := d.service.Table.Info(params.TableName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+	}
 
-	for i := 0; i < len(params.Fields); i++ {
-		dtype := params.Fields[i].convertTypeToSQLiteType()
-		// IGNORE UNSUPPORTED DATATYPES FOR NOW
-		if dtype == "" {
-			continue
-		}
+	tableType := "general"
+	if tableInfo.Auth {
+		tableType = "auth"
+	}
 
-		var field string
-		if dtype == "RELATION" {
-			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "TEXT")
-			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].Name, params.Fields[i].RelatedTable))
+	if len(params.Fields) > 0 || len(params.Indexes) > 0 {
+		if params.TableName == params.UpdatedTableName {
+			fmt.Println("Same table name")
+			err = d.db.Transaction(func(tx *gorm.DB) error {
+				// rename table to something else
+				tempTableName := "_temp_" + params.TableName
+				err := d.service.Table.Rename(tx, params.TableName, tempTableName)
+				if err != nil {
+					return err
+				}
+
+				indexes, err := d.service.Table.Indexes(params.TableName)
+				if err != nil {
+					return err
+				}
+
+				fmt.Println("Found indexes", indexes)
+
+				if len(indexes) > 0 {
+					err = d.service.Table.DropIndexes(tx, indexes)
+					if err != nil {
+						return err
+					}
+				}
+
+				// create new table with same name
+				err = d.service.Table.Create(tx, model.CreateTable{
+					Name:    params.TableName,
+					Fields:  params.Fields,
+					Indexes: params.Indexes,
+					Type:    tableType,
+				})
+				if err != nil {
+					return err
+				}
+
+				// copy all data from old table to new table
+				err = tx.Raw("INSERT INTO " + params.TableName + " SELECT * FROM " + tempTableName).Error
+				if err != nil {
+					return err
+				}
+
+				// delete old table
+				err = d.service.Table.Drop(tx, tempTableName)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+
 		} else {
-			field = fmt.Sprintf("%s %s", params.Fields[i].Name, dtype)
+			fmt.Println("Different table name")
+			err = d.db.Transaction(func(tx *gorm.DB) error {
+				// create new table with the new table name
+				err = d.service.Table.Create(tx, model.CreateTable{
+					Name:    params.UpdatedTableName,
+					Fields:  params.Fields,
+					Indexes: params.Indexes,
+					Type:    tableType,
+				})
+
+				// copy all data from old table to new table
+				err = tx.Raw("INSERT INTO " + params.UpdatedTableName + " SELECT * FROM " + params.TableName).Error
+				if err != nil {
+					return err
+				}
+
+				// delete old table
+				err = d.service.Table.Drop(tx, params.TableName)
+				return err
+			})
 		}
 
-		if !params.Fields[i].Nullable {
-			field += " NOT NULL"
-		}
-
-		if params.Fields[i].Unique {
-			uniques = append(uniques, fmt.Sprintf("UNIQUE (%s)", params.Fields[i].Name))
-		}
-
-		fields = append(fields, field)
-	}
-
-	query = fmt.Sprintf("%s %s", query, strings.Join(fields, ", "))
-
-	err := d.db.Transaction(func(tx *gorm.DB) error {
-		err := d.db.Exec(query).Error
+		d.cache.Delete("columns_" + params.TableName)
+		d.cache.Delete("columns_" + params.UpdatedTableName)
 		if err != nil {
-			return err
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"message": "Failed to update table",
+				"error":   err.Error(),
+			})
 		}
 
-		// add index
-		for _, index := range indexes {
-			err = d.db.Exec(index).Error
-			if err != nil {
-				return err
-			}
-		}
+		return c.JSON(http.StatusOK, responses.APIResponse{
+			Message: "success",
+		})
+	}
 
-		return nil
-	})
+	err = d.service.Table.Rename(d.db, params.TableName, params.UpdatedTableName)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"message": "Failed to add column",
+			"message": "Failed to update table name",
 			"error":   err.Error(),
 		})
 	}
 
-	cacheKey := "columns_" + tableName
-	d.cache.Delete(cacheKey)
-
-	return c.JSON(http.StatusOK, nil)
-}
-
-type deleteColumnReq struct {
-	Columns []string `json:"columns"`
-}
-
-func (d *DatabaseAPIImpl) DeleteColumn(c echo.Context) error {
-	tableName := c.Param("table_name")
-
-	params := new(deleteColumnReq)
-
-	if err := c.Bind(&params); err != nil {
-		return c.JSON(http.StatusBadRequest, errors.New("Failed to bind: "+err.Error()))
-	}
-
-	err := d.db.Transaction(func(tx *gorm.DB) error {
-		for _, col := range params.Columns {
-			query := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s", tableName, col)
-
-			err := d.db.Exec(query).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+	return c.JSON(http.StatusOK, responses.APIResponse{
+		Message: "success",
 	})
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"message": "Failed when deleting column",
-			"error":   err.Error(),
-		})
-	}
-
-	cacheKey := "columns_" + tableName
-	d.cache.Delete(cacheKey)
-
-	return c.JSON(http.StatusOK, nil)
 }

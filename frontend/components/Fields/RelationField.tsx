@@ -32,7 +32,6 @@ const RelationField = ({
     queryKey: ["tables"],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/main/tables`);
-      console.log(res.data);
       return res.data;
     },
   });
@@ -60,8 +59,8 @@ const RelationField = ({
 
             onChange({
               ...field,
-              field_name: value.toString(),
-              related_table: value.toString(),
+              name: value.toString(),
+              reference: value.toString(),
             });
           }}
         >

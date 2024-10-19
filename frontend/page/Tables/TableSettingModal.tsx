@@ -10,9 +10,6 @@ import {
   Tabs,
   Tab,
   Spinner,
-  Input,
-  Accordion,
-  AccordionItem,
   Divider,
   useDisclosure,
   Checkbox,
@@ -27,20 +24,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axiosInstance from "../../pkg/axiosInstance";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import classNames from "classnames";
-import { FaPlus, FaRegCalendar, FaRegFile } from "react-icons/fa6";
-import { datatypes } from "../../data/datatypes";
-import { Field } from "./CreateTableModal";
-import { HiOutlineHashtag } from "react-icons/hi";
-import { RiText } from "react-icons/ri";
-import { RxComponentBoolean } from "react-icons/rx";
-import { TbCirclesRelation } from "react-icons/tb";
-import GeneralField from "../../components/Fields/GeneralField";
-import RelationField from "../../components/Fields/RelationField";
-import { CgKey } from "react-icons/cg";
+import { Field, renderField } from "./CreateTableModal";
 import DeleteTableConfirmModal from "./DeleteTableConfirmModal";
 import { generateRandomString } from "../../utils/utils";
+import CreateIndexModal, { Index } from "./CreateIndexModal";
+import UpdateIndexModal from "./UpdateIndexModal";
+import NewFieldButton from "../../components/Fields/NewFieldButton";
 
 interface TableSettingModalProps {
   isOpen: boolean;
@@ -117,6 +108,7 @@ const TableSettingModal = ({
                   </Button>
                 </div>
               </Tab>
+              <Tab key={"access"} title="Access"></Tab>
             </Tabs>
           </ModalBody>
         </ModalContent>
@@ -144,478 +136,312 @@ interface ColumnPageProps {
 }
 
 const ColumnPage = ({ table }: ColumnPageProps) => {
-  const { data: columns, isLoading } = useQuery({
-    queryKey: ["columns", table],
+  const { data: tableInfo, isLoading } = useQuery<{
+    columns: any[];
+    index: any[];
+  }>({
+    queryKey: ["tableInfo", table],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/main/${table}/columns`);
-      return res.data;
+      const res = await axiosInstance.get(`/api/main/table/${table}`, {
+        params: {
+          data: "columns",
+        },
+      });
+
+      return res.data.data;
     },
   });
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [tableState, setTableState] = useState<any>({
+    table_name: table,
+    columns: [],
+    index: [],
+  });
+
+  const [r, setR] = useState(0);
+  useEffect(() => {
+    if (tableInfo) {
+      const columns = tableInfo?.columns.map((col: any) => {
+        return {
+          id: generateRandomString(12),
+          type: col.type,
+          name: col.name,
+          nullable: !col.not_null,
+          reference: col.reference,
+        } as Field;
+      });
+
+      const index = tableInfo?.index.map((idx: any) => {
+        return {
+          name: idx.name,
+          indexes: idx.indexes.map((i: any) => {
+            return columns.find((col: any) => col.name === i)?.id as string;
+          }),
+        };
+      });
+
+      setTableState({
+        table_name: table,
+        columns: columns,
+        index: index,
+      });
+    }
+  }, [tableInfo, r]);
+
   const {
-    isOpen: isRenameOpen,
-    onOpen: onRenameOpen,
-    onClose: onRenameClose,
+    isOpen: isIndexOpen,
+    onOpen: onIndexOpen,
+    onClose: onIndexClose,
   } = useDisclosure();
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col w-full justify-center items-center">
-        <Spinner color="default" size="lg" />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="flex flex-col gap-2">
-        <Table>
-          <TableHeader>
-            <TableColumn>name</TableColumn>
-            <TableColumn>type</TableColumn>
-            <TableColumn>nullable</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {columns?.map((col: any, idx: number) => (
-              <TableRow key={idx}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <p>{col.name}</p>
-                    {col.pk === 1 && <CgKey size={16} />}
-                  </div>
-                </TableCell>
-                <TableCell>{col.type}</TableCell>
-                <TableCell>{col.notnull ? "Yes" : "No"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Button
-          variant="bordered"
-          className="font-semibold"
-          radius="sm"
-          onClick={onRenameOpen}
-        >
-          Change Column Names
-        </Button>
-        <Button
-          variant="bordered"
-          className="font-semibold"
-          radius="sm"
-          onClick={onOpen}
-          startContent={<FaPlus />}
-        >
-          Add New Column
-        </Button>
-      </div>
-      <RenameColumnModal
-        table={table}
-        isOpen={isRenameOpen}
-        onClose={onRenameClose}
-      />
-      <AddColumnModal table={table} isOpen={isOpen} onClose={onClose} />
-    </>
-  );
-};
-
-interface AddColumnModalProps {
-  table: string;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const AddColumnModal = ({ table, isOpen, onClose }: AddColumnModalProps) => {
-  const [fields, setFields] = useState<Field[]>([]);
-  const addNewField = (type: string) => {
-    setFields([
-      ...fields,
-      {
-        id: generateRandomString(32),
-        field_type: type,
-        field_name: "",
-        nullable: true,
-        unique: false,
-      },
-    ]);
+  const {
+    isOpen: isUpIndexOpen,
+    onOpen: onUpIndexOpen,
+    onClose: onUpIndexClose,
+  } = useDisclosure();
+  const [selectedIdx, setSelectedIdx] = useState(-1);
+  const openUpdateModal = (idx: number) => {
+    setSelectedIdx(idx);
+    onUpIndexOpen();
   };
 
-  const { data: tables, isLoading } = useQuery<{ name: string }[]>({
-    queryKey: ["tables"],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/main/tables`);
-      return res.data;
-    },
-  });
+  const addNewField = (type: string) => {
+    setTableState({
+      ...tableState,
+      columns: [
+        ...tableState.columns,
+        {
+          id: generateRandomString(12),
+          type: type,
+          name: "",
+          nullable: true,
+          unique: false,
+        },
+      ],
+    });
+  };
 
   const deleteField = (idx: number) => {
-    console.log([...fields.slice(0, idx), ...fields.slice(idx + 1)]);
-    setFields((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const renderField = (field: Field, index: number) => {
-    switch (field.field_type) {
-      case "text":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<RiText />}
-          />
-        );
-      case "number":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<HiOutlineHashtag />}
-          />
-        );
-      case "datetime":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<FaRegCalendar />}
-          />
-        );
-      case "boolean":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<RxComponentBoolean />}
-          />
-        );
-      case "relation":
-        return (
-          <RelationField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<TbCirclesRelation />}
-          />
-        );
-      case "file":
-        return (
-          <GeneralField
-            key={index}
-            onDelete={() => deleteField(index)}
-            onChange={(field) =>
-              setFields([
-                ...fields.slice(0, index),
-                field,
-                ...fields.slice(index + 1),
-              ])
-            }
-            field={field}
-            idx={index}
-            icon={<FaRegFile />}
-          />
-        );
-      default:
-    }
+    setTableState({
+      ...tableState,
+      columns: [
+        ...tableState.columns.slice(0, idx),
+        ...tableState.columns.slice(idx + 1),
+      ],
+    });
   };
 
   const queryClient = useQueryClient();
   const { mutateAsync } = useMutation({
-    mutationFn: () => {
-      return axiosInstance.put(`/api/main/${table}/add_column`, {
-        fields: fields.map((field) => {
-          if (field.field_type === "relation" && !field.related_table) return;
-          if (field.field_name === "") return;
+    mutationFn: async () => {
+      const fields = tableState.columns
+        .filter((col: any) => {
+          return !["id", "created_at", "updated_at"].includes(col.name);
+        })
+        .map((col: any) => ({
+          name: col.name,
+          nullable: col.nullable,
+          type: col.type,
+          unique: col.unique,
+        }));
 
-          return {
-            field_name: field.field_name,
-            field_type: field.field_type,
-            nullable: field.nullable,
-            related_table: field.related_table,
-            unique: field.unique,
-          };
+      const indexes = tableState.index.map((idx: any) => ({
+        name: idx.name,
+        indexes: idx.indexes.map((idx: string) => {
+          console.log(idx);
+          return tableState.columns.find((col: any) => col.id === idx)?.name;
         }),
+      }));
+
+      const res = await axiosInstance.put(`/api/main/table/update`, {
+        table_name: tableState.table_name,
+        updated_table_name: tableState.table_name,
+        fields: fields,
+        indexes: indexes,
       });
+
+      return res.data;
     },
     onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ["tables"],
-        type: "active",
+      queryClient.invalidateQueries({
+        queryKey: ["tableInfo", table],
       });
-      queryClient.refetchQueries({
+      queryClient.invalidateQueries({
         queryKey: ["columns", table],
         type: "active",
       });
-      queryClient.refetchQueries({
-        queryKey: ["rows", table],
-        type: "active",
-      });
-      setFields([]);
-      onClose();
     },
   });
 
   const updateTable = () => {
     toast.promise(mutateAsync(), {
-      pending: "Updating table...",
-      success: "Table updated successfully",
-      error: "Error when updating table",
+      pending: "Updating Table",
+      success: "Table Updated",
+      error: "Failed to Update Table",
     });
   };
 
   return (
-    <Modal size="xl" isOpen={isOpen} onClose={onClose}>
-      <ModalContent>
-        <ModalHeader>
-          <p>Add column to [{table}]</p>
-        </ModalHeader>
-        <ModalBody>
-          <Accordion className="rounded-md" variant="bordered">
-            <AccordionItem
-              classNames={{
-                title: "w-full text-center text-md font-semibold",
-                trigger: "py-3 rounded-none",
-              }}
-              className="text-center font-semibold rounded-none"
-              key="1"
-              title="Add new field"
-            >
-              <Divider className="" />
-              <div className="grid grid-cols-3 w-full gap-2 mt-3">
-                {datatypes.map((dtype, idx) =>
-                  dtype.dtype === "RELATION" ? (
-                    <Button
-                      id={idx.toString()}
-                      isDisabled={!tables || tables.length === 0}
-                      isLoading={isLoading}
-                      startContent={dtype.icon}
-                      onClick={() => addNewField(dtype.value)}
-                      className="hover:bg-slate-200 bg-transparent rounded-md"
-                    >
-                      {dtype.label}
-                    </Button>
-                  ) : (
-                    <Button
-                      id={idx.toString()}
-                      startContent={dtype.icon}
-                      onClick={() => addNewField(dtype.value)}
-                      className="hover:bg-slate-200 bg-transparent rounded-md"
-                    >
-                      {dtype.label}
-                    </Button>
-                  )
-                )}
-              </div>
-            </AccordionItem>
-          </Accordion>
-          <div className="flex flex-col gap-4">
-            {fields.map((field, index) => renderField(field, index))}
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            fullWidth
-            className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
-            onClick={() => {
-              setFields([]);
-              onClose();
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            fullWidth
-            className="rounded-md w-full bg-slate-950 text-white font-semibold"
-            onClick={updateTable}
-          >
-            Add Columns
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  );
-};
-
-interface RenameColumnModalProps {
-  table: string;
-  onClose: () => void;
-  isOpen: boolean;
-}
-const RenameColumnModal = ({
-  table,
-  onClose,
-  isOpen,
-}: RenameColumnModalProps) => {
-  const [cols, setCols] = useState<any[]>([]);
-
-  const {
-    data: columns,
-    isLoading,
-    isFetching,
-    isPending,
-  } = useQuery({
-    queryKey: ["columns", table],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/main/${table}/columns`);
-      setCols(res.data);
-      return res.data;
-    },
-  });
-
-  const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (data: any) => {
-      return axiosInstance.put(`/api/main/${table}/alter`, {
-        columns: data,
-      });
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: ["columns", table],
-        type: "active",
-      });
-
-      queryClient.refetchQueries({
-        queryKey: ["rows", table],
-        type: "active",
-      });
-    },
-  });
-
-  const alterColumn = () => {
-    const alteredColumns = cols.map((col: any, idx) => {
-      if (col.name !== columns[idx].name) {
-        return {
-          original: columns[idx].name,
-          altered: col.name,
-        };
-      }
-
-      return null;
-    });
-
-    toast.promise(mutateAsync(alteredColumns.filter((col) => col !== null)), {
-      pending: "Updating column name",
-      success: "Column name updated successfully",
-      error: "Error when updating column name",
-    });
-  };
-
-  if (isLoading || isFetching || isPending) {
-    return (
-      <div className="flex flex-col w-full justify-center items-center">
-        <Spinner color="default" size="lg" />
-      </div>
-    );
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalContent>
-        <ModalHeader>Rename column from [{table}]</ModalHeader>
-        <ModalBody>
+    <div className="flex flex-col gap-4">
+      {isLoading ? (
+        <Spinner size="lg" color="default" />
+      ) : (
+        <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-2">
-            {cols
-              .filter(
-                (col) =>
-                  ![
+            <p className="font-semibold mb-2 text-lg">Columns</p>
+            {tableState?.columns?.map(
+              (col: Field, index: number) =>
+                renderField(
+                  col,
+                  index,
+                  (field) =>
+                    setTableState({
+                      ...tableState,
+                      columns: [
+                        ...tableState.columns.slice(0, index),
+                        field,
+                        ...tableState.columns.slice(index + 1),
+                      ],
+                    }),
+                  () => deleteField(index),
+                  [
                     "id",
+                    "email",
+                    "password",
+                    "salt",
                     "created_at",
                     "updated_at",
-                    "email",
-                    "salt",
-                    "password",
-                  ].includes(col.name) && col.type !== "RELATION"
-              )
-              .map((col: any, idx) => (
-                <Input
-                  id={idx.toString()}
-                  name={idx.toString()}
-                  key={idx}
-                  value={col.name}
-                  onChange={(e) => {
-                    setCols([
-                      ...cols.slice(0, idx),
-                      { ...cols[idx], name: e.target.value },
-                      ...cols.slice(idx + 1),
-                    ]);
-                  }}
+                  ].includes(col.name)
+                )
+              // <GeneralField
+              //   isDisabled={[
+              //     "id",
+              //     "email",
+              //     "password",
+              //     "salt",
+              //     "created_at",
+              //     "updated_at",
+              //   ].includes(col.name)}
+              //   field={col}
+              //   onChange={(field: Field) => {
+              //     setTableState({
+              //       ...tableState,
+              //       columns: [
+              //         ...tableState.columns.slice(0, idx),
+              //         field,
+              //         ...tableState.columns.slice(idx + 1),
+              //       ],
+              //     });
+              //   }}
+              //   onDelete={(idx: number) => {
+              //     setTableState({
+              //       ...tableState,
+              //       columns: [
+              //         ...tableState.columns.slice(0, idx),
+              //         ...tableState.columns.slice(idx + 1),
+              //       ],
+              //     });
+              //   }}
+              //   idx={idx}
+              // />
+            )}
+          </div>
+          <NewFieldButton onAdd={addNewField} isLoading={isLoading} />
+          <Divider className="my-2" />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold">Indexes</p>
+              <p className="text-sm text-blue-700">
+                Index significantly improves read performance, but increases
+                storage overhead and reduce the efficiency of write operations.
+                It's recommended to only use index on fields that are frequently
+                used to filter data.
+              </p>
+            </div>
+            <div className="flex gap-2 items-center">
+              {tableState?.index?.map((index: any, idx: number) => (
+                <Button
+                  className="rounded-md border-slate-950 h-[45px]"
                   variant="bordered"
-                  radius="sm"
-                  isDisabled={
-                    ["id", "created_at", "updated_at", "email"].includes(
-                      col.name
-                    ) || col.type === "RELATION"
-                  }
-                />
+                  key={idx}
+                  onClick={() => openUpdateModal(idx)}
+                >
+                  <div className="text-xs flex flex-col text-start">
+                    <p className="font-semibold">{index.name}</p>
+                    <p>
+                      {index.indexes
+                        ?.map((i: string) => {
+                          return tableState.columns.find((c: any) => c.id === i)
+                            ?.name;
+                        })
+                        .join(", ")}
+                    </p>
+                  </div>
+                </Button>
               ))}
+              <Button
+                onClick={onIndexOpen}
+                className="bg-slate-950 text-white rounded-md h-[45px]"
+              >
+                Create Index
+              </Button>
+            </div>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <div className="flex w-full mt-5 gap-2">
-            <Button
-              fullWidth
-              className="rounded-md w-full bg-transparent hover:bg-default-200  font-semibold"
-              onClick={() => {
-                setCols(columns);
-              }}
-            >
-              Reset
-            </Button>
-            <Button
-              fullWidth
-              className="rounded-md w-full bg-slate-950 text-white font-semibold"
-              onClick={() => alterColumn()}
-            >
-              Save
-            </Button>
-          </div>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      )}
+      <Divider />
+      <div className="w-full justify-end gap-3 flex">
+        <Button
+          className="rounded-md bg-transparent hover:bg-slate-100"
+          onClick={() => {
+            setR(r + 1);
+          }}
+        >
+          Reset
+        </Button>
+        <Button
+          className="rounded-md bg-slate-950 text-white"
+          onClick={() => {
+            updateTable();
+          }}
+        >
+          Save
+        </Button>
+      </div>
+      <CreateIndexModal
+        isOpen={isIndexOpen}
+        onClose={onIndexClose}
+        fields={tableState?.columns}
+        onAdd={(index) => {
+          setTableState({ ...tableState, index: [...tableState.index, index] });
+        }}
+      />
+      <UpdateIndexModal
+        isOpen={isUpIndexOpen}
+        onClose={onUpIndexClose}
+        fields={tableState?.columns}
+        idx={selectedIdx}
+        index={tableState.index[selectedIdx]}
+        onUpdate={(idx: number, index: Index) => {
+          setTableState({
+            ...tableState,
+            index: [
+              ...tableState.index.slice(0, idx),
+              index,
+              ...tableState.index.slice(idx + 1),
+            ],
+          });
+        }}
+        onDelete={(idx: number) => {
+          setTableState({
+            ...tableState,
+            index: [
+              ...tableState.index.slice(0, idx),
+              ...tableState.index.slice(idx + 1),
+            ],
+          });
+        }}
+      />
+    </div>
   );
 };
 

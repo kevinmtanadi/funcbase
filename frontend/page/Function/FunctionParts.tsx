@@ -56,8 +56,8 @@ export const FunctionInsert = ({
     {
       label: "User ID",
       description: "Automatically fetch user ID through JWT token",
-      value: "$user.id",
-      key: "$user.id",
+      value: "@user.id",
+      key: "@user.id",
     },
   ]);
 
@@ -73,8 +73,8 @@ export const FunctionInsert = ({
       {
         label: "User ID",
         description: "Automatically fetch user ID through JWT token",
-        value: "$user.id",
-        key: "$user.id",
+        value: "@user.id",
+        key: "@user.id",
       },
       ...functionParts
         .filter(
@@ -139,7 +139,7 @@ export const FunctionInsert = ({
             variant="bordered"
             onChange={(e) => {
               if (e.target.value !== "") {
-                console.log(functionParts);
+                functionParts;
                 setFunctionParts([
                   ...functionParts.slice(0, idx),
                   {
@@ -217,8 +217,8 @@ export const FunctionUpdate = ({
     {
       label: "User ID",
       description: "Automatically fetch user ID through JWT token",
-      value: "$user.id",
-      key: "$user.id",
+      value: "@user.id",
+      key: "@user.id",
     },
   ]);
 
@@ -234,8 +234,8 @@ export const FunctionUpdate = ({
       {
         label: "User ID",
         description: "Automatically fetch user ID through JWT token",
-        value: "$user.id",
-        key: "$user.id",
+        value: "@user.id",
+        key: "@user.id",
       },
       ...functionParts
         .filter(
