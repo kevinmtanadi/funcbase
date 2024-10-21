@@ -242,6 +242,7 @@ const ColumnPage = ({ table }: ColumnPageProps) => {
           nullable: col.nullable,
           type: col.type,
           unique: col.unique,
+          reference: col.reference,
         }));
 
       const indexes = tableState.index.map((idx: any) => ({

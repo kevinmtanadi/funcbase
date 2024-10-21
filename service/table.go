@@ -49,45 +49,84 @@ const TABLE_INFO_NAME = "name"
 const TABLE_INFO_AUTH = "auth"
 const TABLE_INFO_SYSTEM = "system"
 const TABLE_INFO_INDEXES = "indexes"
-const TABLE_INFO_VIEW_RULE = "view_rule"
-const TABLE_INFO_READ_RULE = "read_rule"
-const TABLE_INFO_INSERT_RULE = "insert_rule"
-const TABLE_INFO_UPDATE_RULE = "update_rule"
-const TABLE_INFO_DELETE_RULE = "delete_rule"
+const TABLE_INFO_ACCESS = "access"
 
 func (s *TableServiceImpl) Info(tableName string, infoNeeded ...string) (model.Tables, error) {
 	if len(infoNeeded) == 0 {
-		infoNeeded = []string{TABLE_INFO_NAME, TABLE_INFO_AUTH, TABLE_INFO_INDEXES, TABLE_INFO_SYSTEM, TABLE_INFO_VIEW_RULE, TABLE_INFO_READ_RULE, TABLE_INFO_INSERT_RULE, TABLE_INFO_UPDATE_RULE, TABLE_INFO_DELETE_RULE}
+		infoNeeded = []string{TABLE_INFO_NAME, TABLE_INFO_AUTH, TABLE_INFO_INDEXES, TABLE_INFO_SYSTEM, TABLE_INFO_ACCESS}
 	}
 
-	cacheKey := "table_" + strings.Join(infoNeeded, ";") + tableName
-	if storedCache, ok := s.cache.Get(cacheKey); ok {
-		return storedCache.(model.Tables), nil
+	var tableInfo model.Tables
+	unfoundData := []string{}
+	for _, info := range infoNeeded {
+		cacheKey := "tableInfo:" + tableName + ":" + info
+
+		if storedCache, ok := s.cache.Get(cacheKey); ok {
+			// Handle each field individually
+			switch info {
+			case TABLE_INFO_NAME:
+				if cachedName, ok := storedCache.(string); ok {
+					tableInfo.Name = cachedName
+				}
+			case TABLE_INFO_AUTH:
+				if cachedAuth, ok := storedCache.(bool); ok {
+					tableInfo.Auth = cachedAuth
+				}
+			case TABLE_INFO_SYSTEM:
+				if cachedSystem, ok := storedCache.(bool); ok {
+					tableInfo.System = cachedSystem
+				}
+			case TABLE_INFO_INDEXES:
+				if cachedIndexes, ok := storedCache.(string); ok {
+					tableInfo.Indexes = cachedIndexes
+				}
+			case TABLE_INFO_ACCESS:
+				if cachedAccess, ok := storedCache.(model.Access); ok {
+					tableInfo.Access = cachedAccess
+				}
+			}
+		} else {
+			unfoundData = append(unfoundData, info)
+		}
 	}
 
-	var table model.Tables
 	err := s.db.Model(&model.Tables{}).
-		Select(infoNeeded).
+		Select(unfoundData).
 		Where("name = ?", tableName).
-		First(&table).Error
+		First(&tableInfo).Error
 	if err != nil {
-		return table, err
+		return tableInfo, err
 	}
 
 	if utils.ArrayContains[string](infoNeeded, TABLE_INFO_INDEXES) {
 		index := []model.Index{}
 
-		err = json.Unmarshal([]byte(table.Indexes), &index)
+		err = json.Unmarshal([]byte(tableInfo.Indexes), &index)
 		if err != nil {
-			return table, err
+			return tableInfo, err
 		}
 
-		table.SystemIndex = index
+		tableInfo.SystemIndex = index
 	}
 
-	s.cache.Set(cacheKey, table, cache.DefaultExpiration)
+	for _, info := range unfoundData {
+		cacheKey := "tableInfo:" + tableName + ":" + info
+		switch info {
+		case TABLE_INFO_NAME:
+			s.cache.Set(cacheKey, tableInfo.Name, cache.DefaultExpiration)
+		case TABLE_INFO_AUTH:
+			s.cache.Set(cacheKey, tableInfo.Auth, cache.DefaultExpiration)
+		case TABLE_INFO_SYSTEM:
+			s.cache.Set(cacheKey, tableInfo.System, cache.DefaultExpiration)
+		case TABLE_INFO_INDEXES:
+			s.cache.Set(cacheKey, tableInfo.Indexes, cache.DefaultExpiration)
+		case TABLE_INFO_ACCESS:
+			s.cache.Set(cacheKey, tableInfo.Access, cache.DefaultExpiration)
+		}
 
-	return table, nil
+	}
+
+	return tableInfo, nil
 }
 
 func (s *TableServiceImpl) Create(tx *gorm.DB, params model.CreateTable) error {
@@ -119,7 +158,7 @@ func (s *TableServiceImpl) Create(tx *gorm.DB, params model.CreateTable) error {
 
 		var field string
 		if dtype == "RELATION" {
-			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "TEXT")
+			field = fmt.Sprintf("%s %s", params.Fields[i].Name, "REAL")
 			foreignKeys = append(foreignKeys, fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s(id) ON UPDATE CASCADE", params.Fields[i].Name, params.Fields[i].Reference))
 		} else {
 			field = fmt.Sprintf("%s %s", params.Fields[i].Name, dtype)
@@ -271,7 +310,7 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 		}
 	}
 
-	table, err := s.Info(tableName)
+	table, err := s.Info(tableName, TABLE_INFO_AUTH)
 	if err != nil {
 		return nil, err
 	}

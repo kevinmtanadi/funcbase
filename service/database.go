@@ -12,11 +12,12 @@ import (
 )
 
 type FetchParams struct {
-	Table  string
-	Filter string
-	Order  string
-	Limit  int
-	Offset int
+	Table   string
+	Filter  string
+	Order   string
+	Limit   int
+	Offset  int
+	Columns []string
 }
 
 type DBService interface {
@@ -51,7 +52,7 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]in
 	columns = "*"
 
 	if tableName != "_log" {
-		table, err := s.service.WithService().Table.Info(tableName)
+		table, err := s.service.WithService().Table.Info(tableName, TABLE_INFO_AUTH)
 		if err != nil {
 			return nil, err
 		}
@@ -76,6 +77,10 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]in
 					continue
 				}
 				columns = fmt.Sprintf("%s", *col)
+			}
+		} else {
+			if len(option.Columns) > 0 {
+				columns = strings.Join(option.Columns, ", ")
 			}
 		}
 	}

@@ -57,7 +57,7 @@ func (h *AuthAPIImpl) Register(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, "Email or password is empty")
 	}
 
-	table, err := h.service.Table.Info(tableName)
+	table, err := h.service.Table.Info(tableName, service.TABLE_INFO_AUTH)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}
@@ -154,7 +154,7 @@ func (h *AuthAPIImpl) Login(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Bad Request")
 	}
 
-	table, err := h.service.Table.Info(tableName)
+	table, err := h.service.Table.Info(tableName, service.TABLE_INFO_AUTH)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 	}

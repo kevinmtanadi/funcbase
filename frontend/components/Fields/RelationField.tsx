@@ -54,6 +54,7 @@ const RelationField = ({
           classNames={{
             base: "min-w-xs",
           }}
+          selectedKey={field.name}
           onSelectionChange={(value) => {
             if (!value) return;
 

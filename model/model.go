@@ -32,11 +32,34 @@ type Tables struct {
 	System      bool    `json:"system,omitempty" gorm:"column:system"`
 	Indexes     string  `json:"indexes,omitempty" gorm:"column:indexes"`
 	SystemIndex []Index `json:"index,omitempty" gorm:"-"`
-	ViewRule    string  `json:"view_rule,omitempty" gorm:"column:view_rule;default:ADMIN_ONLY"`
-	ReadRule    string  `json:"read_rule,omitempty" gorm:"column:read_rule;default:ADMIN_ONLY"`
-	InsertRule  string  `json:"insert_rule,omitempty" gorm:"column:insert_rule;default:ADMIN_ONLY"`
-	UpdateRule  string  `json:"update_rule,omitempty" gorm:"column:update_rule;default:ADMIN_ONLY"`
-	DeleteRule  string  `json:"delete_rule,omitempty" gorm:"column:delete_rule;default:ADMIN_ONLY"`
+	// 0 = admin only
+	// 1 = logged in
+	// 2 = public
+	// others, connected user table
+	Access Access `json:"access,omitempty" gorm:"column:access;default:0;0;0;0;0"`
+}
+
+type Access string
+
+
+func (a *Access) View() string {
+	return strings.Split(string(*a), ";")[0]
+}
+
+func (a *Access) List() string {
+	return strings.Split(string(*a), ";")[1]
+}
+
+func (a *Access) Create() string {
+	return strings.Split(string(*a), ";")[2]
+}
+
+func (a *Access) Update() string {
+	return strings.Split(string(*a), ";")[3]
+}
+
+func (a *Access) Delete() string {
+	return strings.Split(string(*a), ";")[4]
 }
 
 func (t *Tables) TableName() string {

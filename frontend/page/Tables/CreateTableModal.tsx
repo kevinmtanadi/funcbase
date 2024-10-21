@@ -303,114 +303,6 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
     onUpIndexOpen();
   };
 
-  const TableInput = ({ type }: any) => {
-    return (
-      <div className="flex flex-col gap-4">
-        <Input
-          value={table.table_name}
-          onValueChange={(value) => setTable({ ...table, table_name: value })}
-          variant="bordered"
-          classNames={{
-            inputWrapper: "rounded-md",
-            label: "text-md font-semibold",
-          }}
-          size="md"
-          placeholder='eg. "products"'
-          fullWidth
-          labelPlacement="inside"
-          label="Table name"
-          type="text"
-        />
-        <Divider />
-        <div className="flex flex-col gap-1">
-          <p className="font-semibold">Fields</p>
-          <p className="text-sm">
-            <span>Automatically created fields: </span>
-            {type === "general" ? (
-              <>
-                <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">created_at</Code>
-                ,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
-              </>
-            ) : (
-              <>
-                <Code className="px-2 py-0 text-xs rounded-md">id</Code>,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">email</Code>,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">password</Code>,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">salt</Code>,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">created_at</Code>
-                ,{" "}
-                <Code className="px-2 py-0 text-xs rounded-md">updated_at</Code>
-              </>
-            )}
-          </p>
-        </div>
-        <div className="flex flex-col gap-4">
-          {table.fields.map((field, index) =>
-            renderField(
-              field,
-              index,
-              (field) => {
-                setTable({
-                  ...table,
-                  fields: [
-                    ...table.fields.slice(0, index),
-                    field,
-                    ...table.fields.slice(index + 1),
-                  ],
-                });
-              },
-              () => deleteField(index)
-            )
-          )}
-        </div>
-        <NewFieldButton
-          onAdd={addNewField}
-          isDisabled={!tables || tables.length === 0}
-          isLoading={isLoading}
-        />
-        <Divider />
-        <div className="flex flex-col gap-1">
-          <p className="font-semibold">Indexes</p>
-          <p className="text-sm text-blue-700">
-            Index significantly improves read performance, but increases storage
-            overhead and reduce the efficiency of write operations. It's
-            recommended to only use index on fields that are frequently used to
-            filter data.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {table.indexes.map((index, idx) => (
-            <Button
-              className="rounded-md border-slate-950 h-[45px]"
-              variant="bordered"
-              key={idx}
-              onClick={() => openUpdateModal(idx)}
-            >
-              <div className="text-xs flex flex-col text-start">
-                <p className="font-semibold">{index.name}</p>
-                <p>
-                  {index.indexes
-                    ?.map((i: string) => {
-                      return table.fields.find((c: any) => c.id === i)?.name;
-                    })
-                    .join(", ")}
-                </p>
-              </div>
-            </Button>
-          ))}
-          <Button
-            className="bg-slate-950 text-white rounded-md h-[45px]"
-            onClick={onIndexOpen}
-          >
-            Create Index
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <>
       <Modal
@@ -455,7 +347,135 @@ const CreateTableModal = ({ isOpen, onClose }: CreateTableModalProps) => {
                     </SelectItem>
                   </Select>
                 </div>
-                <TableInput type={table.table_type} />
+                <div className="flex flex-col gap-4">
+                  <Input
+                    value={table.table_name}
+                    onValueChange={(value) =>
+                      setTable({ ...table, table_name: value })
+                    }
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "rounded-md",
+                      label: "text-md font-semibold",
+                    }}
+                    size="md"
+                    placeholder='eg. "products"'
+                    fullWidth
+                    labelPlacement="inside"
+                    label="Table name"
+                    type="text"
+                  />
+                  <Divider />
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold">Fields</p>
+                    <p className="text-sm">
+                      <span>Automatically created fields: </span>
+                      {table.table_type === "general" ? (
+                        <>
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            id
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            created_at
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            updated_at
+                          </Code>
+                        </>
+                      ) : (
+                        <>
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            id
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            email
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            password
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            salt
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            created_at
+                          </Code>
+                          ,{" "}
+                          <Code className="px-2 py-0 text-xs rounded-md">
+                            updated_at
+                          </Code>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    {table.fields.map((field, index) =>
+                      renderField(
+                        field,
+                        index,
+                        (field) => {
+                          setTable({
+                            ...table,
+                            fields: [
+                              ...table.fields.slice(0, index),
+                              field,
+                              ...table.fields.slice(index + 1),
+                            ],
+                          });
+                        },
+                        () => deleteField(index)
+                      )
+                    )}
+                  </div>
+                  <NewFieldButton
+                    onAdd={addNewField}
+                    isDisabled={!tables || tables.length === 0}
+                    isLoading={isLoading}
+                  />
+                  <Divider />
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold">Indexes</p>
+                    <p className="text-sm text-blue-700">
+                      Index significantly improves read performance, but
+                      increases storage overhead and reduce the efficiency of
+                      write operations. It's recommended to only use index on
+                      fields that are frequently used to filter data.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {table.indexes.map((index, idx) => (
+                      <Button
+                        className="rounded-md border-slate-950 h-[45px]"
+                        variant="bordered"
+                        key={idx}
+                        onClick={() => openUpdateModal(idx)}
+                      >
+                        <div className="text-xs flex flex-col text-start">
+                          <p className="font-semibold">{index.name}</p>
+                          <p>
+                            {index.indexes
+                              ?.map((i: string) => {
+                                return table.fields.find((c: any) => c.id === i)
+                                  ?.name;
+                              })
+                              .join(", ")}
+                          </p>
+                        </div>
+                      </Button>
+                    ))}
+                    <Button
+                      className="bg-slate-950 text-white rounded-md h-[45px]"
+                      onClick={onIndexOpen}
+                    >
+                      Create Index
+                    </Button>
+                  </div>
+                </div>
               </ModalBody>
               <Divider />
               <ModalFooter>

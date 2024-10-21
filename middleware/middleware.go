@@ -53,20 +53,20 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 						if required {
 							return c.JSON(http.StatusUnauthorized, unauthorizedErr)
 						}
-					}
+					} else {
+						// token is valid
 
-					// token is expired
-					if float64(time.Now().Unix()) > claims["exp"].(float64) && required {
-						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
-					}
+						if float64(time.Now().Unix()) > claims["exp"].(float64) && required {
+							return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+						}
 
-					// valueType := reflect.TypeOf(claims["sub"])
-					userID, ok := claims["sub"].(float64)
-					userRole, ok2 := claims["roles"].(string)
-					if ok && ok2 {
-						c.Set("user_id", int(userID))
-						c.Set("roles", userRole)
-						return next(c)
+						userID, ok := claims["sub"].(float64)
+						userRole, ok2 := claims["roles"].(string)
+						if ok && ok2 {
+							c.Set("user_id", int(userID))
+							c.Set("roles", userRole)
+							return next(c)
+						}
 					}
 
 					if required {
