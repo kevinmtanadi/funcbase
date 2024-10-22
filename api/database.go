@@ -28,6 +28,8 @@ type DatabaseAPI interface {
 	FetchTableColumns(c echo.Context) error
 	UpdateTable(c echo.Context) error
 	DeleteTable(c echo.Context) error
+	FetchTableAccess(c echo.Context) error
+	UpdateTableAccess(c echo.Context) error
 
 	View(c echo.Context) error
 	List(c echo.Context) error
@@ -62,6 +64,8 @@ func (api *API) MainAPI() {
 	mainRouter.GET("/:table_name/columns", api.Database.FetchTableColumns, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.PUT("/table/update", api.Database.UpdateTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 	mainRouter.DELETE("/:table_name", api.Database.DeleteTable, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.GET("/table/:table_name/access", api.Database.FetchTableAccess, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
+	mainRouter.PUT("/table/access", api.Database.UpdateTableAccess, middleware.ValidateMainAPIKey, middleware.RequireAuth(true))
 
 	mainRouter.GET("/:table_name/:id", api.Database.View, middleware.ValidateAPIKey, middleware.RequireAuth(false))
 	mainRouter.GET("/:table_name/rows", api.Database.List, middleware.ValidateAPIKey, middleware.RequireAuth(false))
@@ -907,6 +911,53 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, nil)
+}
+
+func (d *DatabaseAPIImpl) FetchTableAccess(c echo.Context) error {
+	var (
+		table = c.Param("table_name")
+	)
+
+	tableInfo, err := d.service.Table.Info(table, service.TABLE_INFO_ACCESS)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+			Message: "Failed to fetch table access",
+			Error:   err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, responses.APIResponse{
+		Data:    tableInfo.Access,
+		Message: "Table access fetched successfully",
+	})
+}
+
+type updateTableAccessReq struct {
+	TableName string `json:"table_name"`
+	Access    string `json:"access"`
+}
+
+func (d *DatabaseAPIImpl) UpdateTableAccess(c echo.Context) error {
+	params := new(updateTableAccessReq)
+
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, responses.APIResponse{
+			Message: "Failed to bind requets body",
+			Error:   err.Error(),
+		})
+	}
+
+	err := d.db.Model(&model.Tables{}).Update("access", params.Access).Error
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, responses.APIResponse{
+			Message: "Failed to update table access",
+			Error:   err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, responses.APIResponse{
+		Message: "Table access updated successfully",
+	})
 }
 
 type updateTableReq struct {

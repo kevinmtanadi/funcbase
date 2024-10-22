@@ -19,6 +19,7 @@ import {
   TableCell,
   TableHeader,
   TableColumn,
+  Input,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaRegTrashAlt } from "react-icons/fa";
@@ -108,7 +109,9 @@ const TableSettingModal = ({
                   </Button>
                 </div>
               </Tab>
-              <Tab key={"access"} title="Access"></Tab>
+              <Tab key={"access"} title="Access">
+                <AccessTab table={tableName} />
+              </Tab>
             </Tabs>
           </ModalBody>
         </ModalContent>
@@ -578,3 +581,72 @@ const DeleteColumnModal = ({
 };
 
 export default TableSettingModal;
+
+interface AccessTabProps {
+  table: string;
+}
+const AccessTab = ({ table }: AccessTabProps) => {
+  const queryClient = useQueryClient();
+  const { data: tableAccess } = useQuery({
+    queryKey: ["access", table],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/main/table/${table}/access`);
+      return res.data.data.split(";");
+    },
+  });
+
+  const [access, setAccess] = useState<any[]>([]);
+  useEffect(() => {
+    if (tableAccess) {
+      setAccess(tableAccess);
+    }
+  }, [tableAccess]);
+
+  const { mutateAsync } = useMutation({
+    mutationFn: () => {
+      return axiosInstance.post(`/api/main/table/${table}/access`);
+    },
+  });
+
+  const accessLabel = ["Fetch", "List", "Insert", "Update", "Delete"];
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        {access &&
+          access.length > 0 &&
+          access.map((acc: any, idx: number) => (
+            <Input
+              key={idx}
+              variant="bordered"
+              radius="sm"
+              label={accessLabel[idx]}
+              type="text"
+              value={acc}
+              onValueChange={(e) =>
+                setAccess([
+                  ...access.slice(0, idx),
+                  e,
+                  ...access.slice(idx + 1),
+                ])
+              }
+            />
+          ))}
+      </div>
+      <div className="flex justify-end gap-3">
+        <Button
+          className="rounded-md bg-transparent hover:bg-slate-100"
+          onClick={() => {}}
+        >
+          Reset
+        </Button>
+        <Button
+          className="rounded-md bg-slate-950 text-white"
+          onClick={() => {}}
+        >
+          Save
+        </Button>
+      </div>
+    </div>
+  );
+};
