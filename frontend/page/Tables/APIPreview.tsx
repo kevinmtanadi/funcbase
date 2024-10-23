@@ -339,6 +339,18 @@ const FetchPreview = ({ table }: PreviewProps) => {
               </TableCell>
             </TableRow>
             <TableRow>
+              <TableCell>get_count</TableCell>
+              <TableCell>boolean</TableCell>
+              <TableCell>
+                <div className="bg-red-200 rounded-full text-center p-1 text-red-700">
+                  no
+                </div>
+              </TableCell>
+              <TableCell>
+                Whether to return the total number of data (default to false)
+              </TableCell>
+            </TableRow>
+            <TableRow>
               <TableCell>sort</TableCell>
               <TableCell>string</TableCell>
               <TableCell>
