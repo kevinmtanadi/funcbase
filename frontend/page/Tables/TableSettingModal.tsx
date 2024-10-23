@@ -20,6 +20,8 @@ import {
   TableHeader,
   TableColumn,
   Input,
+  Select,
+  SelectItem,
 } from "@nextui-org/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaRegTrashAlt } from "react-icons/fa";
@@ -251,7 +253,6 @@ const ColumnPage = ({ table }: ColumnPageProps) => {
       const indexes = tableState.index.map((idx: any) => ({
         name: idx.name,
         indexes: idx.indexes.map((idx: string) => {
-          console.log(idx);
           return tableState.columns.find((col: any) => col.id === idx)?.name;
         }),
       }));
@@ -585,8 +586,13 @@ export default TableSettingModal;
 interface AccessTabProps {
   table: string;
 }
+
+interface AccessValue {
+  value: string;
+  reference?: string;
+}
+
 const AccessTab = ({ table }: AccessTabProps) => {
-  const queryClient = useQueryClient();
   const { data: tableAccess } = useQuery({
     queryKey: ["access", table],
     queryFn: async () => {
@@ -595,58 +601,196 @@ const AccessTab = ({ table }: AccessTabProps) => {
     },
   });
 
-  const [access, setAccess] = useState<any[]>([]);
+  const [r, setR] = useState(0);
+  const [access, setAccess] = useState<AccessValue[]>([]);
   useEffect(() => {
     if (tableAccess) {
-      setAccess(tableAccess);
+      setAccess(
+        tableAccess.map((acc: string) => {
+          if (["0", "1", "2"].includes(acc)) {
+            return {
+              value: acc,
+            };
+          }
+          return {
+            value: "3",
+            reference: acc,
+          };
+        })
+      );
     }
-  }, [tableAccess]);
+  }, [tableAccess, r]);
 
-  const { mutateAsync } = useMutation({
-    mutationFn: () => {
-      return axiosInstance.post(`/api/main/table/${table}/access`);
+  const { data: columns } = useQuery({
+    queryKey: ["columns", table],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/main/${table}/columns`);
+      return res.data;
     },
   });
 
+  const [authTable, setAuthTable] = useState<any[]>([]);
+  useEffect(() => {
+    setAuthTable(columns?.filter((col: any) => col.type === "RELATION"));
+  }, [columns]);
   const accessLabel = ["Fetch", "List", "Insert", "Update", "Delete"];
+
+  const queryClient = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: () => {
+      return axiosInstance.put(`/api/main/table/access`, {
+        table_name: table,
+        access: access,
+      });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({
+        queryKey: ["access", table],
+        type: "active",
+      });
+    },
+  });
+
+  const updateAccess = () => {
+    toast.promise(mutateAsync(), {
+      pending: "Updating table access...",
+      success: "Table access updated successfully",
+      error: "Error when updating table access",
+    });
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
         {access &&
           access.length > 0 &&
-          access.map((acc: any, idx: number) => (
-            <Input
-              key={idx}
-              variant="bordered"
-              radius="sm"
-              label={accessLabel[idx]}
-              type="text"
-              value={acc}
-              onValueChange={(e) =>
-                setAccess([
-                  ...access.slice(0, idx),
-                  e,
-                  ...access.slice(idx + 1),
-                ])
-              }
-            />
+          access.map((acc: AccessValue, idx: number) => (
+            <div className="flex gap-3">
+              <Select
+                variant="bordered"
+                classNames={{
+                  trigger: "rounded-md",
+                  popoverContent: " rounded-t-none rounded-b-md",
+                }}
+                label={<b>{accessLabel[idx]} Access</b>}
+                defaultSelectedKeys={[acc.value]}
+                selectedKeys={[acc.value]}
+                onChange={(e) => {
+                  if (["0", "1", "2", "3"].includes(e.target.value)) {
+                    setAccess([
+                      ...access.slice(0, idx),
+                      {
+                        ...access[idx],
+                        value: e.target.value,
+                      },
+                      ...access.slice(idx + 1),
+                    ]);
+                  }
+                }}
+                disabledKeys={authTable.length > 0 ? [""] : ["3"]}
+              >
+                <SelectItem textValue="Admin Only" key={"0"} value={"0"}>
+                  <div className="flex flex-col text-start">
+                    <p className="font-semibold">Admin Only</p>
+                    <p className="text-gray-600 text-sm">
+                      Only admins can access this data
+                    </p>
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  textValue="Authenticated User"
+                  key={"1"}
+                  value={"1"}
+                >
+                  <div className="flex flex-col text-start">
+                    <p className="font-semibold">Authenticated User</p>
+                    <p className="text-gray-600 text-sm">
+                      User must be authenticated (when sending a request, there
+                      must be a JWT token attached)
+                    </p>
+                  </div>
+                </SelectItem>
+                <SelectItem textValue="Public Access" key={"2"} value={"2"}>
+                  <div className="flex flex-col text-start">
+                    <p className="font-semibold">Public Access</p>
+                    <p className="text-gray-600 text-sm">
+                      Anybody can access this table
+                    </p>
+                  </div>
+                </SelectItem>
+                <SelectItem textValue="Owner Only" key={"3"} value={"3"}>
+                  <div className="flex flex-col text-start">
+                    <p className="font-semibold">Owner Only</p>
+                    <p className="text-gray-600 text-sm">
+                      Only the owner can access their data. There must be at
+                      least 1 auth table that this table is related to
+                    </p>
+                  </div>
+                </SelectItem>
+              </Select>
+              {!["0", "1", "2"].includes(acc.value) && authTable.length > 0 && (
+                <RelationTab
+                  tables={authTable}
+                  selectedTable={acc.reference}
+                  onChange={(reference) => {
+                    setAccess([
+                      ...access.slice(0, idx),
+                      {
+                        ...access[idx],
+                        reference,
+                      },
+                      ...access.slice(idx + 1),
+                    ]);
+                  }}
+                />
+              )}
+            </div>
           ))}
       </div>
       <div className="flex justify-end gap-3">
         <Button
           className="rounded-md bg-transparent hover:bg-slate-100"
-          onClick={() => {}}
+          onClick={() => {
+            setR(r + 1);
+          }}
         >
           Reset
         </Button>
         <Button
           className="rounded-md bg-slate-950 text-white"
-          onClick={() => {}}
+          onClick={() => {
+            updateAccess();
+          }}
         >
           Save
         </Button>
       </div>
     </div>
+  );
+};
+
+interface RelationTabProps {
+  tables: any[];
+  selectedTable?: string;
+  onChange: (reference: string) => void;
+}
+const RelationTab = ({ tables, selectedTable, onChange }: RelationTabProps) => {
+  return (
+    <Select
+      variant="bordered"
+      classNames={{
+        trigger: "rounded-md",
+        popoverContent: " rounded-t-none rounded-b-md",
+      }}
+      label={<b>Owner Table</b>}
+      selectedKeys={selectedTable && [selectedTable]}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {tables.map((table) => (
+        <SelectItem key={table.name} textValue={table.name} value={table.name}>
+          {table.name}
+        </SelectItem>
+      ))}
+    </Select>
   );
 };

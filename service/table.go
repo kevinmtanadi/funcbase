@@ -20,7 +20,7 @@ type TableService interface {
 	Rename(tx *gorm.DB, tableName string, newName string) error
 	Drop(tx *gorm.DB, tableName string) error
 
-	Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error)
+	Columns(tableName string, fetchAuthColumn bool, fetchTableType bool) ([]map[string]interface{}, error)
 
 	Indexes(tableName string) ([]string, error)
 	DropIndexes(tx *gorm.DB, indexes []string) error
@@ -269,15 +269,20 @@ func (s *TableServiceImpl) Drop(tx *gorm.DB, tableName string) error {
 	return tx.Exec(fmt.Sprintf("DROP TABLE %s", tableName)).Error
 }
 
-func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]map[string]interface{}, error) {
+func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool, fetchTableType bool) ([]map[string]interface{}, error) {
 	var result []map[string]interface{}
 	cacheKey := "columns_" + tableName
 	storedCache, ok := s.cache.Get(cacheKey)
 	if ok {
-		fmt.Println("Fetched columns from cache")
 		return storedCache.([]map[string]interface{}), nil
 	}
-	fmt.Println("Fetched columns from db")
+
+	string1 := ""
+	string2 := ""
+	if fetchTableType {
+		string1 = ", t.auth"
+		string2 = "LEFT JOIN '_table' AS t ON fk.'table' = t.name"
+	}
 
 	rows, err := s.db.Raw(fmt.Sprintf(`
 		SELECT 
@@ -288,10 +293,11 @@ func (s *TableServiceImpl) Columns(tableName string, fetchAuthColumn bool) ([]ma
 			info.'notnull',
 			info.dflt_value,
 			fk.'table' AS reference
+			%s
 		FROM pragma_table_info('%s') AS info
 		LEFT JOIN pragma_foreign_key_list('%s') AS fk ON
-		info.name = fk.'from'
-	`, tableName, tableName)).Rows()
+		info.name = fk.'from' %s
+	`, string1, tableName, tableName, string2)).Rows()
 	if err != nil {
 		return result, err
 	}

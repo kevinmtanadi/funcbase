@@ -137,7 +137,7 @@ func (d *DatabaseAPIImpl) FetchTableInfo(c echo.Context) error {
 	fmt.Println(datas)
 	for _, data := range datas {
 		if data == "columns" {
-			response["columns"], err = d.service.Table.Columns(tableName, false)
+			response["columns"], err = d.service.Table.Columns(tableName, false, false)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 					Message: "Error fetching table info",
@@ -154,6 +154,7 @@ func (d *DatabaseAPIImpl) FetchTableInfo(c echo.Context) error {
 
 type fetchColumn struct {
 	FetchAuthColumn bool `json:"fetch_auth_column" query:"fetch_auth_column"`
+	FetchTableType  bool `json:"table_type" query:"table_type"`
 }
 
 func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
@@ -166,7 +167,7 @@ func (d *DatabaseAPIImpl) FetchTableColumns(c echo.Context) error {
 		})
 	}
 
-	result, err := d.service.Table.Columns(tableName, params.FetchAuthColumn)
+	result, err := d.service.Table.Columns(tableName, params.FetchAuthColumn, params.FetchTableType)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
@@ -934,7 +935,10 @@ func (d *DatabaseAPIImpl) FetchTableAccess(c echo.Context) error {
 
 type updateTableAccessReq struct {
 	TableName string `json:"table_name"`
-	Access    string `json:"access"`
+	Access    []struct {
+		Value     string `json:"value"`
+		Reference string `json:"reference"`
+	} `json:"access"`
 }
 
 func (d *DatabaseAPIImpl) UpdateTableAccess(c echo.Context) error {
@@ -947,7 +951,25 @@ func (d *DatabaseAPIImpl) UpdateTableAccess(c echo.Context) error {
 		})
 	}
 
-	err := d.db.Model(&model.Tables{}).Update("access", params.Access).Error
+	accessValue := []string{}
+	for _, access := range params.Access {
+		switch access.Value {
+		case "0", "1", "2":
+			accessValue = append(accessValue, access.Value)
+		case "3":
+			accessValue = append(accessValue, access.Reference)
+		default:
+			return c.JSON(http.StatusBadRequest, responses.APIResponse{
+				Message: "Invalid access value",
+				Error:   "Invalid access value",
+			})
+		}
+
+	}
+
+	err := d.db.Model(&model.Tables{}).
+		Where("name = ?", params.TableName).
+		Update("access", strings.Join(accessValue, ";")).Error
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 			Message: "Failed to update table access",

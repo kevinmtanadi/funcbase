@@ -58,7 +58,7 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]in
 		}
 
 		if table.Auth {
-			columnsArr, err := s.service.WithService().Table.Columns(tableName, false)
+			columnsArr, err := s.service.WithService().Table.Columns(tableName, false, false)
 
 			if err != nil {
 				return nil, err
@@ -92,7 +92,7 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]in
 		if isSQLTerm(option.Filter) {
 			query = query.Where(option.Filter)
 		} else {
-			columns, err := s.service.WithService().Table.Columns(tableName, false)
+			columns, err := s.service.WithService().Table.Columns(tableName, false, false)
 			if err != nil {
 				return nil, err
 			}
@@ -140,7 +140,7 @@ func (s *DBServiceImpl) Count(db *gorm.DB, option *FetchParams) (int64, error) {
 		if isSQLTerm(option.Filter) {
 			query = query.Where(option.Filter)
 		} else {
-			columns, err := s.service.WithService().Table.Columns(tableName, false)
+			columns, err := s.service.WithService().Table.Columns(tableName, false, false)
 			if err != nil {
 				return 0, err
 			}
