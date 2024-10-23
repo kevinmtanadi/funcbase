@@ -19,7 +19,6 @@ import {
   TableCell,
   TableHeader,
   TableColumn,
-  Input,
   Select,
   SelectItem,
 } from "@nextui-org/react";
