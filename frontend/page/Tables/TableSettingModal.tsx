@@ -81,6 +81,9 @@ const TableSettingModal = ({
               <Tab key={"columns"} title="Columns">
                 <ColumnPage table={tableName} />
               </Tab>
+              <Tab key={"access"} title="Access">
+                <AccessTab table={tableName} />
+              </Tab>
               <Tab key={"danger"} title="Danger Zone">
                 <div className="flex flex-col gap-2">
                   <Button
@@ -109,9 +112,6 @@ const TableSettingModal = ({
                     </div>
                   </Button>
                 </div>
-              </Tab>
-              <Tab key={"access"} title="Access">
-                <AccessTab table={tableName} />
               </Tab>
             </Tabs>
           </ModalBody>
@@ -600,6 +600,19 @@ const AccessTab = ({ table }: AccessTabProps) => {
     },
   });
 
+  const { data: tableInfo } = useQuery({
+    queryKey: ["tables", table],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/main/tables`, {
+        params: {
+          search: table,
+          limit: 1,
+        },
+      });
+      return res.data[0];
+    },
+  });
+
   const [r, setR] = useState(0);
   const [access, setAccess] = useState<AccessValue[]>([]);
   useEffect(() => {
@@ -663,88 +676,154 @@ const AccessTab = ({ table }: AccessTabProps) => {
       <div className="flex flex-col gap-3">
         {access &&
           access.length > 0 &&
-          access.map((acc: AccessValue, idx: number) => (
-            <div className="flex gap-3">
-              <Select
-                variant="bordered"
-                classNames={{
-                  trigger: "rounded-md",
-                  popoverContent: " rounded-t-none rounded-b-md",
-                }}
-                label={<b>{accessLabel[idx]} Access</b>}
-                defaultSelectedKeys={[acc.value]}
-                selectedKeys={[acc.value]}
-                onChange={(e) => {
-                  if (["0", "1", "2", "3"].includes(e.target.value)) {
-                    setAccess([
-                      ...access.slice(0, idx),
-                      {
-                        ...access[idx],
-                        value: e.target.value,
-                      },
-                      ...access.slice(idx + 1),
-                    ]);
-                  }
-                }}
-                disabledKeys={authTable.length > 0 ? [""] : ["3"]}
-              >
-                <SelectItem textValue="Admin Only" key={"0"} value={"0"}>
-                  <div className="flex flex-col text-start">
-                    <p className="font-semibold">Admin Only</p>
-                    <p className="text-gray-600 text-sm">
-                      Only admins can access this data
-                    </p>
-                  </div>
-                </SelectItem>
-                <SelectItem
-                  textValue="Authenticated User"
-                  key={"1"}
-                  value={"1"}
-                >
-                  <div className="flex flex-col text-start">
-                    <p className="font-semibold">Authenticated User</p>
-                    <p className="text-gray-600 text-sm">
-                      User must be authenticated (when sending a request, there
-                      must be a JWT token attached)
-                    </p>
-                  </div>
-                </SelectItem>
-                <SelectItem textValue="Public Access" key={"2"} value={"2"}>
-                  <div className="flex flex-col text-start">
-                    <p className="font-semibold">Public Access</p>
-                    <p className="text-gray-600 text-sm">
-                      Anybody can access this table
-                    </p>
-                  </div>
-                </SelectItem>
-                <SelectItem textValue="Owner Only" key={"3"} value={"3"}>
-                  <div className="flex flex-col text-start">
-                    <p className="font-semibold">Owner Only</p>
-                    <p className="text-gray-600 text-sm">
-                      Only the owner can access their data. There must be at
-                      least 1 auth table that this table is related to
-                    </p>
-                  </div>
-                </SelectItem>
-              </Select>
-              {!["0", "1", "2"].includes(acc.value) && authTable.length > 0 && (
-                <RelationTab
-                  tables={authTable}
-                  selectedTable={acc.reference}
-                  onChange={(reference) => {
-                    setAccess([
-                      ...access.slice(0, idx),
-                      {
-                        ...access[idx],
-                        reference,
-                      },
-                      ...access.slice(idx + 1),
-                    ]);
+          access.map((acc: AccessValue, idx: number) =>
+            tableInfo?.auth ? (
+              <div className="flex gap-3">
+                <Select
+                  variant="bordered"
+                  classNames={{
+                    trigger: "rounded-md",
+                    popoverContent: " rounded-t-none rounded-b-md",
                   }}
-                />
-              )}
-            </div>
-          ))}
+                  label={<b>{accessLabel[idx]} Access</b>}
+                  defaultSelectedKeys={[acc.value]}
+                  selectedKeys={[acc.value]}
+                  onChange={(e) => {
+                    if (["0", "1", "2", "3"].includes(e.target.value)) {
+                      setAccess([
+                        ...access.slice(0, idx),
+                        {
+                          ...access[idx],
+                          value: e.target.value,
+                        },
+                        ...access.slice(idx + 1),
+                      ]);
+                    }
+                  }}
+                >
+                  <SelectItem textValue="Admin Only" key={"0"} value={"0"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Admin Only</p>
+                      <p className="text-gray-600 text-sm">
+                        Only admins can access this data
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem
+                    textValue="Authenticated User"
+                    key={"1"}
+                    value={"1"}
+                  >
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Authenticated User</p>
+                      <p className="text-gray-600 text-sm">
+                        User must be authenticated (when sending a request,
+                        there must be a JWT token attached)
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem textValue="Public Access" key={"2"} value={"2"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Public Access</p>
+                      <p className="text-gray-600 text-sm">
+                        Anybody can access this table
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem textValue="Owner Only" key={"3"} value={"3"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Owner Only</p>
+                      <p className="text-gray-600 text-sm">
+                        Only the owner can access their data.
+                      </p>
+                    </div>
+                  </SelectItem>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <Select
+                  variant="bordered"
+                  classNames={{
+                    trigger: "rounded-md",
+                    popoverContent: " rounded-t-none rounded-b-md",
+                  }}
+                  label={<b>{accessLabel[idx]} Access</b>}
+                  defaultSelectedKeys={[acc.value]}
+                  selectedKeys={[acc.value]}
+                  onChange={(e) => {
+                    if (["0", "1", "2", "3"].includes(e.target.value)) {
+                      setAccess([
+                        ...access.slice(0, idx),
+                        {
+                          ...access[idx],
+                          value: e.target.value,
+                        },
+                        ...access.slice(idx + 1),
+                      ]);
+                    }
+                  }}
+                  disabledKeys={authTable.length > 0 ? [""] : ["3"]}
+                >
+                  <SelectItem textValue="Admin Only" key={"0"} value={"0"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Admin Only</p>
+                      <p className="text-gray-600 text-sm">
+                        Only admins can access this data
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem
+                    textValue="Authenticated User"
+                    key={"1"}
+                    value={"1"}
+                  >
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Authenticated User</p>
+                      <p className="text-gray-600 text-sm">
+                        User must be authenticated (when sending a request,
+                        there must be a JWT token attached)
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem textValue="Public Access" key={"2"} value={"2"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Public Access</p>
+                      <p className="text-gray-600 text-sm">
+                        Anybody can access this table
+                      </p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem textValue="Owner Only" key={"3"} value={"3"}>
+                    <div className="flex flex-col text-start">
+                      <p className="font-semibold">Owner Only</p>
+                      <p className="text-gray-600 text-sm">
+                        Only the owner can access their data. There must be at
+                        least 1 auth table that this table is related to
+                      </p>
+                    </div>
+                  </SelectItem>
+                </Select>
+                {!["0", "1", "2"].includes(acc.value) &&
+                  authTable.length > 0 && (
+                    <RelationTab
+                      tables={authTable}
+                      selectedTable={acc.reference}
+                      onChange={(reference) => {
+                        setAccess([
+                          ...access.slice(0, idx),
+                          {
+                            ...access[idx],
+                            reference,
+                          },
+                          ...access.slice(idx + 1),
+                        ]);
+                      }}
+                    />
+                  )}
+              </div>
+            )
+          )}
       </div>
       <div className="flex justify-end gap-3">
         <Button

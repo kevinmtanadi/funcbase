@@ -12,6 +12,7 @@ import (
 	"funcbase/service"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,7 +135,6 @@ func (d *DatabaseAPIImpl) FetchTableInfo(c echo.Context) error {
 	response["index"] = table.SystemIndex
 
 	datas := strings.Split(params.Data, ",")
-	fmt.Println(datas)
 	for _, data := range datas {
 		if data == "columns" {
 			response["columns"], err = d.service.Table.Columns(tableName, false, false)
@@ -193,24 +193,21 @@ type fetchRowsRes struct {
 }
 
 func (d *DatabaseAPIImpl) List(c echo.Context) error {
-	tableName := c.Param("table_name")
-	var res fetchRowsRes
+	var (
+		tableName                 = c.Param("table_name")
+		params    *fetchRowsParam = new(fetchRowsParam)
+		res       fetchRowsRes
+		userId    = strconv.Itoa(c.Get("user_id").(int))
+	)
 
-	var params *fetchRowsParam = new(fetchRowsParam)
 	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
 
-	paramUser := c.Get("user_id")
-	var userID int
-	if paramUser != nil {
-		userID = paramUser.(int)
-	}
-
 	if strings.Contains(params.Filter, "$user.id") {
-		params.Filter = strings.ReplaceAll(params.Filter, "$user.id", string(userID))
+		params.Filter = strings.ReplaceAll(params.Filter, "$user.id", userId)
 	}
 
 	data, err := d.service.DB.Fetch(d.db, &service.FetchParams{
@@ -278,15 +275,38 @@ func (d *DatabaseAPIImpl) CreateTable(c echo.Context) error {
 func (d *DatabaseAPIImpl) View(c echo.Context) error {
 	var (
 		tableName                              = c.Param("table_name")
-		id                                     = c.Param("id")
-		userId                                 = c.Get("user_id")
+		requestID                              = c.Param("id")
+		requestUID                             = c.Get("user_id")
 		result          map[string]interface{} = make(map[string]interface{}, 0)
 		roles                                  = c.Get("roles")
 		referencedTable                        = ""
 	)
 
+	var userId int
+	var ok bool
+	if requestUID != nil {
+		userId, ok = requestUID.(int)
+		if !ok {
+			userId = 0
+		}
+		userId = int(userId)
+	}
+
+	var id int
+	var err error
+	if requestID != "" {
+		id, err = strconv.Atoi(requestID)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, responses.APIResponse{
+				Message: "ID must be an integer",
+				Error:   err.Error(),
+			})
+		}
+		id = int(id)
+	}
+
 	if roles != "ADMIN" {
-		tableInfo, err := d.service.Table.Info(tableName, service.TABLE_INFO_ACCESS)
+		tableInfo, err := d.service.Table.Info(tableName, service.TABLE_INFO_ACCESS, service.TABLE_INFO_AUTH)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Message: "Error fetching data",
@@ -298,26 +318,35 @@ func (d *DatabaseAPIImpl) View(c echo.Context) error {
 		switch viewAccess {
 		case "0":
 			return c.JSON(http.StatusForbidden, responses.APIResponse{
-				Message: "You don't have access to view this data 1",
+				Message: "You don't have access to view this data",
 				Error:   "Data restricted",
 			})
 		case "1":
-			if userId == nil {
+			if userId == 0 {
 				return c.JSON(http.StatusForbidden, responses.APIResponse{
-					Message: "You don't have access to view this data 2",
+					Message: "You don't have access to view this data",
 					Error:   "Data restricted",
 				})
 			}
 		case "2":
 			// ignore since data is public
 		default:
-			referencedTable = viewAccess
+			if tableInfo.Auth {
+				if userId != id {
+					return c.JSON(http.StatusForbidden, responses.APIResponse{
+						Message: "You don't have access to view this data because you dont own it",
+						Error:   "Data restricted",
+					})
+				}
+			} else {
+				referencedTable = viewAccess
+			}
 		}
 	}
 
 	if err := d.db.Table(tableName).
 		Select("*").
-		Where("id = ?", id).
+		Where("id = ?", requestID).
 		Find(&result).
 		Limit(1).
 		Error; err != nil {
@@ -325,9 +354,8 @@ func (d *DatabaseAPIImpl) View(c echo.Context) error {
 	}
 
 	if referencedTable != "" {
-		userTable := result[referencedTable].(float64)
-		userIdFloat := userId.(int)
-		if int(userTable) != userIdFloat {
+		userTable := int(result[referencedTable].(float64))
+		if userTable != userId {
 			return c.JSON(http.StatusForbidden, responses.APIResponse{
 				Message: "You don't have access to view this data 3",
 				Error:   "Data restricted",
@@ -506,13 +534,24 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 	var (
 		tableName       = c.Param("table_name")
 		contentType     = c.Request().Header.Get("Content-Type")
-		userId          = c.Get("user_id")
+		requestUID      = c.Get("user_id")
 		roles           = c.Get("roles")
 		referencedTable = ""
 	)
 
+	var userId int
+	var ok bool
+	if requestUID != nil {
+		userId, ok = requestUID.(int)
+		if !ok {
+			userId = 0
+		}
+		userId = int(userId)
+	}
+
+	var isAuth = false
 	if roles != "ADMIN" {
-		tableInfo, err := d.service.Table.Info(tableName, service.TABLE_INFO_ACCESS)
+		tableInfo, err := d.service.Table.Info(tableName, service.TABLE_INFO_ACCESS, service.TABLE_INFO_AUTH)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, responses.APIResponse{
 				Data:    nil,
@@ -529,7 +568,7 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 				Error:   "Data restricted",
 			})
 		case "1":
-			if userId == nil {
+			if userId == 0 {
 				return c.JSON(http.StatusForbidden, responses.APIResponse{
 					Message: "You don't have access to this data",
 					Error:   "Data restricted",
@@ -538,7 +577,11 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 		case "2":
 			// ignore since data is public
 		default:
-			referencedTable = updateAccess
+			if tableInfo.Auth {
+				isAuth = true
+			} else {
+				referencedTable = updateAccess
+			}
 		}
 	}
 
@@ -566,7 +609,7 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 				id = v[0]
 			}
 			if v[0] == "@user.id" {
-				if userId == nil {
+				if userId == 0 {
 					return c.JSON(http.StatusBadRequest, responses.APIResponse{
 						Message: "User not authorized",
 						Error:   "Token not found",
@@ -581,6 +624,13 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, responses.APIResponse{
 				Message: "Data ID is required to update",
 				Error:   "ID not found",
+			})
+		}
+
+		if isAuth && strconv.Itoa(userId) != id {
+			return c.JSON(http.StatusForbidden, responses.APIResponse{
+				Message: "You don't have access to this data",
+				Error:   "Data restricted",
 			})
 		}
 
@@ -667,12 +717,20 @@ func (d *DatabaseAPIImpl) Update(c echo.Context) error {
 			})
 		}
 
+		id := param["id"].(float64)
+		if isAuth && int(userId) != int(id) {
+			return c.JSON(http.StatusForbidden, responses.APIResponse{
+				Message: "You don't have access to this data",
+				Error:   "Data restricted",
+			})
+		}
+
 		for k, v := range param {
 			if v == "" {
 				continue
 			}
 			if v == "@user.id" {
-				if userId == nil {
+				if userId == 0 {
 					return c.JSON(http.StatusBadRequest, responses.APIResponse{
 						Message: "User not authorized",
 						Error:   "Token not found",
@@ -777,7 +835,22 @@ func (d *DatabaseAPIImpl) Delete(c echo.Context) error {
 		case "2":
 			// ignore since data is public
 		default:
-			referencedTable = deleteAccess
+			if tableInfo.Auth {
+				if len(params.ID) > 0 {
+					return c.JSON(http.StatusForbidden, responses.APIResponse{
+						Message: "On delete user data, only 1 data can be deleted at a time",
+						Error:   "Multiple ID not allowed",
+					})
+				}
+				if strconv.Itoa(userId.(int)) != params.ID[0] {
+					return c.JSON(http.StatusForbidden, responses.APIResponse{
+						Message: "You don't have access to this data",
+						Error:   "Data restricted",
+					})
+				}
+			} else {
+				referencedTable = deleteAccess
+			}
 		}
 	}
 
@@ -801,7 +874,7 @@ func (d *DatabaseAPIImpl) Delete(c echo.Context) error {
 					Error:   "Data not found",
 				})
 			}
-			if data[0][referencedTable] != userId {
+			if data[0][referencedTable] != strconv.Itoa(userId.(int)) {
 				return c.JSON(http.StatusForbidden, responses.APIResponse{
 					Message: "You don't have access to this data",
 					Error:   "Data restricted",
@@ -957,7 +1030,11 @@ func (d *DatabaseAPIImpl) UpdateTableAccess(c echo.Context) error {
 		case "0", "1", "2":
 			accessValue = append(accessValue, access.Value)
 		case "3":
-			accessValue = append(accessValue, access.Reference)
+			if access.Reference == "" {
+				accessValue = append(accessValue, access.Value)
+			} else {
+				accessValue = append(accessValue, access.Reference)
+			}
 		default:
 			return c.JSON(http.StatusBadRequest, responses.APIResponse{
 				Message: "Invalid access value",
