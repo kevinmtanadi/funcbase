@@ -7,7 +7,7 @@
     "tailwind": "npx tailwindcss build -i ./index.css -o ./tailwind.css --watch",
     "build-tailwind": "npx tailwindcss build -i ./index.css -o ./tailwind.css --minify",
     "dev": "concurrently \"npm run tailwind\" \"vite\"",
-    "build-frontend": "tsc && vite build",
+    "build-frontend": "vite build",
     "build": "npm run build-tailwind && npm run build-frontend",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"

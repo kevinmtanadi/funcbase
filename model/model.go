@@ -36,11 +36,10 @@ type Tables struct {
 	// 1 = logged in
 	// 2 = public
 	// others, connected user table
-	Access Access `json:"access,omitempty" gorm:"column:access;default:0;0;0;0;0"`
+	Access Access `json:"access,omitempty" gorm:"column:access"`
 }
 
 type Access string
-
 
 func (a *Access) View() string {
 	return strings.Split(string(*a), ";")[0]

@@ -43,6 +43,32 @@ func RequireAuth(required bool) echo.MiddlewareFunc {
 				"error":  "unauthorized",
 			}
 
+			tokenHeader := c.Request().Header.Get("Authorization")
+			if tokenHeader != "" {
+				tokenHeader = strings.Replace(tokenHeader, "Bearer ", "", 1)
+
+				claims, err := parseJWT(tokenHeader)
+				if err != nil {
+					if required {
+						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+					}
+				} else {
+					// token is valid
+
+					if float64(time.Now().Unix()) > claims["exp"].(float64) && required {
+						return c.JSON(http.StatusUnauthorized, unauthorizedErr)
+					}
+
+					userID, ok := claims["sub"].(float64)
+					userRole, ok2 := claims["roles"].(string)
+					if ok && ok2 {
+						c.Set("user_id", int(userID))
+						c.Set("roles", userRole)
+						return next(c)
+					}
+				}
+			}
+
 			cookies := c.Request().Cookies()
 			for _, cookie := range cookies {
 				if cookie.Name == "_auth" {

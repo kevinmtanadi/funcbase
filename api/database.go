@@ -194,11 +194,21 @@ type fetchRowsRes struct {
 
 func (d *DatabaseAPIImpl) List(c echo.Context) error {
 	var (
-		tableName                 = c.Param("table_name")
-		params    *fetchRowsParam = new(fetchRowsParam)
-		res       fetchRowsRes
-		userId    = strconv.Itoa(c.Get("user_id").(int))
+		tableName                  = c.Param("table_name")
+		params     *fetchRowsParam = new(fetchRowsParam)
+		res        fetchRowsRes
+		requestUID = c.Get("user_id")
 	)
+
+	var userId int
+	var ok bool
+	if requestUID != nil {
+		userId, ok = requestUID.(int)
+		if !ok {
+			userId = 0
+		}
+		userId = int(userId)
+	}
 
 	if err := (&echo.DefaultBinder{}).BindQueryParams(c, params); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
@@ -206,8 +216,14 @@ func (d *DatabaseAPIImpl) List(c echo.Context) error {
 		})
 	}
 
-	if strings.Contains(params.Filter, "$user.id") {
-		params.Filter = strings.ReplaceAll(params.Filter, "$user.id", userId)
+	if strings.Contains(params.Filter, "@user.id") {
+		if userId == 0 {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"error": "User ID is required",
+			})
+		}
+		str := fmt.Sprintf("%d", userId)
+		params.Filter = strings.ReplaceAll(params.Filter, "@user.id", str)
 	}
 
 	data, err := d.service.DB.Fetch(d.db, &service.FetchParams{
@@ -979,11 +995,19 @@ func (d *DatabaseAPIImpl) DeleteTable(c echo.Context) error {
 
 		return nil
 	})
+
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
+
+	d.cache.Delete(fmt.Sprintf("columns_%s", tableName))
+	tableInfoCache := []string{service.TABLE_INFO_NAME, service.TABLE_INFO_AUTH, service.TABLE_INFO_INDEXES, service.TABLE_INFO_SYSTEM, service.TABLE_INFO_ACCESS}
+	for _, info := range tableInfoCache {
+		d.cache.Delete(fmt.Sprintf("tableInfo:%s:%s", tableName, info))
+	}
+
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -1053,6 +1077,8 @@ func (d *DatabaseAPIImpl) UpdateTableAccess(c echo.Context) error {
 			Error:   err.Error(),
 		})
 	}
+
+	d.cache.Delete(fmt.Sprintf("tableInfo:%s:%s", params.TableName, service.TABLE_INFO_ACCESS))
 
 	return c.JSON(http.StatusOK, responses.APIResponse{
 		Message: "Table access updated successfully",

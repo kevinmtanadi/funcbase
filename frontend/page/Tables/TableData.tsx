@@ -343,6 +343,9 @@ const TableData = ({ table, resetTable }: TableDataProps) => {
   const applySearch = () => {
     setParams({ ...params, filter: search });
   };
+  useEffect(() => {
+    setSearch("");
+  }, [table]);
 
   const [selectedRows, setSelectedRows] = useState<Selection>(new Set([]));
   const { mutateAsync } = useMutation({

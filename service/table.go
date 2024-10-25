@@ -241,6 +241,7 @@ func (s *TableServiceImpl) Create(tx *gorm.DB, params model.CreateTable) error {
 			Auth:    isAuth,
 			System:  false,
 			Indexes: string(indexJson),
+			Access:  "0;0;0;0;0",
 		}).
 		Error
 	if err != nil {

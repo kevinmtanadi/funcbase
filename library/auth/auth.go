@@ -42,7 +42,7 @@ func GenerateJWT(payload map[string]interface{}) (string, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 
-	claims["iss"] = "fullbase"
+	claims["iss"] = "funcbase"
 	claims["exp"] = time.Now().Add(time.Hour * 24 * 7).Unix()
 	claims["iat"] = time.Now().Unix()
 	claims["jti"], _ = uuid.NewV7()

@@ -1,0 +1,10 @@
+frontend
+tmp
+.git
+.gitignore
+package-lock.json
+node_modules
+z_others
+fb_data
+funcbase.exe
+test

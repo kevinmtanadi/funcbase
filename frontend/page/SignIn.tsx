@@ -49,7 +49,7 @@ const SignIn = () => {
       <Card radius="sm" className="max-w-[400px] w-9/12">
         <CardHeader className="">
           <div className="flex flex-col gap-10 mt-3 w-full text-center">
-            <h1 className="text-xl font-bold">Fullbase</h1>
+            <h1 className="text-xl font-bold">Funcbase</h1>
             <h2 className="text-md">Admin sign in</h2>
           </div>
         </CardHeader>

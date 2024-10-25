@@ -9,6 +9,7 @@ import (
 	"funcbase/model"
 	"funcbase/service"
 	"net/http"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -138,13 +139,20 @@ func (f FunctionAPIImpl) DeleteFunction(c echo.Context) error {
 }
 
 func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
-	funcName := c.Param("func_name")
-	var function *model.FunctionStored
+	var (
+		requestUID = c.Get("user_id")
+		funcName   = c.Param("func_name")
+		function   *model.FunctionStored
+	)
 
-	paramUser := c.Get("user_id")
-	var userID string
-	if paramUser != nil {
-		userID = paramUser.(string)
+	var userId int
+	var ok bool
+	if requestUID != nil {
+		userId, ok = requestUID.(int)
+		if !ok {
+			userId = 0
+		}
+		userId = int(userId)
 	}
 
 	err := f.db.Model(&model.FunctionStored{}).Where("name = ?", funcName).First(&function).Error
@@ -178,15 +186,21 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 			switch fun.Action {
 			case "insert":
 				if data, ok := caller.Data[fun.Name].([]interface{}); ok {
-					bindedInput := BindMultipleInput(fun.Values, data, savedData, userID)
+					bindedInput, err := BindMultipleInput(fun.Values, data, savedData, fmt.Sprintf("%d", userId))
+					if err != nil {
+						return err
+					}
 
-					err := tx.Table(fun.Table).Create(bindedInput).Error
+					err = tx.Table(fun.Table).Create(bindedInput).Error
 					if err != nil {
 						return err
 					}
 				} else if data, ok := caller.Data[fun.Name].(map[string]interface{}); ok {
-					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
-					err := tx.Table(fun.Table).Clauses(clause.Returning{
+					bindedInput, err := BindSingularInput(fun.Values, data, savedData, fmt.Sprintf("%d", userId))
+					if err != nil {
+						return err
+					}
+					err = tx.Table(fun.Table).Clauses(clause.Returning{
 						Columns: []clause.Column{
 							{
 								Name: "id",
@@ -201,18 +215,21 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 				}
 
 			case "update":
-				if data, ok := caller.Data[fun.Name].([]map[string]interface{}); ok {
-					for _, input := range data {
+				if data, ok := caller.Data[fun.Name].([]interface{}); ok {
+					bindedInput, err := BindMultipleInput(fun.Values, data, savedData, fmt.Sprintf("%d", userId))
+					if err != nil {
+						return err
+					}
+					for _, input := range bindedInput {
 						filter := map[string]interface{}{
 							"id = ?": input["id"],
 						}
 
-						bindedInput := BindSingularInput(fun.Values, input, savedData, userID)
 						table := tx.Table(fun.Table)
 						for k, v := range filter {
 							table = table.Where(k, v)
 						}
-						err := table.Updates(bindedInput).Error
+						err = table.Updates(input).Error
 						if err != nil {
 							return err
 						}
@@ -222,23 +239,33 @@ func (f FunctionAPIImpl) RunFunction(c echo.Context) error {
 						"id = ?": data["id"],
 					}
 
-					bindedInput := BindSingularInput(fun.Values, data, savedData, userID)
+					bindedInput, err := BindSingularInput(fun.Values, data, savedData, fmt.Sprintf("%d", userId))
+					if err != nil {
+						return err
+					}
 					table := tx.Table(fun.Table)
 					for k, v := range filter {
 						table = table.Where(k, v)
 					}
-					err := table.Updates(bindedInput).Error
+					err = table.Updates(bindedInput).Error
 					if err != nil {
 						return err
 					}
+				} else {
+					fmt.Println("Bukan dua duanya wekk")
+					dtype := reflect.TypeOf(caller.Data[fun.Name])
+					fmt.Println(dtype)
 				}
 			case "delete":
 				data := caller.Data[fun.Name].(map[string]interface{})
 				filter := ""
 				if ft, ok := data["filter"].(string); ok {
 					filter = ft
-					if strings.Contains(filter, "$user.id") {
-						filter = strings.ReplaceAll(ft, "$user.id", userID)
+					if strings.Contains(filter, "@user.id") {
+						if userId == 0 {
+							return errors.New("user id not found")
+						}
+						filter = strings.ReplaceAll(ft, "@user.id", fmt.Sprintf("%d", userId))
 					}
 				} else {
 					return errors.New("filter cant be empty when deleting")
@@ -316,21 +343,24 @@ func parseCalculation(input string) (string, interface{}) {
 	return query, value
 }
 
-func BindSingularInput(template map[string]interface{}, input map[string]interface{}, savedData map[string]interface{}, userID string) map[string]interface{} {
+func BindSingularInput(template map[string]interface{}, input map[string]interface{}, savedData map[string]interface{}, userID string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	for k, v := range template {
 		if res, ok := input[k].(string); ok {
-			if strings.HasPrefix(res, "$") && v.(string) != "$user.id" {
-				inputValue := strings.TrimPrefix(res, "$")
+			if strings.HasPrefix(res, "@") && v.(string) != "@user.id" {
+				inputValue := strings.TrimPrefix(res, "@")
 				key, value := parseCalculation(inputValue)
 				result[k] = gorm.Expr(key, value)
 				continue
 			}
 		}
 
-		if strings.HasPrefix(v.(string), "$") {
+		if strings.HasPrefix(v.(string), "@") {
 			key := v.(string)[1:]
-			if v == "$user.id" {
+			if v == "@user.id" {
+				if userID == "" {
+					return nil, errors.New("user id is required")
+				}
 				result[k] = userID
 			} else {
 				result[k] = savedData[key]
@@ -341,22 +371,26 @@ func BindSingularInput(template map[string]interface{}, input map[string]interfa
 
 	}
 
-	return result
+	return result, nil
 }
 
-func BindMultipleInput(template map[string]interface{}, inputs []interface{}, savedData map[string]interface{}, userID string) []map[string]interface{} {
+func BindMultipleInput(template map[string]interface{}, inputs []interface{}, savedData map[string]interface{}, userID string) ([]map[string]interface{}, error) {
 	result := []map[string]interface{}{}
 
 	for _, input := range inputs {
 		// currently testing, if broken, just change to the bottom one
-		result = append(result, BindSingularInput(template, input.(map[string]interface{}), savedData, userID))
+		singular, err := BindSingularInput(template, input.(map[string]interface{}), savedData, userID)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, singular)
 
 		/* ================================================================== */
 		// current := map[string]interface{}{}
 		// for k, v := range template {
 		// 	if strings.HasPrefix(v.(string), "$") {
 		// 		key := v.(string)[1:]
-		// 		if v == "$user.id" {
+		// 		if v == "@user.id" {
 		// 			current[k] = "[this_is_user_id]"
 		// 		} else {
 		// 			current[k] = savedData[key]
@@ -368,5 +402,5 @@ func BindMultipleInput(template map[string]interface{}, inputs []interface{}, sa
 		// result = append(result, current)
 	}
 
-	return result
+	return result, nil
 }
