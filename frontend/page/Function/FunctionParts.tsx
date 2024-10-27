@@ -88,8 +88,8 @@ export const FunctionInsert = ({
         .map((part) => ({
           label: part.name,
           description: "The ID of the inserted " + part.table,
-          value: "$" + part.name,
-          key: "$" + part.name,
+          value: "@" + part.name,
+          key: "@" + part.name,
         })),
     ]);
   }, [functionParts]);

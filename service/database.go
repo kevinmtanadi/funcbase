@@ -88,7 +88,7 @@ func (s *DBServiceImpl) Fetch(db *gorm.DB, option *FetchParams) ([]map[string]in
 	query = query.Select(columns)
 
 	if option.Filter != "" {
-		// convert the $user.id to userID on api package
+		// convert the @user.id to userID on api package
 		if isSQLTerm(option.Filter) {
 			query = query.Where(option.Filter)
 		} else {
@@ -136,7 +136,7 @@ func (s *DBServiceImpl) Count(db *gorm.DB, option *FetchParams) (int64, error) {
 	query := db.Table(tableName)
 	var count int64
 	if option.Filter != "" {
-		// convert the $user.id to userID on api package
+		// convert the @user.id to userID on api package
 		if isSQLTerm(option.Filter) {
 			query = query.Where(option.Filter)
 		} else {
